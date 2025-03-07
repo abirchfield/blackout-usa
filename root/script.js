@@ -10,6 +10,8 @@ const G = {
     dragstartY: null,
     dragorigX: null,
     dragorigY: null,
+    hoverBranch: null,
+    hoverSub: null,
     scale_adjust: 0.25,
     xmax: -80,
     xmin: -112,
@@ -214,7 +216,9 @@ function draw() {
     G.ctx.stroke();
 
     for (let key in G.branches){
+        let r = 2.0;
         let branch = G.branches[key];
+        if (branch == G.hoverBranch) r = 4.0;
         let s1, s2;
         if (branch.P >= 0)
         {
@@ -242,19 +246,19 @@ function draw() {
             else {
                 G.ctx.strokeStyle = "White";
             }
-            G.ctx.lineWidth = 2;
+            G.ctx.lineWidth = r;
             G.ctx.setLineDash([0]);
             G.ctx.lineDashOffset = 0;
             G.ctx.stroke();
             if (Math.abs(branch.P) > 10)
             {
                 G.ctx.strokeStyle = "Black";
-                G.ctx.lineWidth = 3;
+                G.ctx.lineWidth = r*1.5;
                 G.ctx.setLineDash([6, 26]);
                 G.ctx.lineDashOffset = 2*G.anim_cycle_state+1;
                 G.ctx.stroke();
                 G.ctx.strokeStyle = "Lime";
-                G.ctx.lineWidth = 3;
+                G.ctx.lineWidth = r*1.5;
                 G.ctx.setLineDash([4, 28]);
                 G.ctx.lineDashOffset = 2*G.anim_cycle_state;
                 G.ctx.stroke();
@@ -263,12 +267,12 @@ function draw() {
         else if (branch.Status1 == "DIS")
         {
             G.ctx.strokeStyle = "White";
-            G.ctx.lineWidth = 2;
+            G.ctx.lineWidth = r;
             G.ctx.setLineDash([0]);
             G.ctx.lineDashOffset = 0;
             G.ctx.stroke();
             G.ctx.strokeStyle = "Black";
-            G.ctx.lineWidth = 3;
+            G.ctx.lineWidth = r*1.5;
             G.ctx.setLineDash([5, 5]);
             G.ctx.lineDashOffset = 0;
             G.ctx.stroke();
@@ -276,7 +280,7 @@ function draw() {
         else if (branch.Status1 == "TRIP")
         {
             G.ctx.strokeStyle = "Red";
-            G.ctx.lineWidth = 2;
+            G.ctx.lineWidth = r;
             G.ctx.setLineDash([5, 5]);
             G.ctx.lineDashOffset = 0;
             G.ctx.stroke();
@@ -306,19 +310,19 @@ function draw() {
                 else {
                     G.ctx.strokeStyle = "White";
                 }
-                G.ctx.lineWidth = 2;
+                G.ctx.lineWidth = r;
                 G.ctx.setLineDash([0]);
                 G.ctx.lineDashOffset = 0;
                 G.ctx.stroke();
                 if (Math.abs(branch.P) > 10)
                 {
                     G.ctx.strokeStyle = "Black";
-                    G.ctx.lineWidth = 3;
+                    G.ctx.lineWidth = r*1.5;
                     G.ctx.setLineDash([6, 26]);
                     G.ctx.lineDashOffset = 2*G.anim_cycle_state+1;
                     G.ctx.stroke();
                     G.ctx.strokeStyle = "Lime";
-                    G.ctx.lineWidth = 3;
+                    G.ctx.lineWidth = r*1.5;
                     G.ctx.setLineDash([4, 28]);
                     G.ctx.lineDashOffset = 2*G.anim_cycle_state;
                     G.ctx.stroke();
@@ -327,12 +331,12 @@ function draw() {
             else if (branch.Status2 == "DIS")
             {
                 G.ctx.strokeStyle = "White";
-                G.ctx.lineWidth = 2;
+                G.ctx.lineWidth = r;
                 G.ctx.setLineDash([0]);
                 G.ctx.lineDashOffset = 0;
                 G.ctx.stroke();
                 G.ctx.strokeStyle = "Black";
-                G.ctx.lineWidth = 3;
+                G.ctx.lineWidth = r*1.5;
                 G.ctx.setLineDash([5, 5]);
                 G.ctx.lineDashOffset = 0;
                 G.ctx.stroke();
@@ -340,7 +344,7 @@ function draw() {
             else if (branch.Status2 == "TRIP")
             {
                 G.ctx.strokeStyle = "Red";
-                G.ctx.lineWidth = 2;
+                G.ctx.lineWidth = r;
                 G.ctx.setLineDash([5, 5]);
                 G.ctx.lineDashOffset = 0;
                 G.ctx.stroke();
@@ -351,6 +355,7 @@ function draw() {
     G.ctx.setLineDash([0]);
     G.ctx.lineDashOffset = 0;
 
+    /* Substation circles and squares */
     for (let key in G.subs){
         let sub = G.subs[key];
         let P = 0
@@ -358,6 +363,8 @@ function draw() {
         P = Math.min(P, 0.99*sub.Pmax);
         P = Math.max(P, 0);
         if (sub.Category=="Load") {
+            let r = 10;
+            if (sub == G.hoverSub) r = 13;
             let Pmax = sub.Pmax*G.fr_load;
             G.ctx.strokeStyle = "White";
             G.ctx.lineWidth = 3;
@@ -371,16 +378,18 @@ function draw() {
             if (alltrip == 1) {
                 G.ctx.strokeStyle = "Red";
             }
-            G.ctx.fillRect((-G.x0 + sub.Longitude)*G.scaleX - 10, 
-                (G.y0 - sub.Latitude)*G.scaleY - 10, 20, 20);
+            G.ctx.fillRect((-G.x0 + sub.Longitude)*G.scaleX - r, 
+                (G.y0 - sub.Latitude)*G.scaleY - r, 2*r, 2*r);
             G.ctx.fillStyle = "White";
-            G.ctx.fillRect((-G.x0 + sub.Longitude)*G.scaleX - 10, 
-                (G.y0 - sub.Latitude)*G.scaleY - 10 - 20*(P-Pmax)/Pmax, 
-                20, 20*(P)/Pmax);
-            G.ctx.strokeRect((-G.x0 + sub.Longitude)*G.scaleX - 10, 
-                (G.y0 - sub.Latitude)*G.scaleY - 10, 20, 20);
+            G.ctx.fillRect((-G.x0 + sub.Longitude)*G.scaleX - r, 
+                (G.y0 - sub.Latitude)*G.scaleY - r - 2*r*(P-Pmax)/Pmax, 
+                2*r, 2*r*(P)/Pmax);
+            G.ctx.strokeRect((-G.x0 + sub.Longitude)*G.scaleX - r, 
+                (G.y0 - sub.Latitude)*G.scaleY - r, 2*r, 2*r);
         }
         else {
+            let r = 10;
+            if (sub == G.hoverSub) r = 13;
             if (sub.Category=="Wind") G.ctx.fillStyle = "Green";
             if (sub.Category=="Solar PV") G.ctx.fillStyle = "Yellow";
             if (sub.Category=="Gas Turbine") G.ctx.fillStyle = "Gray";
@@ -401,13 +410,13 @@ function draw() {
             G.ctx.lineWidth = 1;
             G.ctx.beginPath();
             G.ctx.arc((-G.x0 + sub.Longitude)*G.scaleX, 
-                (G.y0 - sub.Latitude)*G.scaleY, 12, 0, 2*Math.PI);
+                (G.y0 - sub.Latitude)*G.scaleY, r*1.2, 0, 2*Math.PI);
             G.ctx.fill();
             G.ctx.stroke();
             G.ctx.fillStyle = "Black";
             G.ctx.beginPath();
             G.ctx.arc((-G.x0 + sub.Longitude)*G.scaleX, 
-                (G.y0 - sub.Latitude)*G.scaleY, 10, 
+                (G.y0 - sub.Latitude)*G.scaleY, r, 
                 -Math.PI/2, -Math.PI/2+0.001+6.28*P/sub.Pmax, true);
             G.ctx.lineTo((-G.x0 + sub.Longitude)*G.scaleX, 
                 (G.y0 - sub.Latitude)*G.scaleY);
@@ -415,9 +424,11 @@ function draw() {
         }
     }
 
+    /* Substation names */
     for (let key in G.subs){
         let sub = G.subs[key];
         G.ctx.font = "15px Arial";
+        if (sub == G.hoverSub) G.ctx.font = "20px Arial";
         G.ctx.strokeStyle = "Black";
         G.ctx.lineWidth = 3;
         G.ctx.fillStyle = "White";
@@ -427,6 +438,48 @@ function draw() {
             (G.y0 - sub.Latitude)*G.scaleY + 5);
     }
 
+    /* Branch label on hover */
+    for (let key in G.branches){
+        let branch = G.branches[key];
+        if (branch != G.hoverBranch) continue;
+        let s1, s2;
+        if (branch.P >= 0)
+        {
+            s1 = branch.sub1;
+            s2 = branch.sub2;
+        }
+        else
+        {
+            s2 = branch.sub1;
+            s1 = branch.sub2;
+        }
+        let Lat = 0.5*(s1.Latitude + s2.Latitude);
+        let Lon = 0.5*(s1.Longitude + s2.Longitude);
+        G.ctx.font = "20px Arial";
+        G.ctx.strokeStyle = "Black";
+        G.ctx.lineWidth = 3;
+        G.ctx.fillStyle = "White";
+        let text = `${Math.abs(branch.P).toFixed(0)} MW`;
+        if (Math.abs(branch.P) > branch.Circuits*branch.Pmax*1.2) {
+            G.ctx.fillStyle = "Orange";
+            text += " (CRITICALLY OVERLOADED)";
+        }
+        else if (Math.abs(branch.P) > branch.Circuits*branch.Pmax) {
+            G.ctx.fillStyle = "Yellow";
+            text += " (overloaded)";
+        }
+        if (branch.Status1 == "TRIP") {
+            text = "TRIPPED - cannot reclose";
+            G.ctx.fillStyle = "Red";
+        }
+        else if (branch.Status1 == "DIS") {
+            text = "Line out of service";
+        }
+        G.ctx.strokeText(text, (-G.x0 + Lon)*G.scaleX + 15, 
+            (G.y0 - Lat)*G.scaleY + 5);
+        G.ctx.fillText(text, (-G.x0 + Lon)*G.scaleX + 15, 
+            (G.y0 - Lat)*G.scaleY + 5);
+    }
 }
 
 /* ------------------------------------------------------------------------- */
@@ -600,10 +653,50 @@ function mouseMoveHandler(event) {
         G.dragstartY = event.offsetY;
         draw();
     }
+
+    /* Check for hovering over sub or branch */
+    G.hoverBranch = null;
+    G.hoverSub = null;
+    let x = G.x0 + event.offsetX/G.scaleX;
+    let y = G.y0 - event.offsetY/G.scaleY;
+    for (let key in G.subs){
+        let sub = G.subs[key];
+        let dist_to_sub = Math.sqrt(Math.pow(x-sub.Longitude, 2) 
+            + Math.pow(y-sub.Latitude, 2))*G.scaleX;
+        if (dist_to_sub < 15) {
+            G.hoverSub = sub;
+            break;
+        }
+    }
+
+    if (G.hoverSub == null)
+    {
+        let mindist = 30;
+        for (var key in G.branches){
+            let branch = G.branches[key];
+            let s1 = branch.sub1, s2 = branch.sub2;
+            let dist_to_line = Math.abs(
+                (s2.Latitude-s1.Latitude)*x - (s2.Longitude-s1.Longitude)*y 
+                + s2.Longitude*s1.Latitude - s2.Latitude*s1.Longitude) 
+                / branch.dist * G.scaleX;
+            let xmin2 = Math.min(s1.Longitude, s2.Longitude);
+            let xmax2 = Math.max(s1.Longitude, s2.Longitude);
+            let ymin2 = Math.min(s1.Latitude, s2.Latitude);
+            let ymax2 = Math.max(s1.Latitude, s2.Latitude);
+            if (dist_to_line < mindist && x > xmin2 && x < xmax2 
+                && y > ymin2 && y < ymax2) {
+                G.hoverBranch = branch;
+                mindist = dist_to_line;
+            }
+        }
+    }
+
 }
 
 function mouseLeaveHandler(event) {
     G.inDrag = false;
+    G.hoverBranch = null;
+    G.hoverSub = null;
 }
 
 function mouseUpHandler(event) {
@@ -614,42 +707,13 @@ function mouseUpHandler(event) {
         + Math.pow(event.offsetY-G.dragorigY, 2));
     if (dragdist < 10)
     {
-        /* Check for clicks */
-        let found_click = false;
-        let x = G.x0 + G.dragorigX/G.scaleX;
-        let y = G.y0 - G.dragorigY/G.scaleY;
-        for (let key in G.subs){
-            let sub = G.subs[key];
-            let dist_to_sub = Math.sqrt(Math.pow(x-sub.Longitude, 2) 
-                + Math.pow(y-sub.Latitude, 2))*G.scaleX;
-            if (dist_to_sub < 12) {
-                open_sub_dialog(sub);
-                found_click = true;
-                break;
-            }
+        if (G.hoverSub != null) {
+            open_sub_dialog(G.hoverSub);
+        }
+        else if (G.hoverBranch != null) {
+            open_branch_dialog(G.hoverBranch);
         }
 
-        if (found_click == false)
-        {
-            for (var key in G.branches){
-                let branch = G.branches[key];
-                let s1 = branch.sub1, s2 = branch.sub2;
-                let dist_to_line = Math.abs(
-                    (s2.Latitude-s1.Latitude)*x - (s2.Longitude-s1.Longitude)*y 
-                    + s2.Longitude*s1.Latitude - s2.Latitude*s1.Longitude) 
-                    / branch.dist * G.scaleX;
-                let xmin2 = Math.min(s1.Longitude, s2.Longitude);
-                let xmax2 = Math.max(s1.Longitude, s2.Longitude);
-                let ymin2 = Math.min(s1.Latitude, s2.Latitude);
-                let ymax2 = Math.max(s1.Latitude, s2.Latitude);
-                if (dist_to_line < 5 && x > xmin2 && x < xmax2 
-                    && y > ymin2 && y < ymax2) {
-                    open_branch_dialog(branch);
-                    found_click = true;
-                    break;
-                }
-            }
-        }
         G.dragorigX = G.dragorigY = 0;
     }
 
