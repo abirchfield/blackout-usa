@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <Title>Blackout USA</Title>
+        <meta name="description" content="An educational digital experience for understanding large power grid operations." />
+        <link rel="stylesheet" href="style.css" />
+        <script src="scenario_data.js"> </script>
+        <script src="math.js"> </script>
+        <script src="chart.js"></script>
+        <script src="script.js" async> </script>
+    </head>
+    <body>
+        <div class="full-screen">
+
+            <!--div class="header-row">
+                <div class="header-content">
+                </div>
+            </div-->
+
+            <list class="head-button-group">
+                <li><button class="head-button" id="pause-button">&#x23F8;&#xfe0e;</button></li>
+                <li><button class="head-button" id="fast-button">&#x23E9;&#xfe0e;</button></li>
+                <li><button class="head-button" id="help-button">?</button></li>
+                <li><button class="head-button" id="quit-button">X</button></li>
+            </list>
+
+            <div class="main-section">
+
+            <div id="dashboard-panel-id" class="dashboard-panel">
+                <div class="dash-left-column"> 
+                    <div class="head-main-text">Blackout USA</div>
+                    <br/>
+                    <div class="dash-label" id="dash-clock-label">Day 1</div>
+                    <div class="dash-label dash-value" id="dash-clock">1:00 PM</div>
+                    <br/>
+                    <div class="dash-label">Grid Frequency</div>
+                    <div class="dash-label dash-value" id="dash-freq">60.00 Hz</div>
+                    <br/>
+                    <div class="dash-label">Load Served</div>
+                    <div class="dash-label dash-value" id="dash-sload">0 MW</div>
+                    <div class="dash-label">Load Unserved</div>
+                    <div class="dash-label dash-value" id="dash-uload">0 MW</div>
+                    <div class="dash-label">Reserves</div>
+                    <div class="dash-label dash-value" id="dash-reserve">0 MW</div>
+                    <br/>
+                    <div class="dash-label">Current Average Cost of Power</div>
+                    <div class="dash-label dash-value" id="dash-avcost">$0</div>
+                    <div class="dash-label">Today's Total Cost</div>
+                    <div class="dash-label dash-value" id="dash-tcost">$0</div>
+                </div>
+                <div class="dash-right-column"> 
+                    <div class="dash-label">Wind Generation</div>
+                    <div class="dash-label dash-value" id="dash-wgen">0 MW</div>
+                    <div class="dash-label">Solar Generation</div>
+                    <div class="dash-label dash-value" id="dash-sgen">0 MW</div>
+                    <div class="dash-label">Thermal Generation</div>
+                    <div class="dash-label dash-value" id="dash-thgen">0 MW</div>
+                    <div class="dash-label">Nuclear Generation</div>
+                    <div class="dash-label dash-value" id="dash-nugen">0 MW</div>
+                    <br/>
+                    <div class="dash-label">Current generator operating cost</div>
+                    <div class="dash-label dash-value" id="dash-cfixed">0 $/hour</div>
+                    <div class="dash-label">Current fuel cost</div>
+                    <div class="dash-label dash-value" id="dash-cfuel">0 $/hour</div>
+                    <div class="dash-label">Current unserved load cost</div>
+                    <div class="dash-label dash-value" id="dash-cuload">0 $/hour</div>
+                    <br/>
+                    <div class="dash-label">Today's total generator operating cost</div>
+                    <div class="dash-label dash-value" id="dash-tfixed">$0</div>
+                    <div class="dash-label">Today's total fuel cost</div>
+                    <div class="dash-label dash-value" id="dash-tfuel">$0</div>
+                    <div class="dash-label">Today's total unserved load cost</div>
+                    <div class="dash-label dash-value" id="dash-tuload">$0</div>
+                </div>
+            </div>
+            <div class="canvas-box" id="canvas-box-obj">
+            <canvas tabindex='1' id="main-canvas-id" class="main-canvas">
+            </div>
+            </canvas>
+            </div>
+            <div class="footer-row">
+                <div class="footer-content">
+                    <div class="foot-line">
+                        <div class="alert-text" id="alert-footer-text-bar">No alerts to show</div>
+                        <button class="head-button alert-button" id="alerts-button">View all Alerts</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal modal-narrow" id="welcome-modal">
+            <div class="modal-header">
+                <div class="title">Welcome to the Blackout USA Game!</div>
+            </div>
+            <div class="modal-body">
+                <div class="instruction-box">
+                <div>
+                Can you efficiently operate an electrical grid and keep it safe 
+                from a blackout? Manage the grid for 5 different days, 
+                each one a bit more challenging than the one before. Pay 
+                attention to the briefing for each day, and the 
+                "How to Play" instructions on the next screen. 
+                Click the button below to get 
+                started.
+                </div>
+                <button class="modal-text-button" onclick="start_day1()">
+                    Start my first shift!
+                </button> 
+                <div>
+                    This game was developed by the research group of Prof.
+                    Adam Birchfield at Texas A&M University. 
+                    <a href="https://birchfield.engr.tamu.edu">
+                        More Information.
+                    </a>
+                </div>
+            </div>
+            </div>
+        </div>
+        <div class="modal" id="alerts-modal">
+            <div class="modal-header">
+                <div class="title">Alerts</div>
+                <button data-close-modal class="close-button">&times;</button>
+            </div>
+            <div class="modal-body" id="alerts-body">
+                <div class="alerts-row" id="alerts-body-header"><div class="alert-time">Time</div><div class="alert-message">Message</div></div>
+            </div>
+        </div>
+        <div class="modal modal-narrow" id="help-modal">
+            <div class="modal-header">
+                <div class="title" id="scenario-title">Scenario Info and Options</div>
+                <button data-close-modal class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="instruction-box">
+                    <p id="scenario-description">TBD</p>
+                    <button data-close-modal class="modal-text-button">Got it! Let's go to the game!</button>
+                    <hr>
+                    <div class="modal-section-header">How to Play</div>
+                    <div class="modal-content" id="scenario-instructions">
+                        <p>Scroll down for more. You can return here any time by
+                            clicking the help button.
+                        </p>
+
+                        <div class="modal-par-header">My Objective</div> 
+                        <p>Your objective is to finish the shift with the 
+                            lowest possible total cost. The highest cost 
+                            component is unserved load -- so avoiding a blackout
+                            and keeping all customers online should keep your
+                            costs pretty low! For additional challenge, 
+                            consider prioritizing cheaper generators and not
+                            having unnecessary generators online to bring the
+                            average cost of power down.
+                        </p>
+
+                        <div class="modal-par-header">What should I do?</div> 
+                        <p>Click on the "View all Alerts" button in the bottom
+                            right to bring up the
+                            list of alerts. This list includes hints and 
+                            notifications to help you find your 
+                            priorities for managing the grid. You can delete 
+                            any alert by clicking "OK" on the alerts window.
+                            The most recent alert will be displayed at the 
+                            bottom of the screen.
+                        </p>
+                        <div class="modal-par-header">The Map</div> 
+                        <p>Navigate the Texas electric grid by clicking
+                        and dragging to move around (or use arrow keys). 
+                        Zoom in and out with the scroll wheel 
+                        (or PageUp/PageDown).</p>
+                        <div class="modal-par-header">Loads</div> 
+                        <p>Square substations represent electric customers: 
+                            homes and businesses that use electric power. These 
+                            are also called electrical "loads". In the game 
+                            they are marked with solid squares if they are 
+                            "connected," meaning the customers have electricity, 
+                            and empty squares if they are "disconnected," if the 
+                            customers are in blackout.
+                        </p>
+                        <img src="Figs/Load1.PNG">
+                        <p>In-service load</p>
+                        <img src="Figs/Load2.PNG">
+                        <p>Out-of-service load</p>
+                        <p>Click on one of the square load substations to bring 
+                            up more information. Each substation contains 
+                            multiple customer circuits. As the electric grid 
+                            operator, you can switch loads in or out of service.
+                            Normally you want all loads in service. There is a
+                            cost of $1000/MW/hr for unserved load. 
+                        </p>
+                        <p>Sometimes, however, loads should be opened 
+                            (disconnected) so that load-generation imbalance
+                            does not cause further problems. Loads that have
+                            tripped (due to frequency issues or breakup of 
+                            the grid) are not able to be closed back.
+                        </p>
+                        <div class="modal-par-header">Generators</div> 
+                        <p>Circle substations represent electric generators, the
+                            source of electric power. In the game the
+                            circles are colored based on the fuel type. The 
+                            shading of the generator also represents how much 
+                            power it is producing: an empty circle is not 
+                            generating any power, while a full one is producing 
+                            at its maximum capacity.
+                        </p>
+                        <img src="Figs/Gen1.PNG">
+                        <p>A solar plant operating near full capacity</p>
+                        <img src="Figs/Gen2.PNG">
+                        <p>A thermal plant (coal in this case) operating at
+                            about 50% capacity.
+                        </p>
+                        <p>Click on one of the cicle generator substations to 
+                            bring up more information. Each substation contains 
+                            multiple generating units. As the electric grid 
+                            operator, you have different decisions depending
+                            on the status of the unit.
+                        </p>
+                        <img src="Figs/Gen-in-service.PNG">
+                        <p>In-service generators are currently producing power.
+                            This information shows how much power it is
+                            producing, which will always be between the Min
+                            and Max. (For solar and wind, the Max is adjusted
+                            by how much solar or wind are available.).
+                        </p>
+                        <p> You can change the set point of a generator, which 
+                            tells the generation controls how much power to
+                            generate. However, the actual output may be more
+                            or less if needed to try to balance load. Balancing
+                            load and generation always takes top priority.
+                            Changing the set point will generally cause the 
+                            power output to change, though some units may be
+                            slower than others to adjust.
+                        </p>
+                        <p> Cost information is also given on this screen.
+                            Each generator has an operating cost per hour
+                            and a fuel cost per MW, per hour. So the total cost
+                            is (operating cost) + (power output) * (fuel cost).
+                            Then divide that by the power output to get the
+                            average power cost.
+                        </p>
+                        <p> If desired, an in-service unit can be shut down.
+                            This will cause the power output to reduce to zero
+                            and, once the generator is fully shut down, there
+                            will no longer be an operating or fuel cost.
+                        </p>
+                        <img src="Figs/Gen-shut-down.PNG">
+                        <p> Once a generator has started shutting down, no
+                            controls are available. You must wait until it fully
+                            shuts down before starting it back up.
+                        </p>
+                        <img src="Figs/Gen-out-of-service.PNG">
+                        <p>
+                            Out of service generators do not add any cost to
+                            the system operation. They can be started up if
+                            more generation capability is needed. Once start-up
+                            begins, the operating cost comes into effect.
+                        </p>
+                        <img src="Figs/Gen-start-up.PNG">
+                        <p>
+                            Once a generator has begun starting up, it may take
+                            some time before it begins generating power. For
+                            steam units (coal and nuclear), the start up time
+                            is very long and it might not be possible to start 
+                            them up 
+                            within the duration of your shift. Most other units
+                            start relatively quickly, except the Gas Combined 
+                            Cycle, which can start in several hours. Once 
+                            started,
+                            the unit will increase power output to its minimum
+                            value, then begin operating as normal.
+                        </p>
+                        <img src="Figs/Gen-trip.PNG">
+                        <p>
+                            A generator that has tripped offline (due to 
+                            frequency or separation from the grid) cannot
+                            be restarted.
+                        </p>
+                        <div class="modal-par-header">Transmission Lines</div> 
+                        <p>Substations (circles and squares) are connected to each
+                            other by transmission lines. The animated dots on the
+                            line represent the direction the power is flowing.
+                        </p>
+                        <img src="Figs/Line-1.PNG">
+                        <p>Click on one of the lines to bring up more information. 
+                            Some of the lines have two circuits.
+                            As the electric grid operator, you 
+                            can switch lines in and out of service. 
+                        </p>
+                        <p>If a line is overloaded, it will turn yellow. If it
+                            becomes very overloaded, it will turn orange. If a
+                            line remains orange, it is at risk of tripping due 
+                            to overload. Tripped lines (red dash) 
+                            cannot be reclosed.
+                        </p>
+                        <img src="Figs/Line-2.PNG">
+                        <img src="Figs/Line-3.PNG">
+                        <img src="Figs/Line-4.PNG">
+                        <p>Keep in mind that when a line is removed from service
+                            or tripped, the power previously flowing on it will
+                            have to find a new path through other lines. If
+                            those other lines become overloaded, this can cause
+                            cascading outages.
+                            If there are no other paths, the grid has been
+                            separated into parts. This will cause a lot of 
+                            lines, loads, and and generators to trip
+                            (major cascade).
+                        </p>
+                        
+                        <div class="modal-par-header">Time Management</div> 
+                        <p>The dashboard is shown on the left (hover for more
+                            information). It shows overview grid data.
+                        </p>
+                        <p>The clock will run at 1 minute every 1/2 second 
+                            by default. Use the controls in the top right to
+                            pause or fast forward the clock. When it gets to
+                            11pm, the shift is over!
+                        </p>
+                        <img src="Figs/Clock.PNG">
+                        <img src="Figs/Navigation.png">
+
+                        <div class="modal-par-header">Frequency Management</div> 
+                        <p>Below the clock is the grid frequency. This is the
+                            most important number for avoiding a blackout!
+                            Keep it as close to 60 Hz as possible. If it turns
+                            orange, you are getting close to risk of tripping.
+                            If it turns red, you will start to see generators,
+                            loads, and lines trip offline and a blackout is 
+                            likely not far off.
+                        </p>
+                        <p>How do you control the grid frequency? If the 
+                            frequency is too high (above 60.3 Hz), there is 
+                            too much generation and not enough load. Shut down
+                            some generators or add back some outaged load.
+                            If the frequency is too low (below 59.7 Hz),
+                            you need more generation quickly or you need to 
+                            shed load! Keep in mind starting up a generator 
+                            takes some time.
+                        </p>
+                        <img src="Figs/Freq.png">
+
+                        <div class="modal-par-header">Watching Reserves</div> 
+                        <p>Reserves are shown on the center left of the 
+                            dashboard. The reserves is how much extra power 
+                            you could generate if all your in-service generators
+                            were increased to their maximum output. In other 
+                            words, it measures your backup. If reserves get to
+                            zero, you should see frequency decrease soon and 
+                            that is likely to lead to blackout. Start up more
+                            generators to increase your reserve.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal modal-quit" id="quit-modal">
+            <div class="modal-header">
+                <div class="title">Quit the game?</div>
+                <button data-close-modal class="close-button">&times;</button>
+            </div>
+            <div class="modal-body modal-quit-body">
+                <div>
+                    <button class="modal-text-button" onclick="quitToBeginning()">Quit and go back to beginning</button>
+                    <button class="modal-text-button" onclick="quitRestart()">Restart this day</button>
+                    <button class="modal-text-button" onclick="quitSkipAhead()">Skip forward to the next day</button>
+                    <button data-close-modal class="modal-text-button">Cancel, continue the game</button>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="finished-modal">
+            <div class="modal-header">
+                <div class="title" id="finished-title">Scenario Finished!</div>
+            </div>
+            <div class="modal-body">
+                <div id="scenario-results">Results-TBD</div>
+                <hr>
+                <div class="modal-par-header">Additional Stats from Your Shift</div> 
+                <div id="stats-box">Results-TBD</div>
+                <hr>
+                <button class="modal-text-button" onclick="finishNext()">Start the next day</button>
+                <button class="modal-text-button" onclick="finishReplay()">Replay this day</button>
+                <button class="modal-text-button" onclick="finishToBeginning()">Back to beginning</button>
+            </div>
+        </div>
+        <div class="modal" id="substation-modal">
+            <div class="modal-header">
+                <div class="title" id="substation-title">Substation-Modal</div>
+                <button data-close-modal class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="sub-main-text">This substation has 6 Gas Turbine Units</div>
+                <div id="sub-u1"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u1_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u1_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sub-u2"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u2_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u2_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sub-u3"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u3_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u3_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sub-u4"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u4_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u4_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sub-u5"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u5_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u5_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sub-u6"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u6_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u6_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sub-u7"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u7_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u7_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="sub-u8"><hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p class="sub-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button class="modal-text-button sub-btn1" onclick="sub_u8_click1()">TBD</button>
+                            <button class="modal-text-button sub-btn2" onclick="sub_u8_click2()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="branch-modal">
+            <div class="modal-header">
+                <div class="title" id="branch-title">Branch-Modal</div>
+                <button data-close-modal class="close-button">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div id="branch-direction-text">TBD</div>
+                <div>
+                    <hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p id="branch-ckt1-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button id="branch-ckt1-btn" onclick="branch_ckt1_click()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="branch-second-circuit">
+                    <hr>
+                    <div class="unit-box">
+                        <div class="unit-box-lcol">
+                            <p id="branch-ckt2-txt">TBD</p>
+                        </div>
+                        <div class="unit-box-rcol">
+                            <button id="branch-ckt2-btn" onclick="branch_ckt2_click()">TBD</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="modal" id="unit-modal">
+            <div class="modal-body">
+                <div id="unit-title">Choose a new setpoint for this unit in MW</div>
+                <input id="setpoint-input"></input>
+                <span>MW</span>
+                <br/>
+                <button onclick="unit_ok()">OK</button>
+                <button onclick="unit_cancel()">Cancel</button>
+            </div>
+        </div>
+        <div id="overlay"></div>
+    </body>
+</html>
