@@ -10,19 +10,19 @@ import { SubstationModal } from "@/components/modals/substation-modal"
 import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
 import { HelpModal } from "@/components/modals/help-modal"
-import { AlertsModal } from "@/components/modals/alerts-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
 import { FinishedModal } from "@/components/modals/finished-modal"
 
 export default function Page() {
   // Modal States
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
-  const [isAlertsOpen, setIsAlertsOpen] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isQuitOpen, setIsQuitOpen] = useState(false)
+  const [isBriefingOpen, setIsBriefingOpen] = useState(false)
   const [isFinishedOpen, setIsFinishedOpen] = useState(false)
   const [selectedSub, setSelectedSub] = useState<Substation | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
+  const [isInitialTutorial, setIsInitialTutorial] = useState(false)
 
   // Game States
   const [isPaused, setIsPaused] = useState(true)
@@ -139,6 +139,7 @@ export default function Page() {
     setIsWelcomeOpen(false)
     startGameForDay(1);
     setIsHelpOpen(true)
+    setIsInitialTutorial(true)
     setIsPaused(true) // pause_modal() behavior
   }
 
@@ -200,11 +201,18 @@ export default function Page() {
     setSelectedBranch(branch);
   }
 
+  const handleBriefingOpenChange = (open: boolean) => {
+    setIsBriefingOpen(open);
+    if (open) {
+      setIsPaused(true);
+    } else {
+      setIsPaused(false);
+    }
+  }
+
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <AppHeader
-        alerts={alerts}
-        onAlertsClick={() => setIsAlertsOpen(true)}
         onHelpClick={() => {
           setIsHelpOpen(true);
           setIsPaused(true);
@@ -218,6 +226,10 @@ export default function Page() {
           isFastForward={isFastForward}
           onTogglePause={togglePause}
           onToggleFastForward={toggleFastForward}
+          isBriefingOpen={isBriefingOpen}
+          onBriefingOpenChange={handleBriefingOpenChange}
+          alerts={alerts}
+          onRemoveAlert={removeAlert}
           subs={engineRef.current?.state.subs}
           branches={engineRef.current?.state.branches}
           statsHistory={statsHistory}
@@ -238,22 +250,20 @@ export default function Page() {
             onStartGame={handleStartGame} 
           />
 
-          {/* Alerts Modal */}
-          <AlertsModal
-            open={isAlertsOpen}
-            onOpenChange={setIsAlertsOpen}
-            alerts={alerts}
-            onRemoveAlert={removeAlert}
-          />
-
           {/* Help Modal */}
           <HelpModal 
             open={isHelpOpen} 
             onOpenChange={(open) => {
-              setIsHelpOpen(open)
-              if (!open) setIsPaused(false)
+              setIsHelpOpen(open);
+              if (!open) {
+                if (isInitialTutorial) {
+                  setIsBriefingOpen(true);
+                  setIsInitialTutorial(false);
+                } else {
+                  setIsPaused(false);
+                }
+              }
             }} 
-            day={dashboardStats?.day || 1} 
           />
 
           {/* === NEW DYNAMIC MODALS === */}

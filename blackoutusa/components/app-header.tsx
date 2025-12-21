@@ -1,17 +1,15 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { HelpCircle, X, AlertTriangle, Sun, Moon } from "lucide-react"
+import { HelpCircle, X, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AppHeaderProps {
-  alerts: Array<{ message: string }>;
-  onAlertsClick: () => void;
   onHelpClick: () => void;
   onQuitClick: () => void;
 }
 
-export function AppHeader({ alerts, onAlertsClick, onHelpClick, onQuitClick }: AppHeaderProps) {
+export function AppHeader({ onHelpClick, onQuitClick }: AppHeaderProps) {
   const { resolvedTheme, setTheme } = useTheme()
 
   return (
@@ -20,15 +18,6 @@ export function AppHeader({ alerts, onAlertsClick, onHelpClick, onQuitClick }: A
         Blackout USA
       </h2>
       <div className="ml-auto flex items-center gap-4">
-        <div className="flex items-center gap-2 text-sm font-medium max-w-[300px] lg:max-w-[500px] hidden md:flex">
-          <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="truncate" title={alerts.length > 0 ? alerts[0].message : "No alerts to show"}>
-            {alerts.length > 0 ? alerts[0].message : "No alerts to show"}
-          </span>
-        </div>
-        <Button variant="outline" onClick={onAlertsClick} className="cursor-pointer">
-          View all Alerts
-        </Button>
         <div className="flex items-center gap-1 border-l pl-2">
           <Button
             variant="ghost"

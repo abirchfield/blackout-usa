@@ -23,6 +23,35 @@ interface AlertsModalProps {
   onRemoveAlert: (id: number) => void;
 }
 
+interface AlertsListProps {
+  alerts: Alert[];
+  onRemoveAlert: (id: number) => void;
+}
+
+export function AlertsList({ alerts, onRemoveAlert }: AlertsListProps) {
+  return (
+    <div className="flex-1 overflow-y-auto border-t border-border -mx-6 -mb-6">
+      <div className="grid grid-cols-[90px_1fr_auto] gap-4 p-2 font-bold border-b border-border sticky top-0 bg-popover px-6">
+        <div>Time</div>
+        <div>Message</div>
+        <div>Action</div>
+      </div>
+      <div className="px-6">
+        {alerts.length === 0 && (
+          <div className="p-4 text-center text-muted-foreground">No alerts to show</div>
+        )}
+        {alerts.map((alert) => (
+          <div key={alert.id} className="grid grid-cols-[90px_1fr_auto] gap-4 p-2 border-b border-border items-center">
+            <div>{alert.time}</div>
+            <div className={alert.critical ? "text-red-500 font-bold" : ""}>{alert.message}</div>
+            <Button variant="secondary" size="sm" onClick={() => onRemoveAlert(alert.id)} className="cursor-pointer">OK</Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export function AlertsModal({ open, onOpenChange, alerts, onRemoveAlert }: AlertsModalProps) {
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -31,23 +60,7 @@ export function AlertsModal({ open, onOpenChange, alerts, onRemoveAlert }: Alert
           <DialogTitle className="text-3xl font-bold">Alerts</DialogTitle>
           <DialogDescription className="hidden">List of game alerts</DialogDescription>
         </DialogHeader>
-        <div className="flex-1 overflow-y-auto border-t border-border mt-4">
-          <div className="grid grid-cols-[90px_1fr_auto] gap-4 p-2 font-bold border-b border-border">
-            <div>Time</div>
-            <div>Message</div>
-            <div>Action</div>
-          </div>
-          {alerts.length === 0 && (
-            <div className="p-4 text-center text-muted-foreground">No alerts to show</div>
-          )}
-          {alerts.map((alert) => (
-            <div key={alert.id} className="grid grid-cols-[90px_1fr_auto] gap-4 p-2 border-b border-border items-center">
-              <div>{alert.time}</div>
-              <div className={alert.critical ? "text-red-500 font-bold" : ""}>{alert.message}</div>
-              <Button variant="secondary" size="sm" onClick={() => onRemoveAlert(alert.id)} className="cursor-pointer">OK</Button>
-            </div>
-          ))}
-        </div>
+        <AlertsList alerts={alerts} onRemoveAlert={onRemoveAlert} />
       </DialogContent>
     </Dialog>
   );

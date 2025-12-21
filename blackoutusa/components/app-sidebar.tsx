@@ -1,6 +1,12 @@
 "use client"
 
-import { Zap, DollarSign, Waypoints, Building } from "lucide-react"
+import { Zap, DollarSign, Waypoints, Building, BookText, Bell, Lightbulb } from "lucide-react"
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "@/components/ui/popover"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
@@ -12,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardStats, Substation, Branch } from "@/lib/game/types"
 import { GameEngine } from "@/lib/game/engine"
 import { TimeController } from "./dash/time-controller"
+import { AlertsList } from "./modals/alerts-modal"
 import { EnergyStats } from "./dash/energy"
 import { FinanceStats } from "./dash/finance"
 import { BranchesList } from "./dash/branches"
@@ -23,6 +30,10 @@ interface AppSidebarProps {
   isFastForward: boolean;
   onTogglePause: () => void;
   onToggleFastForward: () => void;
+  isBriefingOpen: boolean;
+  onBriefingOpenChange: (open: boolean) => void;
+  alerts: Array<{ id: number; time: string; message: string; critical: boolean; }>;
+  onRemoveAlert: (id: number) => void;
   subs?: Record<string, Substation>;
   branches?: Record<string, Branch>;
   statsHistory?: DashboardStats[];
@@ -30,7 +41,7 @@ interface AppSidebarProps {
   onBranchSelect: (branch: Branch) => void;
 }
 
-export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onToggleFastForward, subs, branches, statsHistory, onSubstationSelect, onBranchSelect }: AppSidebarProps) {
+export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onToggleFastForward, isBriefingOpen, onBriefingOpenChange, alerts, onRemoveAlert, subs, branches, statsHistory, onSubstationSelect, onBranchSelect }: AppSidebarProps) {
   // Default values if stats are not yet available
   const s = stats || {
     day: 1,
@@ -53,64 +64,121 @@ export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onTo
       <SidebarContent className="font-share-tech overflow-x-hidden">
         {/* Status Group */}
         <SidebarGroup>
-          <SidebarGroupContent className="space-y-3 px-2 pt-4">
-            <div className="flex items-start gap-8">
-              <div className="shrink-0">
-                <div id="dash-clock-label" className="text-xs text-muted-foreground uppercase tracking-wider">
-                  Day {s.day || 1}
+          <SidebarGroupContent className="px-2 pt-4">
+            <div className="grid grid-cols-[1fr_auto_auto] items-stretch gap-2">
+              {/* Left Column: Time and Controls */}
+              <div className="space-y-3">
+                <div className="flex justify-center items-start gap-8">
+                  <div className="shrink-0">
+                    <div id="dash-clock-label" className="text-xs text-muted-foreground uppercase tracking-wider">
+                      Day {s.day || 1}
+                    </div>
+                    <div id="dash-clock" className="text-xl font-bold text-foreground whitespace-nowrap">
+                      {s.timeStr}
+                    </div>
+                  </div>
+                  <div className="shrink-0">
+                    <div className="text-xs text-muted-foreground uppercase tracking-wider">
+                      Frequency
+                    </div>
+                    <div id="dash-freq" className={`text-xl font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-red-500" : "text-foreground"}`}>
+                      {s.frequency.toFixed(2)} Hz
+                    </div>
+                  </div>
                 </div>
-                <div id="dash-clock" className="text-xl font-bold text-foreground whitespace-nowrap">
-                  {s.timeStr}
-                </div>
+                <TimeController 
+                  progress={progress}
+                  isPaused={isPaused}
+                  isFastForward={isFastForward}
+                  onTogglePause={onTogglePause}
+                  onToggleFastForward={onToggleFastForward}
+                />
               </div>
-              <div className="shrink-0">
-                <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                  Frequency
-                </div>
-                <div id="dash-freq" className={`text-xl font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-red-500" : "text-foreground"}`}>
-                  {s.frequency.toFixed(2)} Hz
-                </div>
+
+              {/* Separator */}
+              <div className="w-px bg-border" />
+
+              {/* Right Column: Briefing, Alerts, Hints */}
+              <div className="flex flex-col items-center justify-around gap-2 py-1">
+                <Popover open={isBriefingOpen} onOpenChange={onBriefingOpenChange}>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" title="Briefing" className="cursor-pointer">
+                      <BookText className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="right" align="start" className="w-[400px] font-share-tech">
+                    <div className="grid gap-4">
+                      <div className="space-y-2">
+                        <h4 className="font-bold leading-none">Day {s.day} Briefing</h4>
+                        <p className="text-sm text-muted-foreground">
+                          Your objectives for the upcoming shift.
+                        </p>
+                      </div>
+                      <div className="bg-muted/20 p-4 rounded-lg border border-border text-sm">
+                        {s.day === 1 && (
+                          <ul className="list-disc pl-5 space-y-2">
+                            <li>Your goal is to avoid a blackout and keep operating costs as low as possible</li>
+                            <li>Your shift runs from 1pm to 11pm.</li>
+                            <li>Load (electrical demand from customers) is expected to rise, peak around 7pm, and then decline later in the night.</li>
+                            <li>There is a steady, moderate wind predicted for whole afternoon and evening.</li>
+                            <li>Keep in mind the solar generation will go down later in the afternoon!</li>
+                          </ul>
+                        )}
+                        {s.day !== 1 && <p>Scenario description for Day {s.day} TBD</p>}
+                      </div>
+                    </div>
+                  </PopoverContent>
+                </Popover>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" title="Alerts" className="cursor-pointer">
+                      <Bell className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="right" align="start" className="w-[600px] font-share-tech max-h-[60vh] flex flex-col p-6">
+                    <div className="mb-4">
+                      <h4 className="font-bold leading-none text-xl">Alerts</h4>
+                      <p className="text-sm text-muted-foreground">List of game alerts.</p>
+                    </div>
+                    <AlertsList alerts={alerts} onRemoveAlert={onRemoveAlert} />
+                  </PopoverContent>
+                </Popover>
+                <Button variant="outline" size="icon" title="Hints" className="cursor-pointer">
+                  <Lightbulb className="h-4 w-4" />
+                </Button>
               </div>
             </div>
-            
-            <TimeController 
-              progress={progress}
-              isPaused={isPaused}
-              isFastForward={isFastForward}
-              onTogglePause={onTogglePause}
-              onToggleFastForward={onToggleFastForward}
-            />
           </SidebarGroupContent>
         </SidebarGroup>
 
         <SidebarSeparator />
 
         <Tabs defaultValue="power" className="w-full px-2 pt-2">
-          <TabsList className="w-full justify-start rounded-none border-b bg-transparent p-0">
-            <TabsTrigger value="power" className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground" title="Grid Status">
+          <TabsList className="w-full justify-start rounded-none bg-transparent p-0">
+            <TabsTrigger value="power" className="relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Grid Status">
               <Zap className="h-5 w-5" />
             </TabsTrigger>
-            <TabsTrigger value="costs" className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground" title="Financials">
+            <TabsTrigger value="costs" className="relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Financials">
               <DollarSign className="h-5 w-5" />
             </TabsTrigger>
-            <TabsTrigger value="lines" className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground" title="Transmission Lines">
+            <TabsTrigger value="lines" className="relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Transmission Lines">
               <Waypoints className="h-5 w-5" />
             </TabsTrigger>
-            <TabsTrigger value="subs" className="relative h-10 rounded-none border-b-2 border-transparent bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:border-b-primary data-[state=active]:text-foreground" title="Substations">
+            <TabsTrigger value="subs" className="relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Substations">
               <Building className="h-5 w-5" />
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="power" className="mt-4">
+          <TabsContent value="power" className="bg-sidebar rounded-b-md rounded-tr-md p-4">
             <EnergyStats stats={s} />
           </TabsContent>
-          <TabsContent value="costs" className="mt-4">
+          <TabsContent value="costs" className="bg-sidebar rounded-b-md rounded-tr-md p-4">
             <FinanceStats stats={s} statsHistory={statsHistory} />
           </TabsContent>
-          <TabsContent value="lines" className="mt-4">
+          <TabsContent value="lines" className="bg-sidebar rounded-b-md rounded-tr-md p-4">
             <BranchesList branches={branches} onBranchSelect={onBranchSelect} />
           </TabsContent>
-          <TabsContent value="subs" className="mt-4">
+          <TabsContent value="subs" className="bg-sidebar rounded-b-md rounded-tr-md p-4">
             <SubstationsList subs={subs} onSubstationSelect={onSubstationSelect} />
           </TabsContent>
         </Tabs>

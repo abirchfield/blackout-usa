@@ -4,9 +4,7 @@ import { useMemo } from "react"
 import { SidebarSeparator } from "@/components/ui/sidebar"
 import { DashboardStats } from "@/lib/game/types"
 import { fmtMoneyK, fmtMoneyM } from "@/lib/utils"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { AreaChart, Area, Line, LineChart, XAxis, YAxis, CartesianGrid, ResponsiveContainer } from "recharts"
+import { AreaChart, Area } from "recharts"
 import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
 
 interface FinanceStatsProps {
@@ -21,6 +19,7 @@ export function FinanceStats({ stats, statsHistory }: FinanceStatsProps) {
     return statsHistory?.map(stat => ({
       time: stat.timeStr,
       totalCost: stat.totalCost / 1000000, // in $M
+      avgCost: stat.avgCost,
       opCost: stat.totalOpCost / 1000, // in $k
       fuelCost: stat.totalFuelCost / 1000, // in $k
       unservedCost: stat.totalUnservedCost / 1000, // in $k
@@ -28,103 +27,141 @@ export function FinanceStats({ stats, statsHistory }: FinanceStatsProps) {
   }, [statsHistory]);
 
   const chartConfig = {
-    totalCost: { label: "Total Cost", color: "hsl(var(--primary))" },
-    opCost: { label: "Op Cost", color: "hsl(var(--chart-1))" },
-    fuelCost: { label: "Fuel Cost", color: "hsl(var(--chart-2))" },
-    unservedCost: { label: "Unserved Cost", color: "hsl(var(--chart-3))" },
-  }
+    totalCost: { label: "Total Cost", color: "var(--primary)" },
+    avgCost: { label: "Avg. Cost", color: "var(--chart-4)" },
+    opCost: { label: "Op Cost", color: "var(--chart-1)" },
+    fuelCost: { label: "Fuel Cost", color: "var(--chart-2)" },
+    unservedCost: { label: "Unserved Cost", color: "var(--chart-3)" },
+  } as const
+
+  const showCharts = chartData.length > 1;
 
   return (
     <div className="space-y-4">
-      {/* KPI Cards */}
-      <div className="grid grid-cols-2 gap-2">
-        <Card className="col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Cost</CardTitle>
-          </CardHeader>
-          <CardContent>
+      <div className="space-y-2">
+        {/* Total Cost */}
+        <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Total Cost</div>
             <div id="dash-tcost" className="text-2xl font-bold">{fmtMoneyM(s.totalCost)}</div>
-          </CardContent>
-        </Card>
-        <Card className="col-span-2">
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg. Cost</CardTitle>
-          </CardHeader>
-          <CardContent>
+          </div>
+          {showCharts && (
+            <div className="h-10 w-32">
+              <ChartContainer config={chartConfig} className="h-full w-full">
+                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <Area dataKey="totalCost" type="natural" fill="var(--color-totalCost)" fillOpacity={0.2} stroke="var(--color-totalCost)" strokeWidth={2} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent
+                      indicator="line"
+                      formatter={(value) => [`$${Number(value).toFixed(2)}M`, "Total Cost"]}
+                    />}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
+          )}
+        </div>
+
+        {/* Avg. Cost */}
+        <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+          <div>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider">Avg. Cost</div>
             <div id="dash-avcost" className="text-2xl font-bold">${s.avgCost.toFixed(2)}/MWh</div>
-          </CardContent>
-        </Card>
+          </div>
+          {showCharts && (
+            <div className="h-10 w-32">
+              <ChartContainer config={chartConfig} className="h-full w-full">
+                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <Area dataKey="avgCost" type="natural" fill="var(--color-avgCost)" fillOpacity={0.2} stroke="var(--color-avgCost)" strokeWidth={2} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent
+                      indicator="line"
+                      formatter={(value) => [`$${Number(value).toFixed(2)}/MWh`, "Avg. Cost"]}
+                    />}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
+          )}
+        </div>
       </div>
 
       <SidebarSeparator />
 
-      {/* Charts */}
-      <Tabs defaultValue="breakdown">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="breakdown">Breakdown</TabsTrigger>
-          <TabsTrigger value="total">Total Cost</TabsTrigger>
-        </TabsList>
-        <TabsContent value="breakdown">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Daily Cost Breakdown</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {chartData.length > 1 ? (
-                <ChartContainer config={chartConfig} className="h-[150px] w-full">
-                  <AreaChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value, index) => index % 4 === 0 ? value : ""} style={{ fontSize: '0.7rem' }} />
-                    <YAxis tickFormatter={(value) => `$${value}k`} style={{ fontSize: '0.7rem' }} />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                    <Area dataKey="unservedCost" type="natural" fill="var(--color-unservedCost)" stroke="var(--color-unservedCost)" stackId="a" />
-                    <Area dataKey="fuelCost" type="natural" fill="var(--color-fuelCost)" stroke="var(--color-fuelCost)" stackId="a" />
-                    <Area dataKey="opCost" type="natural" fill="var(--color-opCost)" stroke="var(--color-opCost)" stackId="a" />
-                  </AreaChart>
-                </ChartContainer>
-              ) : (
-                <div className="h-[150px] flex items-center justify-center text-sm text-muted-foreground">Not enough data to display chart.</div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-        <TabsContent value="total">
-          <Card>
-            <CardHeader>
-              <CardTitle className="text-base">Total Cost Trend</CardTitle>
-            </CardHeader>
-            <CardContent>
-              {chartData.length > 1 ? (
-                <ChartContainer config={chartConfig} className="h-[150px] w-full">
-                  <LineChart data={chartData} margin={{ top: 5, right: 10, left: -20, bottom: 0 }}>
-                    <CartesianGrid vertical={false} />
-                    <XAxis dataKey="time" tickLine={false} axisLine={false} tickMargin={8} tickFormatter={(value, index) => index % 4 === 0 ? value : ""} style={{ fontSize: '0.7rem' }} />
-                    <YAxis tickFormatter={(value) => `$${value}M`} style={{ fontSize: '0.7rem' }} />
-                    <ChartTooltip cursor={false} content={<ChartTooltipContent />} />
-                    <Line dataKey="totalCost" type="natural" stroke="var(--color-totalCost)" strokeWidth={2} dot={false} />
-                  </LineChart>
-                </ChartContainer>
-              ) : (
-                <div className="h-[150px] flex items-center justify-center text-sm text-muted-foreground">Not enough data to display chart.</div>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-
-      {/* Hourly Stats */}
-      <div className="grid grid-cols-3 gap-2 text-center">
-        <div>
-          <div className="text-xs text-muted-foreground">Op Cost</div>
-          <div className="font-bold text-foreground">{fmtMoneyK(s.currentOpCost)}/hr</div>
+      <div className="space-y-2">
+        <div className="text-sm font-medium text-muted-foreground">
+          Total Cost Breakdown
         </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Fuel Cost</div>
-          <div className="font-bold text-foreground">{fmtMoneyK(s.currentFuelCost)}/hr</div>
+        {/* Op Cost */}
+        <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+          <div>
+            <div className="text-sm text-muted-foreground">Op Cost</div>
+            <div className="font-bold text-foreground">{fmtMoneyK(s.totalOpCost)}</div>
+          </div>
+          {showCharts && (
+            <div className="h-10 w-32">
+              <ChartContainer config={chartConfig} className="h-full w-full">
+                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <Area dataKey="opCost" type="natural" fill="var(--color-opCost)" fillOpacity={0.2} stroke="var(--color-opCost)" strokeWidth={2} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent
+                      indicator="line"
+                      formatter={(value) => [`$${Number(value).toFixed(0)}k`, "Op Cost"]}
+                    />}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
+          )}
         </div>
-        <div>
-          <div className="text-xs text-muted-foreground">Unserved</div>
-          <div className="font-bold text-foreground">{fmtMoneyK(s.currentUnservedCost)}/hr</div>
+        {/* Fuel Cost */}
+        <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+          <div>
+            <div className="text-sm text-muted-foreground">Fuel Cost</div>
+            <div className="font-bold text-foreground">{fmtMoneyK(s.totalFuelCost)}</div>
+          </div>
+          {showCharts && (
+            <div className="h-10 w-32">
+              <ChartContainer config={chartConfig} className="h-full w-full">
+                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <Area dataKey="fuelCost" type="natural" fill="var(--color-fuelCost)" fillOpacity={0.2} stroke="var(--color-fuelCost)" strokeWidth={2} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent
+                      indicator="line"
+                      formatter={(value) => [`$${Number(value).toFixed(0)}k`, "Fuel Cost"]}
+                    />}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
+          )}
+        </div>
+        {/* Unserved Cost */}
+        <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+          <div>
+            <div className="text-sm text-muted-foreground">Unserved Cost</div>
+            <div className="font-bold text-foreground">{fmtMoneyK(s.totalUnservedCost)}</div>
+          </div>
+          {showCharts && (
+            <div className="h-10 w-32">
+              <ChartContainer config={chartConfig} className="h-full w-full">
+                <AreaChart data={chartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
+                  <Area dataKey="unservedCost" type="natural" fill="var(--color-unservedCost)" fillOpacity={0.2} stroke="var(--color-unservedCost)" strokeWidth={2} />
+                  <ChartTooltip
+                    cursor={false}
+                    content={<ChartTooltipContent
+                      indicator="line"
+                      formatter={(value) => [`$${Number(value).toFixed(0)}k`, "Unserved Cost"]}
+                    />}
+                  />
+                </AreaChart>
+              </ChartContainer>
+            </div>
+          )}
         </div>
       </div>
     </div>
