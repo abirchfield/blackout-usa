@@ -51,6 +51,13 @@ export interface ScenarioData {
   nsubs: number;
 }
 
+export interface Alert {
+  message: string;
+  critical: boolean;
+}
+
+export type AlertHandler = (alert: Alert, reset?: boolean) => void;
+
 export type InteractionHandler = (type: 'sub' | 'branch', data: Substation | Branch) => void;
 
 export interface GameState {
@@ -70,6 +77,7 @@ export interface GameState {
   scaleY: number;
   x0: number;
   y0: number;
+  theme: 'light' | 'dark';
   
   // Input State
   inDrag: boolean;
@@ -115,6 +123,7 @@ export interface GameState {
 export interface DashboardStats {
   day: number;
   timeStr: string;
+  timeStep: number;
   frequency: number;
   loadServed: number;
   loadUnserved: number;
@@ -131,4 +140,6 @@ export interface DashboardStats {
   totalOpCost: number;
   totalFuelCost: number;
   totalUnservedCost: number;
+  fr_wind: number;
+  fr_solar: number;
 }

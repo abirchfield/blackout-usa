@@ -20,10 +20,6 @@ export function TimeController({
 }: TimeControllerProps) {
   return (
     <div className="flex flex-col w-full gap-1">
-      <div className="flex justify-between text-[10px] uppercase text-muted-foreground font-semibold leading-none px-11">
-        <span>1 PM</span>
-        <span>11 PM</span>
-      </div>
       <div className="flex items-center gap-3 w-full">
         <Button
           variant="ghost"
@@ -32,7 +28,7 @@ export function TimeController({
           title={isPaused ? "Resume" : "Pause"}
           className="h-8 w-8 cursor-pointer shrink-0"
         >
-          {isPaused ? <Play className="h-3 w-3 fill-black text-black" /> : <Pause className="h-3 w-3 fill-black text-black" />}
+          {isPaused ? <Play className="h-3 w-3 fill-current" /> : <Pause className="h-3 w-3 fill-current" />}
         </Button>
         <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden" title={`Day Progress: ${progress.toFixed(0)}%`}>
           <div 
@@ -49,6 +45,10 @@ export function TimeController({
         >
           <FastForward className={`h-3 w-3 ${isFastForward ? "fill-current" : ""}`} />
         </Button>
+      </div>
+      <div className="flex justify-between text-[10px] uppercase text-muted-foreground font-semibold leading-none px-11">
+        <span>1 PM</span>
+        <span>11 PM</span>
       </div>
     </div>
   )
