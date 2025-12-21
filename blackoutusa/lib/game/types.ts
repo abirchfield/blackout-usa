@@ -1,11 +1,27 @@
 import * as math from "mathjs";
 
+// --- Statuses ---
+export const STATUS_IN = "IN";
+export const STATUS_DIS = "DIS";
+export const STATUS_TRIP = "TRIP";
+export const STATUS_STARTUP = "STARTUP";
+export const STATUS_SHUTDOWN = "SHUTDOWN";
+export type UnitStatus = typeof STATUS_IN | typeof STATUS_DIS | typeof STATUS_TRIP | typeof STATUS_STARTUP | typeof STATUS_SHUTDOWN;
+export type BranchCircuitStatus = typeof STATUS_IN | typeof STATUS_DIS | typeof STATUS_TRIP;
+
+// --- Categories ---
+export const CATEGORY_LOAD = "Load";
+export const CATEGORY_WIND = "Wind";
+export const CATEGORY_SOLAR = "Solar PV";
+export const CATEGORY_NUCLEAR = "Nuclear Steam";
+export type SubstationCategory = string; // Allow any string, but provide constants for known types
+
 export interface Unit {
-  Status: string;
+  Status: UnitStatus;
   P: number;
   Pset: number;
   P0: number;
-  Status0: string;
+  Status0: UnitStatus;
   StatusCount: number;
 }
 
@@ -14,7 +30,7 @@ export interface Substation {
   Latitude: number;
   Longitude: number;
   Units: number;
-  Category: string;
+  Category: SubstationCategory;
   Pmax: number;
   Pmin: number;
   FixedCost: number;
@@ -32,8 +48,8 @@ export interface Branch {
   ToSub: string;
   FromNum: string;
   ToNum: string;
-  Status1: string;
-  Status2: string;
+  Status1: BranchCircuitStatus;
+  Status2: BranchCircuitStatus;
   P: number;
   Pmax: number;
   Circuits: number;

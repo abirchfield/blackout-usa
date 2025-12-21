@@ -1,12 +1,13 @@
+// components/gen-unit-details/generator-unit-details.tsx
 "use client";
 
-import { Button } from "@/components/ui/button"
-import { Clock } from "lucide-react"
-import { Slider } from "@/components/ui/slider"
-import { Separator } from "@/components/ui/separator"
-import { Substation, Unit } from "@/lib/game/types"
+import { Button } from "@/components/ui/button";
+import { Slider } from "@/components/ui/slider";
+import { Separator } from "@/components/ui/separator";
+import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP } from "@/lib/game/types";
+import { Clock } from "lucide-react"; // Assuming Clock is used for startup/shutdown indicators
 
-interface UnitRowProps {
+interface GeneratorUnitDetailsProps {
   sub: Substation;
   unit: Unit;
   index: number;
@@ -16,7 +17,18 @@ interface UnitRowProps {
   onSetpointChange: (index: number, value: number) => void;
 }
 
-export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpointValue, onSetpointChange }: UnitRowProps) {
+/**
+ * Renders the detailed view and controls for a single generator unit.
+ */
+export function GeneratorUnitDetails({
+  sub,
+  unit,
+  index,
+  onUnitAction,
+  onSetSetpoint,
+  setpointValue,
+  onSetpointChange,
+}: GeneratorUnitDetailsProps) {
   const pmax_unit = sub.Pmax / sub.Units;
   const pmin_unit = sub.Pmin / sub.Units;
 
@@ -32,45 +44,40 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
     onSetSetpoint(sub.Number, index, newValue[0]);
   };
 
-  const renderContent = () => {
+  /**
+   * Renders the status badge and text for the generator unit.
+   */
+  const renderStatusContent = () => {
     switch (unit.Status) {
-      case "IN":
+      case STATUS_IN:
         return (
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Unit #{index + 1}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">IN-SERVICE</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <p className="font-bold">Unit #{index + 1}</p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">IN-SERVICE</span>
           </div>
         );
-      case "DIS":
+      case STATUS_DIS:
         return (
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Unit #{index + 1}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 font-medium">OUT-OF-SERVICE</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <p className="font-bold">Unit #{index + 1}</p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 font-medium">OUT-OF-SERVICE</span>
           </div>
         );
-      case "STARTUP":
+      case STATUS_STARTUP:
         return (
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Unit #{index + 1}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-medium animate-pulse">STARTING UP</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <p className="font-bold">Unit #{index + 1}</p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-yellow-500/20 text-yellow-400 font-medium animate-pulse">STARTING UP</span>
           </div>
         );
-      case "SHUTDOWN":
+      case STATUS_SHUTDOWN:
         return (
-          <div>
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Unit #{index + 1}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 font-medium">SHUTTING DOWN</span>
-            </div>
+          <div className="flex items-center gap-2">
+            <p className="font-bold">Unit #{index + 1}</p>
+            <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 font-medium">SHUTTING DOWN</span>
           </div>
         );
-      case "TRIP":
+      case STATUS_TRIP:
         return (
           <div className="space-y-1">
             <div className="flex items-center gap-2">
@@ -80,12 +87,17 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
             <p className="text-red-500 text-sm">Cannot be restarted.</p>
           </div>
         );
+      default:
+        return <p className="font-bold">Unit #{index + 1} ({unit.Status})</p>;
     }
   };
 
-  const renderActions = () => {
+  /**
+   * Renders the action controls (slider, power display, buttons) for the generator unit.
+   */
+  const renderActionControls = () => {
     switch (unit.Status) {
-      case "IN":
+      case STATUS_IN:
         const outputPercentage = pmax_unit > 0 ? (unit.P / pmax_unit) * 100 : 0;
         return (
           <div className="flex items-center gap-4 w-full">
@@ -113,8 +125,8 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
               <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)}>Shut Down</Button>
             </div>
           </div>
-        )
-      case "DIS":
+        );
+      case STATUS_DIS:
         return (
           <div className="flex items-center justify-end gap-4 w-full">
             <div className="w-[150px] space-y-2">
@@ -137,7 +149,7 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
             </div>
           </div>
         );
-      case "STARTUP":
+      case STATUS_STARTUP:
         const startupProgress = sub.StartTime > 0 ? (unit.StatusCount / sub.StartTime) * 100 : 0;
         const radius = 16;
         const circumference = 2 * Math.PI * radius;
@@ -167,7 +179,7 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
             </div>
           </div>
         );
-      case "SHUTDOWN":
+      case STATUS_SHUTDOWN:
         const shutdownOutputPercentage = pmax_unit > 0 ? (unit.P / pmax_unit) * 100 : 0;
         return (
           <div className="flex items-center justify-end gap-4 w-full">
@@ -179,96 +191,28 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
                   style={{ width: `${shutdownOutputPercentage}%` }}
                 />
               </div>
-
             </div>
             <div className="text-sm font-mono text-right w-[80px]">
               <p className="font-bold text-muted-foreground">--- MW</p>
               <p className="text-foreground/80">{unit.P.toFixed(0)} MW</p>
             </div>
-               
             <div className="w-28" /> {/* Placeholder for button */}
           </div>
         );
-      case "TRIP":
-        return null;
+      case STATUS_TRIP:
+        return null; // Tripped units have no actions
       default:
         return null;
     }
   };
-  
-  const renderLoadActions = () => {
-    switch (unit.Status) {
-      case "IN":
-        return <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)}>Disconnect</Button>;
-      case "DIS":
-        return <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)}>Connect</Button>;
-      case "TRIP":
-        return null;
-      default:
-        return null;
-    }
-  }
 
-  const renderLoadContent = () => {
-    switch (unit.Status) {
-      case "IN":
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Circuit #{index + 1}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-foreground/20 text-foreground font-medium">IN-SERVICE</span>
-            </div>
-            <p className="text-sm font-mono">{unit.P.toFixed(0)} MW</p>
-          </div>
-        );
-      case "DIS":
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Circuit #{index + 1}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-gray-500/20 text-gray-400 font-medium">OUT-OF-SERVICE</span>
-            </div>
-          </div>
-        );
-      case "TRIP":
-        return (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2">
-              <p className="font-bold">Circuit #{index + 1}</p>
-              <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-400 font-medium">TRIPPED</span>
-            </div>
-            <p className="text-red-500 text-sm">Cannot be reconnected.</p>
-          </div>
-        );
-      default:
-        return <p><strong>Circuit #{index + 1} ({unit.Status})</strong></p>;
-    }
-  }
-
-  if (sub.Category === "Load") {
-    return (
-      <>
-        <Separator />
-        <div className="flex justify-between items-center py-3">
-          <div className="text-sm">
-            {renderLoadContent()}
-          </div>
-          <div className="shrink-0">
-            {renderLoadActions()}
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // Consistent 3-column layout for all generator units
   return (
     <>
       <Separator />
       <div className="grid grid-cols-[auto_1fr_auto] items-center gap-x-6 py-3 text-sm">
         {/* Col 1: Unit Info */}
         <div className="w-[200px]">
-          {renderContent()}
+          {renderStatusContent()}
         </div>
 
         {/* Col 2: Financials / Status Info */}
@@ -279,7 +223,7 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
 
         {/* Col 3: Actions */}
         <div className="justify-self-end">
-          {renderActions()}
+          {renderActionControls()}
         </div>
       </div>
     </>

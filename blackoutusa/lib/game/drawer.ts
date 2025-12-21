@@ -1,13 +1,63 @@
-import { Branch, GameState, Substation } from "./types";
+import { Branch, GameState, Substation, STATUS_IN, STATUS_DIS, STATUS_TRIP, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "./types";
 
+// --- Constants ---
+
+// --- Animation ---
+const ANIMATION_CYCLE_FRAMES = 16;
+const MIN_POWER_FOR_ANIMATION = 10;
+const ANIMATION_SPEED_FACTOR = 2;
+
+// --- Colors ---
 const COLOR_TRIPPED = "Red";
 const COLOR_OVERLOAD_CRITICAL = "Orange";
 const COLOR_OVERLOAD_NORMAL = "Yellow";
 const COLOR_POWER_FLOW = "Lime";
+const COLOR_WIND = "Green";
+const COLOR_SOLAR = "Yellow";
+const COLOR_NUCLEAR = "Magenta";
+const COLOR_THERMAL = "Gray";
+
+// --- Drawing Styles ---
+const BORDER_LINE_WIDTH = 2;
+const BRANCH_RADIUS_NORMAL = 2.0;
+const BRANCH_RADIUS_HOVER = 4.0;
+const SUBSTATION_RADIUS_NORMAL = 10;
+const SUBSTATION_RADIUS_HOVER = 13;
+const SUBSTATION_BORDER_WIDTH = 3;
+const GENERATOR_OUTLINE_WIDTH = 1;
+const GENERATOR_OUTER_RADIUS_FACTOR = 1.2;
+const SECOND_CIRCUIT_OFFSET = 5;
+const POWER_FLOW_LINE_WIDTH_FACTOR = 1.5;
+
+// --- Line Dashes ---
+const DISCONNECTED_LINE_DASH = [5, 5];
+const POWER_FLOW_DASH_BACKGROUND = [6, 26];
+const POWER_FLOW_DASH_FOREGROUND = [4, 28];
+
+// --- Math ---
+const TWO_PI = Math.PI * 2;
+const PIE_CHART_START_ANGLE = -Math.PI / 2; // Start at 12 o'clock
+
+// --- Overload Thresholds ---
+const BRANCH_OVERLOAD_NORMAL_THRESHOLD = 1.0;
+const BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW = 1.2;
+const BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL = 1.5;
+
+// --- Fonts & Labels ---
+const FONT_NORMAL = "15px Arial";
+const FONT_HOVER = "20px Arial";
+const LABEL_OFFSET_X = 15;
+const LABEL_OFFSET_Y = 5;
+const LABEL_OUTLINE_WIDTH = 3;
 
 export class GameDrawer {
   private ctx: CanvasRenderingContext2D;
   private canvas: HTMLCanvasElement;
+
+  // Per-frame state
+  private state!: GameState;
+  private primaryColor!: string;
+  private secondaryColor!: string;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -18,29 +68,35 @@ export class GameDrawer {
    * Main drawing method, orchestrates the drawing of all game elements.
    */
   public draw(state: GameState) {
+    this.setupFrame(state);
+
     this.resizeCanvas();
 
-    const { width, height } = this.canvas;
-
-    const primaryColor = state.theme === 'light' ? 'black' : 'white';
-    const secondaryColor = state.theme === 'light' ? 'white' : 'black';
-
-    // Update animation state for power flow dots
-    state.anim_cycle_state = (state.anim_cycle_state + 1) % 16;
-
     // Clear canvas
-    this.ctx.fillStyle = secondaryColor;
-    this.ctx.fillRect(0, 0, width, height);
+    this.ctx.fillStyle = this.secondaryColor;
+    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
-    this.applyViewBounds(state);
+    this.applyViewBounds();
 
-    this.drawBorders(state, primaryColor);
-    this.drawAllBranches(state, primaryColor, secondaryColor);
-    this.drawAllSubstations(state, primaryColor, secondaryColor);
-    this.drawHoverLabel(state, primaryColor, secondaryColor);
+    this.drawBorders();
+    this.drawAllBranches();
+    this.drawAllSubstations();
+    this.drawHoverLabel();
   }
 
-  // --- Private Helper Methods ---
+  // --- Private Canvas & View Helpers ---
+
+  private setupFrame(state: GameState) {
+    this.state = state;
+    this.setThemeColors();
+    // Update animation state for power flow dots
+    this.state.anim_cycle_state = (this.state.anim_cycle_state + 1) % ANIMATION_CYCLE_FRAMES;
+  }
+
+  private setThemeColors() {
+    this.primaryColor = this.state.theme === 'light' ? 'black' : 'white';
+    this.secondaryColor = this.state.theme === 'light' ? 'white' : 'black';
+  }
 
   private resizeCanvas() {
     if (this.canvas.width !== this.canvas.offsetWidth || this.canvas.height !== this.canvas.offsetHeight) {
@@ -49,250 +105,298 @@ export class GameDrawer {
     }
   }
 
-  private applyViewBounds(state: GameState) {
+  private applyViewBounds() {
     const { width, height } = this.canvas;
-    if (state.x0 < state.xmin) state.x0 = state.xmin;
-    if (state.x0 + width / state.scaleX > state.xmax) state.x0 = state.xmax - width / state.scaleX;
-    if (state.y0 - height / state.scaleY < state.ymin) state.y0 = state.ymin + height / state.scaleY;
-    if (state.y0 > state.ymax) state.y0 = state.ymax;
+    if (this.state.x0 < this.state.xmin) this.state.x0 = this.state.xmin;
+    if (this.state.x0 + width / this.state.scaleX > this.state.xmax) this.state.x0 = this.state.xmax - width / this.state.scaleX;
+    if (this.state.y0 - height / this.state.scaleY < this.state.ymin) this.state.y0 = this.state.ymin + height / this.state.scaleY;
+    if (this.state.y0 > this.state.ymax) this.state.y0 = this.state.ymax;
   }
 
-  private getScreenPos(lon: number, lat: number, state: GameState): { x: number; y: number } {
+  private getScreenPos(lon: number, lat: number): { x: number; y: number } {
     return {
-        x: (-state.x0 + lon) * state.scaleX,
-        y: (state.y0 - lat) * state.scaleY,
+        x: (-this.state.x0 + lon) * this.state.scaleX,
+        y: (this.state.y0 - lat) * this.state.scaleY,
     };
   }
 
-  private drawBorders(state: GameState, primaryColor: string) {
-    if (!state.borders || state.borders.length === 0) return;
+  // --- Private Generic Drawing Helpers ---
 
-    this.ctx.strokeStyle = primaryColor;
-    this.ctx.lineWidth = 2;
+  private strokePath(options: { style: string | CanvasGradient | CanvasPattern, width: number, dash?: readonly number[], dashOffset?: number }) {
+    this.ctx.strokeStyle = options.style;
+    this.ctx.lineWidth = options.width;
+    this.ctx.setLineDash(options.dash ?? []);
+    if (options.dashOffset !== undefined) {
+        this.ctx.lineDashOffset = options.dashOffset;
+    }
+    this.ctx.stroke();
+  }
+
+  private drawCircle(cx: number, cy: number, radius: number, options: { fill?: string, stroke?: string, lineWidth?: number }) {
+    this.ctx.beginPath();
+    this.ctx.arc(cx, cy, radius, 0, TWO_PI);
+    if (options.fill) {
+        this.ctx.fillStyle = options.fill;
+        this.ctx.fill();
+    }
+    if (options.stroke) {
+        this.ctx.strokeStyle = options.stroke;
+        this.ctx.lineWidth = options.lineWidth ?? 1;
+        this.ctx.stroke();
+    }
+  }
+
+  private drawPieSlice(cx: number, cy: number, radius: number, startAngle: number, endAngle: number, color: string) {
+    this.ctx.fillStyle = color;
+    this.ctx.beginPath();
+    this.ctx.moveTo(cx, cy);
+    this.ctx.arc(cx, cy, radius, startAngle, endAngle, false);
+    this.ctx.closePath();
+    this.ctx.fill();
+  }
+
+  private drawOutlinedText(text: string, x: number, y: number, font: string, fillStyle: string, outlineStyle: string) {
+    this.ctx.font = font;
+    this.ctx.strokeStyle = outlineStyle;
+    this.ctx.lineWidth = LABEL_OUTLINE_WIDTH;
+    this.ctx.fillStyle = fillStyle;
+
+    this.ctx.strokeText(text, x, y);
+    this.ctx.fillText(text, x, y);
+  }
+
+  // --- Private Main Drawing Methods ---
+
+  private drawBorders() {
+    if (!this.state.borders || this.state.borders.length === 0) return;
+
+    this.ctx.strokeStyle = this.primaryColor;
+    this.ctx.lineWidth = BORDER_LINE_WIDTH;
     this.ctx.beginPath();
     
-    const startPos = this.getScreenPos(state.borders[0][0], state.borders[0][1], state);
+    const startPos = this.getScreenPos(this.state.borders[0][0], this.state.borders[0][1]);
     this.ctx.moveTo(startPos.x, startPos.y);
 
-    for (let i = 1; i < state.borders.length; i++) {
-        const pos = this.getScreenPos(state.borders[i][0], state.borders[i][1], state);
+    for (let i = 1; i < this.state.borders.length; i++) {
+        const pos = this.getScreenPos(this.state.borders[i][0], this.state.borders[i][1]);
         this.ctx.lineTo(pos.x, pos.y);
     }
     this.ctx.stroke();
   }
 
-  private drawAllBranches(state: GameState, primaryColor: string, secondaryColor: string) {
-    for (const key in state.branches) {
-      const branch = state.branches[key];
+  private drawAllBranches() {
+    for (const key in this.state.branches) {
+      const branch = this.state.branches[key];
       if (!branch.sub1 || !branch.sub2) continue;
 
-      const radius = (branch === state.hoverBranch) ? 4.0 : 2.0;
+      const radius = (branch === this.state.hoverBranch) ? BRANCH_RADIUS_HOVER : BRANCH_RADIUS_NORMAL;
 
       // Swap substations based on power flow direction for animation
       const [s1, s2] = branch.P < 0 ? [branch.sub2, branch.sub1] : [branch.sub1, branch.sub2];
-
-      this.drawBranchCircuit(branch, branch.Status1, s1, s2, radius, state, primaryColor, secondaryColor);
+      this.drawBranchCircuit(branch, branch.Status1, s1, s2, radius);
 
       if (branch.Circuits === 2) {
-        this.drawBranchCircuit(branch, branch.Status2, s1, s2, radius, state, primaryColor, secondaryColor, true);
+        this.drawBranchCircuit(branch, branch.Status2, s1, s2, radius, true);
       }
     }
     this.ctx.setLineDash([]); // Reset line dash after drawing all branches
   }
 
-  private drawBranchCircuit(branch: Branch, status: string, s1: Substation, s2: Substation, radius: number, state: GameState, primaryColor: string, secondaryColor: string, isSecondCircuit = false) {
-    const p1 = this.getScreenPos(s1.Longitude, s1.Latitude, state);
-    const p2 = this.getScreenPos(s2.Longitude, s2.Latitude, state);
+  private drawBranchCircuit(branch: Branch, status: string, s1: Substation, s2: Substation, radius: number, isSecondCircuit = false) {
+    const p1 = this.getScreenPos(s1.Longitude, s1.Latitude);
+    const p2 = this.getScreenPos(s2.Longitude, s2.Latitude);
 
     this.ctx.beginPath();
 
     if (isSecondCircuit) {
-        const offset = 5;
-        const circuit_offX = (s2.Latitude - s1.Latitude) / (branch.dist || 1) * offset;
-        const circuit_offY = (s2.Longitude - s1.Longitude) / (branch.dist || 1) * offset;
-        
-        this.ctx.moveTo(p1.x, p1.y);
-        this.ctx.lineTo(p1.x + circuit_offX, p1.y + circuit_offY);
-        this.ctx.lineTo(p2.x + circuit_offX, p2.y + circuit_offY);
-        this.ctx.lineTo(p2.x, p2.y);
+        const dx = p2.x - p1.x;
+        const dy = p2.y - p1.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist > 0) {
+            // Calculate a perpendicular vector in screen space
+            const offsetX = -dy / dist * SECOND_CIRCUIT_OFFSET;
+            const offsetY = dx / dist * SECOND_CIRCUIT_OFFSET;
+
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p1.x + offsetX, p1.y + offsetY);
+            this.ctx.lineTo(p2.x + offsetX, p2.y + offsetY);
+            this.ctx.lineTo(p2.x, p2.y);
+        } else {
+            this.ctx.moveTo(p1.x, p1.y);
+            this.ctx.lineTo(p2.x, p2.y);
+        }
     } else {
         this.ctx.moveTo(p1.x, p1.y);
         this.ctx.lineTo(p2.x, p2.y);
     }
 
     switch (status) {
-        case "IN":
-            if (Math.abs(branch.P) > branch.Circuits * branch.Pmax * 1.2) this.ctx.strokeStyle = COLOR_OVERLOAD_CRITICAL;
-            else if (Math.abs(branch.P) > branch.Circuits * branch.Pmax) this.ctx.strokeStyle = COLOR_OVERLOAD_NORMAL;
-            else this.ctx.strokeStyle = primaryColor;
-
-            this.ctx.lineWidth = radius;
-            this.ctx.setLineDash([]);
-            this.ctx.stroke();
-
-            if (Math.abs(branch.P) > 10) {
-                this.drawAnimatedPowerFlow(radius, state, secondaryColor);
+        case STATUS_IN:
+            this.strokePath({ style: this.getBranchOverloadColor(branch), width: radius });
+            if (Math.abs(branch.P) > MIN_POWER_FOR_ANIMATION) {
+                this.drawAnimatedPowerFlow(radius);
             }
             break;
-        case "DIS":
-            this.ctx.strokeStyle = primaryColor;
-            this.ctx.lineWidth = radius;
-            this.ctx.setLineDash([]);
-            this.ctx.stroke();
-            this.ctx.strokeStyle = secondaryColor;
-            this.ctx.lineWidth = radius * 1.5;
-            this.ctx.setLineDash([5, 5]);
-            this.ctx.stroke();
+        case STATUS_DIS:
+            // Draw solid line then dashed on top for disconnected appearance
+            this.strokePath({ style: this.primaryColor, width: radius });
+            this.strokePath({ style: this.secondaryColor, width: radius * POWER_FLOW_LINE_WIDTH_FACTOR, dash: DISCONNECTED_LINE_DASH });
             break;
-        case "TRIP":
-            this.ctx.strokeStyle = COLOR_TRIPPED;
-            this.ctx.lineWidth = radius;
-            this.ctx.setLineDash([5, 5]);
-            this.ctx.stroke();
+        case STATUS_TRIP:
+            this.strokePath({ style: COLOR_TRIPPED, width: radius, dash: DISCONNECTED_LINE_DASH });
             break;
     }
   }
 
-  private drawAnimatedPowerFlow(radius: number, state: GameState, secondaryColor: string) {
+  private drawAnimatedPowerFlow(radius: number) {
+    const baseOffset = ANIMATION_SPEED_FACTOR * this.state.anim_cycle_state;
+    const lineWidth = radius * POWER_FLOW_LINE_WIDTH_FACTOR;
+
     // Background dash to create a gap for the colored dot
-    this.ctx.strokeStyle = secondaryColor;
-    this.ctx.lineWidth = radius * 1.5;
-    this.ctx.setLineDash([6, 26]);
-    this.ctx.lineDashOffset = 2 * state.anim_cycle_state + 1;
-    this.ctx.stroke();
+    this.strokePath({ style: this.secondaryColor, width: lineWidth, dash: POWER_FLOW_DASH_BACKGROUND, dashOffset: baseOffset + 1 });
     
     // Foreground colored dot
-    this.ctx.strokeStyle = COLOR_POWER_FLOW;
-    this.ctx.lineWidth = radius * 1.5;
-    this.ctx.setLineDash([4, 28]);
-    this.ctx.lineDashOffset = 2 * state.anim_cycle_state;
-    this.ctx.stroke();
+    this.strokePath({ style: COLOR_POWER_FLOW, width: lineWidth, dash: POWER_FLOW_DASH_FOREGROUND, dashOffset: baseOffset });
   }
 
-  private drawAllSubstations(state: GameState, primaryColor: string, secondaryColor: string) {
-    for (const key in state.subs) {
-      const sub = state.subs[key];
-      const { x: cx, y: cy } = this.getScreenPos(sub.Longitude, sub.Latitude, state);
-      const radius = (sub === state.hoverSub) ? 13 : 10;
+  private drawAllSubstations() {
+    for (const key in this.state.subs) {
+      const sub = this.state.subs[key];
+      const { x: cx, y: cy } = this.getScreenPos(sub.Longitude, sub.Latitude);
+      const radius = (sub === this.state.hoverSub) ? SUBSTATION_RADIUS_HOVER : SUBSTATION_RADIUS_NORMAL;
 
-      if (sub.Category === "Load") {
-        this.drawLoadSubstation(sub, state, cx, cy, radius, primaryColor, secondaryColor);
+      if (sub.Category === CATEGORY_LOAD) {
+        this.drawLoadSubstation(sub, cx, cy, radius);
       } else {
-        this.drawGeneratorSubstation(sub, cx, cy, radius, primaryColor, secondaryColor);
+        this.drawGeneratorSubstation(sub, cx, cy, radius);
       }
 
-      this.ctx.font = sub === state.hoverSub ? "20px Arial" : "15px Arial";
-      this.ctx.strokeStyle = secondaryColor;
-      this.ctx.lineWidth = 3;
-      this.ctx.fillStyle = primaryColor;
-      this.ctx.strokeText(sub.Name, cx + 15, cy + 5);
-      this.ctx.fillText(sub.Name, cx + 15, cy + 5);
+      const font = sub === this.state.hoverSub ? FONT_HOVER : FONT_NORMAL;
+      this.drawOutlinedText(sub.Name, cx + LABEL_OFFSET_X, cy + LABEL_OFFSET_Y, font, this.primaryColor, this.secondaryColor);
     }
   }
 
-  private getGeneratorColor(category: string): string {
-    switch (category) {
-        case "Wind": return "Green";
-        case "Solar PV": return "Yellow";
-        case "Nuclear Steam": return "Magenta";
-        default: return "Gray";
-    }
-  }
-
-  private drawLoadSubstation(sub: Substation, state: GameState, cx: number, cy: number, r: number, primaryColor: string, secondaryColor: string) {
-    const P = sub.U.reduce((acc, unit) => acc + unit.P, 0);
-    const Pmax = sub.Pmax * state.fr_load;
+  private drawLoadSubstation(sub: Substation, cx: number, cy: number, r: number) {
+    const P = this.getSubstationPower(sub);
+    const Pmax = sub.Pmax * this.state.fr_load;
     
-    const allTripped = sub.U.every((unit) => unit.Status === "TRIP");
-    this.ctx.strokeStyle = allTripped ? COLOR_TRIPPED : primaryColor;
-    this.ctx.lineWidth = 3;
+    const allTripped = this.isSubstationTripped(sub);
+    this.ctx.strokeStyle = allTripped ? COLOR_TRIPPED : this.primaryColor;
+    this.ctx.lineWidth = SUBSTATION_BORDER_WIDTH;
     
-    this.ctx.fillStyle = secondaryColor;
+    // Background
+    this.ctx.fillStyle = this.secondaryColor;
     this.ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
     
+    // Fill based on load
     if (Pmax > 0) {
-        this.ctx.fillStyle = primaryColor;
+        this.ctx.fillStyle = this.primaryColor;
         const fillRatio = Math.max(0, P / Pmax);
         const fillHeight = 2 * r * fillRatio;
         this.ctx.fillRect(cx - r, cy + r - fillHeight, 2 * r, fillHeight);
     }
 
+    // Border
     this.ctx.strokeRect(cx - r, cy - r, 2 * r, 2 * r);
   }
 
-  private drawGeneratorSubstation(sub: Substation, cx: number, cy: number, r: number, primaryColor: string, secondaryColor: string) {
-    const P = sub.U.reduce((acc, unit) => acc + unit.P, 0);
+  private drawGeneratorSubstation(sub: Substation, cx: number, cy: number, r: number) {
+    const P = this.getSubstationPower(sub);
     const clampedP = Math.max(0, Math.min(P, sub.Pmax));
 
     const genColor = this.getGeneratorColor(sub.Category);
-    const allTripped = sub.U.every((unit) => unit.Status === "TRIP");
+    const allTripped = this.isSubstationTripped(sub);
 
     const displayColor = allTripped ? COLOR_TRIPPED : genColor;
-    const borderColor = allTripped ? COLOR_TRIPPED : primaryColor;
+    const borderColor = allTripped ? COLOR_TRIPPED : this.primaryColor;
+    
+    // Draw outer colored circle with border
+    this.drawCircle(cx, cy, r * GENERATOR_OUTER_RADIUS_FACTOR, {
+        fill: displayColor,
+        stroke: borderColor,
+        lineWidth: GENERATOR_OUTLINE_WIDTH
+    });
 
-    this.ctx.fillStyle = displayColor;
-    this.ctx.strokeStyle = borderColor;
-    this.ctx.lineWidth = 1;
-    this.ctx.beginPath();
-    this.ctx.arc(cx, cy, r * 1.2, 0, 2 * Math.PI);
-    this.ctx.fill();
-    this.ctx.stroke();
+    // Draw inner background circle
+    this.drawCircle(cx, cy, r, { fill: this.secondaryColor });
 
-    this.ctx.fillStyle = secondaryColor;
-    this.ctx.beginPath();
-    this.ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-    this.ctx.fill();
-
+    // Draw pie chart slice for power output
     if (sub.Pmax > 0 && clampedP > 0 && !allTripped) {
-        this.ctx.fillStyle = displayColor;
-        this.ctx.beginPath();
-        this.ctx.moveTo(cx, cy);
-        const startAngle = -Math.PI / 2;
-        const endAngle = startAngle + (2 * Math.PI * clampedP / sub.Pmax);
-        this.ctx.arc(cx, cy, r, startAngle, endAngle, false);
-        this.ctx.closePath();
-        this.ctx.fill();
+        const endAngle = PIE_CHART_START_ANGLE + (TWO_PI * clampedP / sub.Pmax);
+        this.drawPieSlice(cx, cy, r, PIE_CHART_START_ANGLE, endAngle, displayColor);
     }
     
-    this.ctx.beginPath();
-    this.ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-    this.ctx.stroke();
+    // Draw inner circle border
+    this.drawCircle(cx, cy, r, { stroke: borderColor, lineWidth: GENERATOR_OUTLINE_WIDTH });
   }
 
-  private drawHoverLabel(state: GameState, primaryColor: string, secondaryColor: string) {
-    if (!state.hoverBranch) return;
+  private drawHoverLabel() {
+    if (!this.state.hoverBranch) return;
 
-    const branch = state.hoverBranch;
+    const branch = this.state.hoverBranch;
     if (!branch.sub1 || !branch.sub2) return;
 
     const Lat = 0.5 * (branch.sub1.Latitude + branch.sub2.Latitude);
     const Lon = 0.5 * (branch.sub1.Longitude + branch.sub2.Longitude);
-    const pos = this.getScreenPos(Lon, Lat, state);
-    const cx = pos.x + 15;
-    const cy = pos.y + 5;
-
-    this.ctx.font = "20px Arial";
-    this.ctx.strokeStyle = secondaryColor;
-    this.ctx.lineWidth = 3;
+    const pos = this.getScreenPos(Lon, Lat);
+    const cx = pos.x + LABEL_OFFSET_X;
+    const cy = pos.y + LABEL_OFFSET_Y;
 
     let text = `${Math.abs(branch.P).toFixed(0)} MW`;
-    let color = primaryColor;
+    let color = this.primaryColor;
 
-    if (branch.Status1 === "TRIP" || branch.Status2 === "TRIP") {
+    const isTripped = branch.Status1 === STATUS_TRIP || branch.Status2 === STATUS_TRIP;
+    const isDisconnected = branch.Status1 === STATUS_DIS && (branch.Circuits === 1 || branch.Status2 === STATUS_DIS);
+    const overloadRatio = Math.abs(branch.P) / (branch.Circuits * branch.Pmax);
+    const isCriticallyOverloaded = overloadRatio > BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL;
+    const isOverloaded = overloadRatio > BRANCH_OVERLOAD_NORMAL_THRESHOLD;
+
+    if (isTripped) {
       text = "TRIPPED - cannot reclose";
       color = COLOR_TRIPPED;
-    } else if (branch.Status1 === "DIS" && (branch.Circuits === 1 || branch.Status2 === "DIS")) {
+    } else if (isDisconnected) {
       text = "Line out of service";
-    } else if (Math.abs(branch.P) > branch.Circuits * branch.Pmax * 1.5) {
+    } else if (isCriticallyOverloaded) {
       color = COLOR_OVERLOAD_CRITICAL;
       text += " (CRITICALLY OVERLOADED)";
-    } else if (Math.abs(branch.P) > branch.Circuits * branch.Pmax) {
+    } else if (isOverloaded) {
       color = COLOR_OVERLOAD_NORMAL;
       text += " (overloaded)";
     }
     
-    this.ctx.fillStyle = color;
-    this.ctx.strokeText(text, cx, cy);
-    this.ctx.fillText(text, cx, cy);
+    this.drawOutlinedText(text, cx, cy, FONT_HOVER, color, this.secondaryColor);
+  }
+
+  // --- Private State & Logic Helpers ---
+
+  private getBranchOverloadColor(branch: Branch): string {
+    const overloadRatio = Math.abs(branch.P) / (branch.Circuits * branch.Pmax);
+    if (overloadRatio > BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW) {
+        return COLOR_OVERLOAD_CRITICAL;
+    }
+    if (overloadRatio > BRANCH_OVERLOAD_NORMAL_THRESHOLD) {
+        return COLOR_OVERLOAD_NORMAL;
+    }
+    return this.primaryColor;
+  }
+
+  private getGeneratorColor(category: string): string {
+    switch (category) {
+        case CATEGORY_WIND: return COLOR_WIND;
+        case CATEGORY_SOLAR: return COLOR_SOLAR;
+        case CATEGORY_NUCLEAR: return COLOR_NUCLEAR;
+        default: return COLOR_THERMAL;
+    }
+  }
+
+  private getSubstationPower(sub: Substation): number {
+    return sub.U.reduce((acc, unit) => acc + unit.P, 0);
+  }
+
+  private isSubstationTripped(sub: Substation): boolean {
+    // A substation is considered tripped if all its units are tripped.
+    if (sub.Units === 0) return false;
+    return sub.U.every((unit) => unit.Status === STATUS_TRIP);
   }
 }
