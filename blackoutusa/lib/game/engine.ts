@@ -1,4 +1,4 @@
-import { Substation, Branch, DashboardStats, GameState, InteractionHandler, AlertHandler, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "./types";
+import { Substation, Branch, DashboardStats, GameState, InteractionHandler, AlertHandler, HintHandler, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "./types";
 import { scenario_data } from "./scenario_data";
 import { GameDrawer } from "./drawer";
 import { GameHandler } from "./handler";
@@ -144,6 +144,7 @@ export class GameEngine {
   }
 
   public onAlert?: AlertHandler;
+  public onHint?: HintHandler;
 
   public setTheme(theme: 'light' | 'dark') {
     if (this.state.theme !== theme) {
@@ -237,7 +238,7 @@ export class GameEngine {
     
     this.currentScenario = scenarios[day] || null;
     if (this.currentScenario) {
-      this.currentScenario.start(this.state, this.onAlert);
+      this.currentScenario.start(this.state, this.onAlert, this.onHint);
     } else {
       // Default behavior or error for undefined day
       this.onAlert?.({ message: `Scenario for Day ${day} is not defined.`, critical: true }, true);
@@ -323,7 +324,7 @@ export class GameEngine {
 
     this.state.t += 1;
 
-    this.currentScenario?.update(this.state, this.onAlert);
+    this.currentScenario?.update(this.state, this.onAlert, this.onHint);
 
     this._handleContingencies();
     this._updateGridTopology();

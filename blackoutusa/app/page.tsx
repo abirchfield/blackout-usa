@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import { GameEngine } from "@/lib/game/engine"
 import { DashboardStats, Substation, Branch, Alert, AlertHandler } from "@/lib/game/types"
+import { DashboardStats, Substation, Branch, Alert, Hint } from "@/lib/game/types"
 import { AppHeader } from "@/components/app-header"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SubstationModal } from "@/components/modals/substation-modal"
@@ -28,6 +29,7 @@ export default function Page() {
   const [isPaused, setIsPaused] = useState(true)
   const [isFastForward, setIsFastForward] = useState(false)
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
+  const [hints, setHints] = useState<Array<{id: number, time: string, message: string}>>([])
   const [statsHistory, setStatsHistory] = useState<DashboardStats[]>([])
 
   // Theme
@@ -90,6 +92,18 @@ export default function Page() {
           return [newAlert, ...prevAlerts];
         });
       };
+
+      engineRef.current.onHint = (hint: Hint, reset?: boolean) => {
+        const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
+        setHints(prevHints => {
+          const nextId = (reset || prevHints.length === 0) ? 0 : (prevHints[0].id + 1);
+          const newHint = { id: nextId, time: timeStr, ...hint };
+          if (reset) {
+            return [newHint];
+          }
+          return [newHint, ...prevHints];
+        });
+      };
       
       // Start Animation Loop
       let animationFrameId: number;
@@ -145,6 +159,10 @@ export default function Page() {
 
   const removeAlert = (id: number) => {
     setAlerts(prev => prev.filter(a => a.id !== id))
+  }
+
+  const removeHint = (id: number) => {
+    setHints(prev => prev.filter(h => h.id !== id))
   }
 
   const togglePause = () => {
@@ -230,6 +248,8 @@ export default function Page() {
           onBriefingOpenChange={handleBriefingOpenChange}
           alerts={alerts}
           onRemoveAlert={removeAlert}
+          hints={hints}
+          onRemoveHint={removeHint}
           subs={engineRef.current?.state.subs}
           branches={engineRef.current?.state.branches}
           statsHistory={statsHistory}

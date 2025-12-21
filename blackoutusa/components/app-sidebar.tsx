@@ -19,6 +19,7 @@ import { DashboardStats, Substation, Branch } from "@/lib/game/types"
 import { GameEngine } from "@/lib/game/engine"
 import { TimeController } from "./dash/time-controller"
 import { AlertsList } from "./modals/alerts-modal"
+import { HintsList } from "./modals/hints-modal"
 import { EnergyStats } from "./dash/energy"
 import { FinanceStats } from "./dash/finance"
 import { BranchesList } from "./dash/branches"
@@ -34,6 +35,8 @@ interface AppSidebarProps {
   onBriefingOpenChange: (open: boolean) => void;
   alerts: Array<{ id: number; time: string; message: string; critical: boolean; }>;
   onRemoveAlert: (id: number) => void;
+  hints: Array<{ id: number; time: string; message: string; }>;
+  onRemoveHint: (id: number) => void;
   subs?: Record<string, Substation>;
   branches?: Record<string, Branch>;
   statsHistory?: DashboardStats[];
@@ -41,7 +44,7 @@ interface AppSidebarProps {
   onBranchSelect: (branch: Branch) => void;
 }
 
-export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onToggleFastForward, isBriefingOpen, onBriefingOpenChange, alerts, onRemoveAlert, subs, branches, statsHistory, onSubstationSelect, onBranchSelect }: AppSidebarProps) {
+export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onToggleFastForward, isBriefingOpen, onBriefingOpenChange, alerts, onRemoveAlert, hints = [], onRemoveHint, subs, branches, statsHistory, onSubstationSelect, onBranchSelect }: AppSidebarProps) {
   // Default values if stats are not yet available
   const s = stats || {
     day: 1,
@@ -143,9 +146,20 @@ export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onTo
                     <AlertsList alerts={alerts} onRemoveAlert={onRemoveAlert} />
                   </PopoverContent>
                 </Popover>
-                <Button variant="outline" size="icon" title="Hints" className="cursor-pointer">
-                  <Lightbulb className="h-4 w-4" />
-                </Button>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" size="icon" title="Hints" className="cursor-pointer">
+                      <Lightbulb className="h-4 w-4" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent side="right" align="start" className="w-[600px] font-share-tech max-h-[60vh] flex flex-col p-6">
+                    <div className="mb-4">
+                      <h4 className="font-bold leading-none text-xl">Hints</h4>
+                      <p className="text-sm text-muted-foreground">List of game hints.</p>
+                    </div>
+                    <HintsList hints={hints} onRemoveHint={onRemoveHint} />
+                  </PopoverContent>
+                </Popover>
               </div>
             </div>
           </SidebarGroupContent>
