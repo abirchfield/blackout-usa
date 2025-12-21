@@ -2,11 +2,10 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
-import { HelpCircle, X, AlertTriangle, Sun, Moon } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { AppSidebar } from "@/components/app-sidebar"
 import { GameEngine } from "@/lib/game/engine"
 import { DashboardStats, Substation, Branch, Alert, AlertHandler } from "@/lib/game/types"
+import { AppHeader } from "@/components/app-header"
+import { AppSidebar } from "@/components/app-sidebar"
 import { SubstationModal } from "@/components/modals/substation-modal"
 import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
@@ -26,10 +25,10 @@ export default function Page() {
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
 
   // Game States
-  const [day, setDay] = useState(0) // Start at 0, set to 1 on game start
   const [isPaused, setIsPaused] = useState(true)
   const [isFastForward, setIsFastForward] = useState(false)
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
+  const [statsHistory, setStatsHistory] = useState<DashboardStats[]>([])
 
   // Theme
   const { resolvedTheme, setTheme } = useTheme()
@@ -94,7 +93,6 @@ export default function Page() {
       
       // Start Animation Loop
       let animationFrameId: number;
-      let lastUiUpdate = 0;
       let lastGameStepTime = 0;
       
       const loop = (timestamp: number) => {
@@ -105,6 +103,12 @@ export default function Page() {
             if (timestamp - lastGameStepTime > gameSpeed) {
               const isDayOver = engineRef.current.update(1);
               lastGameStepTime = timestamp;
+
+              // Get latest stats and update React state
+              const newStats = engineRef.current.getDashboardStats();
+              setDashboardStats(newStats);
+              setStatsHistory(prev => [...prev, newStats]);
+
               if (isDayOver) {
                 setIsPaused(true);
                 setIsFinishedOpen(true);
@@ -115,11 +119,6 @@ export default function Page() {
           // Draw
           engineRef.current.draw();
           
-          // Sync UI (Throttle to ~10fps to save React renders)
-          if (timestamp - lastUiUpdate > 100) {
-            setDashboardStats(engineRef.current.getDashboardStats());
-            lastUiUpdate = timestamp;
-          }
         }
         animationFrameId = requestAnimationFrame(loop);
       };
@@ -133,11 +132,11 @@ export default function Page() {
   // Logic ported from script.js start_day1() and start_day()
   const startGameForDay = (dayToStart: number) => {
     engineRef.current?.startDay(dayToStart);
+    setStatsHistory([]); // Reset history for the new day
   }
 
   const handleStartGame = () => {
     setIsWelcomeOpen(false)
-    setDay(1)
     startGameForDay(1);
     setIsHelpOpen(true)
     setIsPaused(true) // pause_modal() behavior
@@ -174,16 +173,16 @@ export default function Page() {
   }
 
   const handleReplayDay = () => {
-    startGameForDay(day);
+    startGameForDay(dashboardStats?.day || 1);
     setIsFinishedOpen(false);
     setIsQuitOpen(false);
     setIsPaused(false);
   }
 
   const handleNextDay = () => {
-    const nextDay = day < 5 ? day + 1 : 1;
-    setDay(nextDay);
-    startGameForDay(nextDay);
+    const currentDay = dashboardStats?.day || 1;
+    const nextDay = currentDay < 5 ? currentDay + 1 : 1;
+    startGameForDay(nextDay)
     setIsFinishedOpen(false);
     setIsQuitOpen(false);
     setIsPaused(false);
@@ -203,66 +202,25 @@ export default function Page() {
 
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
-      <header className="bg-background sticky top-0 flex shrink-0 items-center gap-2 border-b p-4 h-16 z-50">
-        <h2 className="text-2xl font-bold font-share-tech text-foreground mr-4">
-          Blackout USA
-        </h2>
-        <div className="ml-auto flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm font-medium max-w-[300px] lg:max-w-[500px] hidden md:flex">
-            <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
-            <span className="truncate" title={alerts.length > 0 ? alerts[0].message : "No alerts to show"}>
-              {alerts.length > 0 ? alerts[0].message : "No alerts to show"}
-            </span>
-          </div>
-          <Button variant="outline" onClick={() => setIsAlertsOpen(true)} className="cursor-pointer">
-            View all Alerts
-          </Button>
-          <div className="flex items-center gap-1 border-l pl-2">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            title="Toggle theme"
-            className="cursor-pointer"
-          >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => {
-              setIsHelpOpen(true)
-              setIsPaused(true)
-            }}
-            title="Help"
-            className="cursor-pointer"
-          >
-            <HelpCircle className="h-4 w-4" />
-          </Button>
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => setIsQuitOpen(true)}
-            title="Quit"
-            className="cursor-pointer"
-          >
-            <X className="h-4 w-4" />
-          </Button>
-          </div>
-        </div>
-      </header>
+      <AppHeader
+        alerts={alerts}
+        onAlertsClick={() => setIsAlertsOpen(true)}
+        onHelpClick={() => {
+          setIsHelpOpen(true);
+          setIsPaused(true);
+        }}
+        onQuitClick={() => setIsQuitOpen(true)}
+      />
       <div className="flex flex-1 overflow-hidden">
-        <AppSidebar 
-          stats={dashboardStats} 
-          day={day}
+        <AppSidebar
+          stats={dashboardStats}
           isPaused={isPaused}
           isFastForward={isFastForward}
           onTogglePause={togglePause}
           onToggleFastForward={toggleFastForward}
           subs={engineRef.current?.state.subs}
           branches={engineRef.current?.state.branches}
+          statsHistory={statsHistory}
           onSubstationSelect={handleSubstationSelect}
           onBranchSelect={handleBranchSelect}
         />
@@ -295,7 +253,7 @@ export default function Page() {
               setIsHelpOpen(open)
               if (!open) setIsPaused(false)
             }} 
-            day={day} 
+            day={dashboardStats?.day || 1} 
           />
 
           {/* === NEW DYNAMIC MODALS === */}
@@ -314,7 +272,7 @@ export default function Page() {
             open={isFinishedOpen}
             onOpenChange={setIsFinishedOpen}
             stats={dashboardStats}
-            day={day}
+            day={dashboardStats?.day || 1}
             onNextDay={handleNextDay}
             onReplay={handleReplayDay}
             onQuit={handleQuitToStart}
