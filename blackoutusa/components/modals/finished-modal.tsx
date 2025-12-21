@@ -69,9 +69,9 @@ export function FinishedModal({ open, onOpenChange, stats, day, onNextDay, onRep
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <Button onClick={onNextDay} className="w-full">Start the next day</Button>
-          <Button onClick={onReplay} variant="secondary" className="w-full">Replay this day</Button>
-          <Button onClick={onQuit} variant="secondary" className="w-full">Back to beginning</Button>
+          <Button onClick={onNextDay} className="w-full cursor-pointer">Start the next day</Button>
+          <Button onClick={onReplay} variant="secondary" className="w-full cursor-pointer">Replay this day</Button>
+          <Button onClick={onQuit} variant="secondary" className="w-full cursor-pointer">Back to beginning</Button>
         </div>
       </DialogContent>
     </Dialog>
