@@ -1,11 +1,12 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react"
-import { HelpCircle, X, AlertTriangle } from "lucide-react"
+import { useTheme } from "next-themes"
+import { HelpCircle, X, AlertTriangle, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AppSidebar } from "@/components/app-sidebar"
 import { GameEngine } from "@/lib/game/engine"
-import { DashboardStats, Substation, Branch } from "@/lib/game/types"
+import { DashboardStats, Substation, Branch, Alert, AlertHandler } from "@/lib/game/types"
 import { SubstationModal } from "@/components/modals/substation-modal"
 import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
@@ -29,7 +30,9 @@ export default function Page() {
   const [isPaused, setIsPaused] = useState(true)
   const [isFastForward, setIsFastForward] = useState(false)
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
-  const [alertIdCounter, setAlertIdCounter] = useState(0)
+
+  // Theme
+  const { resolvedTheme, setTheme } = useTheme()
   
   // Refs for loop access
   const isPausedRef = useRef(isPaused)
@@ -44,6 +47,12 @@ export default function Page() {
     isFastForwardRef.current = isFastForward
   }, [isFastForward])
 
+  useEffect(() => {
+    if (engineRef.current && resolvedTheme) {
+      engineRef.current.setTheme(resolvedTheme as 'light' | 'dark');
+    }
+  }, [resolvedTheme]);
+
   // Engine Integration
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<GameEngine | null>(null)
@@ -56,6 +65,11 @@ export default function Page() {
     if (canvasRef.current && !engineRef.current) {
       engineRef.current = new GameEngine(canvasRef.current);
 
+      // Set initial theme right after creation to prevent flicker/mismatch
+      if (resolvedTheme) {
+        engineRef.current.setTheme(resolvedTheme as 'light' | 'dark');
+      }
+
       // --- Connect Engine to React UI ---
       engineRef.current.onInteract = (type, data) => {
         if (type === 'sub') {
@@ -63,6 +77,19 @@ export default function Page() {
         } else if (type === 'branch') {
           setSelectedBranch(data as Branch);
         }
+      };
+
+      engineRef.current.onAlert = (alert: Alert, reset?: boolean) => {
+        const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
+        setAlerts(prevAlerts => {
+          // The new ID is the highest existing ID + 1, or 0 if resetting.
+          const nextId = (reset || prevAlerts.length === 0) ? 0 : (prevAlerts[0].id + 1);
+          const newAlert = { id: nextId, time: timeStr, ...alert };
+          if (reset) {
+            return [newAlert];
+          }
+          return [newAlert, ...prevAlerts];
+        });
       };
       
       // Start Animation Loop
@@ -104,29 +131,14 @@ export default function Page() {
   }, [])
 
   // Logic ported from script.js start_day1() and start_day()
+  const startGameForDay = (dayToStart: number) => {
+    engineRef.current?.startDay(dayToStart);
+  }
+
   const handleStartGame = () => {
     setIsWelcomeOpen(false)
     setDay(1)
-    
-    // Reset alerts and add Day 1 hints (simulated from script.js)
-    const initialAlerts = [
-      { message: "Your shift has started. Click \"View all Alerts\" to see additional hints for what to do.", critical: false },
-      { message: "Hint #1: The McCamey Solar PV plant in West Texas is currently disconnected. You might as well start up all 3 units at that plant to get more, low-cost energy.", critical: false },
-      { message: "Hint #2: The Mission Gas Turbine plant in South Texas has very high costs. Try shutting down 1-3 of these units while you still have plenty of reserves.", critical: false },
-      { message: "Hint #3: You are going to need more reserves in the evening once the solar has gone down and the load is higher.", critical: false },
-      { message: "Hint #4: For the rest of the day, watch the reserves carefully. If they get below 500 MW you need to find new generation to start up.", critical: false },
-    ]
-    
-    // Add them in reverse order so the first one appears at the top (like prepend)
-    const newAlerts = initialAlerts.map((a, i) => ({
-      id: i,
-      time: "1:00 PM",
-      message: a.message,
-      critical: a.critical
-    }))
-    setAlerts(newAlerts)
-    setAlertIdCounter(initialAlerts.length)
-
+    startGameForDay(1);
     setIsHelpOpen(true)
     setIsPaused(true) // pause_modal() behavior
   }
@@ -154,24 +166,39 @@ export default function Page() {
     setSelectedSub(engineRef.current?.state.subs[subId] || null); // Refresh modal data
   }
 
+  const handleSetSetpoint = (subId: string, unitIndex: number, newSetpoint: number) => {
+    engineRef.current?.setUnitSetpoint(subId, unitIndex, newSetpoint);
+    // Refresh the modal data to reflect the change immediately in the "Pset" value,
+    // though the input field itself maintains its own state.
+    setSelectedSub(engineRef.current?.state.subs[subId] || null);
+  }
+
   const handleReplayDay = () => {
-    engineRef.current?.setDefaults();
-    // Logic to re-add alerts for the current day would go here
+    startGameForDay(day);
     setIsFinishedOpen(false);
+    setIsQuitOpen(false);
     setIsPaused(false);
   }
 
   const handleNextDay = () => {
     const nextDay = day < 5 ? day + 1 : 1;
     setDay(nextDay);
-    engineRef.current?.setDefaults();
-    // Logic to add alerts for the *next* day would go here
+    startGameForDay(nextDay);
     setIsFinishedOpen(false);
+    setIsQuitOpen(false);
     setIsPaused(false);
   }
 
   const handleQuitToStart = () => {
     window.location.reload(); // Simplest way to reset everything
+  }
+
+  const handleSubstationSelect = (sub: Substation) => {
+    setSelectedSub(sub);
+  }
+
+  const handleBranchSelect = (branch: Branch) => {
+    setSelectedBranch(branch);
   }
 
   return (
@@ -191,6 +218,17 @@ export default function Page() {
             View all Alerts
           </Button>
           <div className="flex items-center gap-1 border-l pl-2">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
+            title="Toggle theme"
+            className="cursor-pointer"
+          >
+            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            <span className="sr-only">Toggle theme</span>
+          </Button>
           <Button
             variant="ghost"
             size="icon"
@@ -223,20 +261,18 @@ export default function Page() {
           isFastForward={isFastForward}
           onTogglePause={togglePause}
           onToggleFastForward={toggleFastForward}
+          subs={engineRef.current?.state.subs}
+          branches={engineRef.current?.state.branches}
+          onSubstationSelect={handleSubstationSelect}
+          onBranchSelect={handleBranchSelect}
         />
         <main className="flex-1 flex flex-col overflow-hidden relative min-w-0">
         <div className="game-wrapper relative h-full w-full">
-          <div className="main-section">
-            <div className="canvas-box" id="canvas-box-obj">
-              <canvas
-                ref={canvasRef}
-                tabIndex={1}
-                id="main-canvas-id"
-                className="main-canvas"
-              ></canvas>
-            </div>
-          </div>
-
+          <canvas
+            ref={canvasRef}
+            tabIndex={1}
+            className="h-full w-full"
+          ></canvas>
           {/* Modals */}
           <WelcomeModal 
             open={isWelcomeOpen} 
@@ -263,7 +299,14 @@ export default function Page() {
           />
 
           {/* === NEW DYNAMIC MODALS === */}
-          <SubstationModal sub={selectedSub} onClose={() => setSelectedSub(null)} onUnitAction={handleUnitAction} />
+          <SubstationModal 
+            sub={selectedSub} 
+            onClose={() => setSelectedSub(null)} 
+            onUnitAction={handleUnitAction}
+            onSetSetpoint={handleSetSetpoint}
+            frWind={dashboardStats?.fr_wind}
+            frSolar={dashboardStats?.fr_solar}
+          />
           <BranchModal branch={selectedBranch} onClose={() => setSelectedBranch(null)} onCircuitAction={(branchId, circuit) => engineRef.current?.toggleBranchCircuitStatus(branchId, circuit)} />
 
           {/* Finished Day Modal */}
