@@ -11,7 +11,7 @@ import {
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider"
 import { Substation, Unit } from "@/lib/game/types"
-import { UnitRow } from "@/components/gen-unit"
+import { UnitRow } from "@/components/modals/substation-controls/gen-unit"
 
 // --- Substation Modal Component ---
 interface SubstationModalProps {

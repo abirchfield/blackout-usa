@@ -1,6 +1,6 @@
 "use client"
 
-import { Zap, Wind, DollarSign, Waypoints, Building } from "lucide-react"
+import { Zap, DollarSign, Waypoints, Building } from "lucide-react"
 import {
   Sidebar,
   SidebarContent,
@@ -17,7 +17,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DashboardStats, Substation, Branch, Unit } from "@/lib/game/types"
+import { DashboardStats, Substation, Branch, Unit, STATUS_IN, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "@/lib/game/types"
 import { GameEngine } from "@/lib/game/engine"
 import { TimeController } from "@/components/time-controller"
 
@@ -62,33 +62,33 @@ export function AppSidebar({ stats, day, isPaused, isFastForward, onTogglePause,
     let animationClass = '';
 
     switch (unit.Status) {
-      case 'IN':
-      case 'STARTUP':
-        if (sub.Category === 'Wind') colorClass = 'bg-green-500';
-        else if (sub.Category === 'Solar PV') colorClass = 'bg-yellow-500';
-        else if (sub.Category === 'Nuclear Steam') colorClass = 'bg-pink-500';
+      case STATUS_IN:
+      case STATUS_STARTUP:
+        if (sub.Category === CATEGORY_WIND) colorClass = 'bg-green-500';
+        else if (sub.Category === CATEGORY_SOLAR) colorClass = 'bg-yellow-500';
+        else if (sub.Category === CATEGORY_NUCLEAR) colorClass = 'bg-pink-500';
         else colorClass = 'bg-gray-400';
-        if (unit.Status === 'STARTUP') animationClass = 'animate-pulse';
+        if (unit.Status === STATUS_STARTUP) animationClass = 'animate-pulse';
         break;
-      case 'SHUTDOWN':
+      case STATUS_SHUTDOWN:
         colorClass = 'bg-gray-600';
         break;
-      case 'TRIP':
+      case STATUS_TRIP:
         colorClass = 'bg-red-500';
         break;
     }
 
-    const opacity = unit.Status === 'IN' ? Math.max(0.2, brightness) : 1;
+    const opacity = unit.Status === STATUS_IN ? Math.max(0.2, brightness) : 1;
     return { className: `${colorClass} ${animationClass} w-2 h-2 rounded-full transition-all`, style: { opacity } };
   };
 
   const getLoadIndicatorStyle = (unit: Unit) => {
     let colorClass = 'bg-muted-foreground'; // Default for DIS
     switch (unit.Status) {
-      case 'IN':
+      case STATUS_IN:
         colorClass = 'bg-foreground'; // Theme-aware: white on dark, black on light
         break;
-      case 'TRIP':
+      case STATUS_TRIP:
         colorClass = 'bg-red-500';
         break;
     }
@@ -269,12 +269,12 @@ export function AppSidebar({ stats, day, isPaused, isFastForward, onTogglePause,
                         const loading = totalRating > 0 ? (Math.abs(branch.P) / totalRating) * 100 : 0;
 
                         let inServiceCircuits = 0;
-                        if (branch.Status1 === 'IN') inServiceCircuits++;
-                        if (branch.Circuits === 2 && branch.Status2 === 'IN') inServiceCircuits++;
+                        if (branch.Status1 === STATUS_IN) inServiceCircuits++;
+                        if (branch.Circuits === 2 && branch.Status2 === STATUS_IN) inServiceCircuits++;
 
                         let statusElement;
                         if (inServiceCircuits === 0) {
-                          const isTripped = branch.Status1 === 'TRIP' || (branch.Circuits === 2 && branch.Status2 === 'TRIP');
+                          const isTripped = branch.Status1 === STATUS_TRIP || (branch.Circuits === 2 && branch.Status2 === STATUS_TRIP);
                           if (isTripped) {
                             statusElement = <span className="text-xs text-red-500 font-medium">TRIPPED</span>;
                           } else {
