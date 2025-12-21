@@ -1,262 +1,186 @@
 "use client"
 
-import * as React from "react"
-import { ArchiveX, Command, File, Inbox, Send, Trash2 } from "lucide-react"
-
-import { NavUser } from "@/components/nav-user"
-import { Label } from "@/components/ui/label"
+import { ChevronLeft, ChevronRight } from "lucide-react"
+import { Button } from "@/components/ui/button"
 import {
   Sidebar,
   SidebarContent,
-  SidebarFooter,
   SidebarGroup,
   SidebarGroupContent,
-  SidebarHeader,
-  SidebarInput,
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
+  SidebarSeparator,
   useSidebar,
 } from "@/components/ui/sidebar"
-import { Switch } from "@/components/ui/switch"
+import { DashboardStats } from "@/lib/game/types"
 
-// This is sample data
-const data = {
-  user: {
-    name: "shadcn",
-    email: "m@example.com",
-    avatar: "/avatars/shadcn.jpg",
-  },
-  navMain: [
-    {
-      title: "Inbox",
-      url: "#",
-      icon: Inbox,
-      isActive: true,
-    },
-    {
-      title: "Drafts",
-      url: "#",
-      icon: File,
-      isActive: false,
-    },
-    {
-      title: "Sent",
-      url: "#",
-      icon: Send,
-      isActive: false,
-    },
-    {
-      title: "Junk",
-      url: "#",
-      icon: ArchiveX,
-      isActive: false,
-    },
-    {
-      title: "Trash",
-      url: "#",
-      icon: Trash2,
-      isActive: false,
-    },
-  ],
-  mails: [
-    {
-      name: "William Smith",
-      email: "williamsmith@example.com",
-      subject: "Meeting Tomorrow",
-      date: "09:34 AM",
-      teaser:
-        "Hi team, just a reminder about our meeting tomorrow at 10 AM.\nPlease come prepared with your project updates.",
-    },
-    {
-      name: "Alice Smith",
-      email: "alicesmith@example.com",
-      subject: "Re: Project Update",
-      date: "Yesterday",
-      teaser:
-        "Thanks for the update. The progress looks great so far.\nLet's schedule a call to discuss the next steps.",
-    },
-    {
-      name: "Bob Johnson",
-      email: "bobjohnson@example.com",
-      subject: "Weekend Plans",
-      date: "2 days ago",
-      teaser:
-        "Hey everyone! I'm thinking of organizing a team outing this weekend.\nWould you be interested in a hiking trip or a beach day?",
-    },
-    {
-      name: "Emily Davis",
-      email: "emilydavis@example.com",
-      subject: "Re: Question about Budget",
-      date: "2 days ago",
-      teaser:
-        "I've reviewed the budget numbers you sent over.\nCan we set up a quick call to discuss some potential adjustments?",
-    },
-    {
-      name: "Michael Wilson",
-      email: "michaelwilson@example.com",
-      subject: "Important Announcement",
-      date: "1 week ago",
-      teaser:
-        "Please join us for an all-hands meeting this Friday at 3 PM.\nWe have some exciting news to share about the company's future.",
-    },
-    {
-      name: "Sarah Brown",
-      email: "sarahbrown@example.com",
-      subject: "Re: Feedback on Proposal",
-      date: "1 week ago",
-      teaser:
-        "Thank you for sending over the proposal. I've reviewed it and have some thoughts.\nCould we schedule a meeting to discuss my feedback in detail?",
-    },
-    {
-      name: "David Lee",
-      email: "davidlee@example.com",
-      subject: "New Project Idea",
-      date: "1 week ago",
-      teaser:
-        "I've been brainstorming and came up with an interesting project concept.\nDo you have time this week to discuss its potential impact and feasibility?",
-    },
-    {
-      name: "Olivia Wilson",
-      email: "oliviawilson@example.com",
-      subject: "Vacation Plans",
-      date: "1 week ago",
-      teaser:
-        "Just a heads up that I'll be taking a two-week vacation next month.\nI'll make sure all my projects are up to date before I leave.",
-    },
-    {
-      name: "James Martin",
-      email: "jamesmartin@example.com",
-      subject: "Re: Conference Registration",
-      date: "1 week ago",
-      teaser:
-        "I've completed the registration for the upcoming tech conference.\nLet me know if you need any additional information from my end.",
-    },
-    {
-      name: "Sophia White",
-      email: "sophiawhite@example.com",
-      subject: "Team Dinner",
-      date: "1 week ago",
-      teaser:
-        "To celebrate our recent project success, I'd like to organize a team dinner.\nAre you available next Friday evening? Please let me know your preferences.",
-    },
-  ],
+interface AppSidebarProps {
+  stats?: DashboardStats;
 }
 
-export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
-  // Note: I'm using state to show active item.
-  // IRL you should use the url/router.
-  const [activeItem, setActiveItem] = React.useState(data.navMain[0])
-  const [mails, setMails] = React.useState(data.mails)
-  const { setOpen } = useSidebar()
+export function AppSidebar({ stats }: AppSidebarProps) {
+  const { state, toggleSidebar } = useSidebar()
+
+  // Default values if stats are not yet available
+  const s = stats || {
+    day: 1, timeStr: "1:00 PM", frequency: 60,
+    loadServed: 0, loadUnserved: 0, reserves: 0,
+    windGen: 0, solarGen: 0, thermalGen: 0, nuclearGen: 0,
+    avgCost: 0, totalCost: 0,
+    currentOpCost: 0, currentFuelCost: 0, currentUnservedCost: 0,
+    totalOpCost: 0, totalFuelCost: 0, totalUnservedCost: 0
+  };
+
+  // Helper for currency formatting
+  const fmtMoney = (val: number) => `$${val.toLocaleString()}`;
+  const fmtMoneyK = (val: number) => `$${(val / 1000).toFixed(0)}k`;
+  const fmtMoneyM = (val: number) => `$${(val / 1000000).toFixed(2)}M`;
+  const fmtMW = (val: number) => `${val.toFixed(0)} MW`;
 
   return (
-    <Sidebar
-      collapsible="icon"
-      className="overflow-hidden *:data-[sidebar=sidebar]:flex-row"
-      {...props}
-    >
-      {/* This is the first sidebar */}
-      {/* We disable collapsible and adjust width to icon. */}
-      {/* This will make the sidebar appear as icons. */}
-      <Sidebar
-        collapsible="none"
-        className="w-[calc(var(--sidebar-width-icon)+1px)]! border-r"
+    <Sidebar collapsible="icon" className="group border-r border-border bg-sidebar !top-16 !h-[calc(100vh-4rem)] overflow-visible">
+      <Button
+        onClick={toggleSidebar}
+        className="absolute -right-3 top-3 z-50 h-6 w-6 rounded-full border shadow-md p-0"
+        variant="outline"
+        size="icon"
       >
-        <SidebarHeader>
-          <SidebarMenu>
-            <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild className="md:h-8 md:p-0">
-                <a href="#">
-                  <div className="bg-sidebar-primary text-sidebar-primary-foreground flex aspect-square size-8 items-center justify-center rounded-lg">
-                    <Command className="size-4" />
-                  </div>
-                  <div className="grid flex-1 text-left text-sm leading-tight">
-                    <span className="truncate font-medium">Acme Inc</span>
-                    <span className="truncate text-xs">Enterprise</span>
-                  </div>
-                </a>
-              </SidebarMenuButton>
-            </SidebarMenuItem>
-          </SidebarMenu>
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupContent className="px-1.5 md:px-0">
-              <SidebarMenu>
-                {data.navMain.map((item) => (
-                  <SidebarMenuItem key={item.title}>
-                    <SidebarMenuButton
-                      tooltip={{
-                        children: item.title,
-                        hidden: false,
-                      }}
-                      onClick={() => {
-                        setActiveItem(item)
-                        const mail = data.mails.sort(() => Math.random() - 0.5)
-                        setMails(
-                          mail.slice(
-                            0,
-                            Math.max(5, Math.floor(Math.random() * 10) + 1)
-                          )
-                        )
-                        setOpen(true)
-                      }}
-                      isActive={activeItem?.title === item.title}
-                      className="px-2.5 md:px-2"
-                    >
-                      <item.icon />
-                      <span>{item.title}</span>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-        <SidebarFooter>
-          <NavUser user={data.user} />
-        </SidebarFooter>
-      </Sidebar>
-
-      {/* This is the second sidebar */}
-      {/* We disable collapsible and let it fill remaining space */}
-      <Sidebar collapsible="none" className="hidden flex-1 md:flex">
-        <SidebarHeader className="gap-3.5 border-b p-4">
-          <div className="flex w-full items-center justify-between">
-            <div className="text-foreground text-base font-medium">
-              {activeItem?.title}
+        {state === "collapsed" ? <ChevronRight className="h-3 w-3" /> : <ChevronLeft className="h-3 w-3" />}
+      </Button>
+      <SidebarContent className="font-share-tech overflow-x-hidden">
+        {/* Status Group */}
+        <SidebarGroup>
+          <SidebarGroupContent className="space-y-3 px-2 pt-4">
+            <div>
+              <div id="dash-clock-label" className="text-sm text-muted-foreground">
+                Day {s.day}
+              </div>
+              <div id="dash-clock" className="text-xl font-bold text-foreground">
+                {s.timeStr}
+              </div>
             </div>
-            <Label className="flex items-center gap-2 text-sm">
-              <span>Unreads</span>
-              <Switch className="shadow-none" />
-            </Label>
-          </div>
-          <SidebarInput placeholder="Type to search..." />
-        </SidebarHeader>
-        <SidebarContent>
-          <SidebarGroup className="px-0">
-            <SidebarGroupContent>
-              {mails.map((mail) => (
-                <a
-                  href="#"
-                  key={mail.email}
-                  className="hover:bg-sidebar-accent hover:text-sidebar-accent-foreground flex flex-col items-start gap-2 border-b p-4 text-sm leading-tight whitespace-nowrap last:border-b-0"
+            <div className="space-y-1">
+              <span className="text-xs text-muted-foreground uppercase tracking-wider">
+                Frequency
+              </span>
+              <div id="dash-freq" className={`text-2xl font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-red-500" : "text-foreground"}`}>
+                {s.frequency.toFixed(2)} Hz
+              </div>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Load & Generation Group */}
+        <SidebarGroup>
+          <SidebarGroupContent className="flex transition-all duration-300 ease-in-out group-data-[state=collapsed]:gap-0 gap-2 px-2 pt-2 items-start">
+            <div className="flex-none w-[120px] flex flex-col gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Load Served</div>
+                <div id="dash-sload" className="text-lg font-bold text-foreground">
+                  {fmtMW(s.loadServed)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Load Unserved</div>
+                <div id="dash-uload" className="text-lg font-bold text-foreground">
+                  {fmtMW(s.loadUnserved)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Reserves</div>
+                <div
+                  id="dash-reserve"
+                  className="text-lg font-bold text-foreground"
                 >
-                  <div className="flex w-full items-center gap-2">
-                    <span>{mail.name}</span>{" "}
-                    <span className="ml-auto text-xs">{mail.date}</span>
-                  </div>
-                  <span className="font-medium">{mail.subject}</span>
-                  <span className="line-clamp-2 w-[260px] text-xs whitespace-break-spaces">
-                    {mail.teaser}
-                  </span>
-                </a>
-              ))}
-            </SidebarGroupContent>
-          </SidebarGroup>
-        </SidebarContent>
-      </Sidebar>
+                  {fmtMW(s.reserves)}
+                </div>
+              </div>
+            </div>
+            {/* Generation Mix - Right Column */}
+            <div className="flex-none w-[120px] flex flex-col gap-3 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out opacity-100 group-data-[state=collapsed]:w-0 group-data-[state=collapsed]:opacity-0">
+              <div>
+                <div className="text-xs text-muted-foreground">Wind</div>
+                <div id="dash-wgen" className="text-lg font-bold text-green-500">
+                  {fmtMW(s.windGen)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Solar</div>
+                <div id="dash-sgen" className="text-lg font-bold text-yellow-500">
+                  {fmtMW(s.solarGen)}
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Thermal</div>
+                <div id="dash-thgen" className="text-lg font-bold text-gray-400">
+                  {fmtMW(s.thermalGen)}
+                </div>
+              </div>
+            </div>
+            {/* Generation Mix - Third Column */}
+            <div className="flex-none w-[120px] flex flex-col gap-3 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out opacity-100 group-data-[state=collapsed]:w-0 group-data-[state=collapsed]:opacity-0">
+              <div>
+                <div className="text-xs text-muted-foreground">Nuclear</div>
+                <div id="dash-nugen" className="text-lg font-bold text-pink-500">
+                  {fmtMW(s.nuclearGen)}
+                </div>
+              </div>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+
+        <SidebarSeparator />
+
+        {/* Costs & Financials Group */}
+        <SidebarGroup>
+          <SidebarGroupContent className="flex transition-all duration-300 ease-in-out group-data-[state=collapsed]:gap-0 gap-2 px-2 pt-2 items-start">
+            <div className="flex-none w-[120px] flex flex-col gap-3">
+              <div>
+                <div className="text-xs text-muted-foreground">Avg Cost</div>
+                <div id="dash-avcost" className="text-lg font-bold text-foreground">
+                  $0
+                </div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Total Cost</div>
+                <div id="dash-tcost" className="text-lg font-bold text-foreground">
+                  $0
+                </div>
+              </div>
+            </div>
+            {/* Financials - Right Column */}
+            <div className="flex-none w-[120px] flex flex-col gap-3 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out opacity-100 group-data-[state=collapsed]:w-0 group-data-[state=collapsed]:opacity-0">
+              <div>
+                <div className="text-xs text-muted-foreground">Hourly Op</div>
+                <div id="dash-cfixed" className="text-lg font-bold text-foreground">{fmtMoney(s.currentOpCost)}/hr</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Hourly Fuel</div>
+                <div id="dash-cfuel" className="text-lg font-bold text-foreground">{fmtMoney(s.currentFuelCost)}/hr</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Hourly Unserved</div>
+                <div id="dash-cuload" className="text-lg font-bold text-foreground">{fmtMoney(s.currentUnservedCost)}/hr</div>
+              </div>
+            </div>
+            {/* Financials - Third Column */}
+            <div className="flex-none w-[120px] flex flex-col gap-3 overflow-hidden whitespace-nowrap transition-all duration-300 ease-in-out opacity-100 group-data-[state=collapsed]:w-0 group-data-[state=collapsed]:opacity-0">
+              <div>
+                <div className="text-xs text-muted-foreground">Daily Op</div>
+                <div id="dash-tfixed" className="text-lg font-bold text-foreground">{fmtMoneyK(s.totalOpCost)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Daily Fuel</div>
+                <div id="dash-tfuel" className="text-lg font-bold text-foreground">{fmtMoneyK(s.totalFuelCost)}</div>
+              </div>
+              <div>
+                <div className="text-xs text-muted-foreground">Daily Unserved</div>
+                <div id="dash-tuload" className="text-lg font-bold text-foreground">{fmtMoneyK(s.totalUnservedCost)}</div>
+              </div>
+            </div>
+          </SidebarGroupContent>
+        </SidebarGroup>
+      </SidebarContent>
     </Sidebar>
   )
 }
