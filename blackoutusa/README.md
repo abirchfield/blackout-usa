@@ -1,3 +1,23 @@
+### Birchfield Research Group
+
+To run this in development environment, run the following in this directory
+
+```bash
+npm run dev
+```
+
+And to do a static export do a build:
+
+```bash
+npm run build
+```
+
+The static web files should then appear in `/blackoutusa/out/...`
+
+
+
+### Default README
+
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
 ## Getting Started

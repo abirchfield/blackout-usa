@@ -14,8 +14,8 @@ interface FinishedModalProps {
   onOpenChange: (open: boolean) => void;
   stats?: DashboardStats;
   day: number;
-  onNextDay: () => void;
-  onReplay: () => void;
+  onNextDay: (currentDay: number) => void;
+  onReplay: (currentDay: number) => void;
   onQuit: () => void;
 }
 
@@ -48,8 +48,11 @@ export function FinishedModal({ open, onOpenChange, stats, day, onNextDay, onRep
   const resultMessage = getResultMessage(day, stats.totalCost);
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[700px] font-share-tech">
+    <Dialog open={open} onOpenChange={() => {
+      // Do nothing. This prevents dismissal via overlay click, Esc, or the 'X' button.
+      // The modal must be closed via an explicit action inside it.
+    }}>
+      <DialogContent className="sm:max-w-[700px] font-share-tech [&>button]:hidden">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold">Day {day} Results</DialogTitle>
         </DialogHeader>
@@ -69,8 +72,8 @@ export function FinishedModal({ open, onOpenChange, stats, day, onNextDay, onRep
           </div>
         </div>
         <div className="flex flex-col gap-2">
-          <Button onClick={onNextDay} className="w-full cursor-pointer">Start the next day</Button>
-          <Button onClick={onReplay} variant="secondary" className="w-full cursor-pointer">Replay this day</Button>
+          <Button onClick={() => onNextDay(day)} className="w-full cursor-pointer">Start the next day</Button>
+          <Button onClick={() => onReplay(day)} variant="secondary" className="w-full cursor-pointer">Replay this day</Button>
           <Button onClick={onQuit} variant="secondary" className="w-full cursor-pointer">Back to beginning</Button>
         </div>
       </DialogContent>

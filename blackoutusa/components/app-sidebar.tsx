@@ -15,7 +15,7 @@ import {
   SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DashboardStats, Substation, Branch } from "@/lib/game/types"
+import { DashboardStats, Substation, Branch, Briefing } from "@/lib/game/types"
 import { GameEngine } from "@/lib/game/engine"
 import { TimeController } from "./dash/time-controller"
 import { AlertsList } from "./modals/alerts-modal"
@@ -33,6 +33,7 @@ interface AppSidebarProps {
   onToggleFastForward: () => void;
   isBriefingOpen: boolean;
   onBriefingOpenChange: (open: boolean) => void;
+  briefing: Briefing | null;
   alerts: Array<{ id: number; time: string; message: string; critical: boolean; }>;
   onRemoveAlert: (id: number) => void;
   hints: Array<{ id: number; time: string; message: string; }>;
@@ -44,7 +45,7 @@ interface AppSidebarProps {
   onBranchSelect: (branch: Branch) => void;
 }
 
-export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onToggleFastForward, isBriefingOpen, onBriefingOpenChange, alerts, onRemoveAlert, hints = [], onRemoveHint, subs, branches, statsHistory, onSubstationSelect, onBranchSelect }: AppSidebarProps) {
+export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onToggleFastForward, isBriefingOpen, onBriefingOpenChange, briefing, alerts, onRemoveAlert, hints = [], onRemoveHint, subs, branches, statsHistory, onSubstationSelect, onBranchSelect }: AppSidebarProps) {
   // Default values if stats are not yet available
   const s = stats || {
     day: 1,
@@ -71,21 +72,13 @@ export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onTo
             <div className="grid grid-cols-[1fr_auto_auto] items-stretch gap-2">
               {/* Left Column: Time and Controls */}
               <div className="space-y-3">
-                <div className="flex justify-center items-start gap-8">
-                  <div className="shrink-0">
+                <div className="flex justify-center">
+                  <div className="shrink-0 text-center">
                     <div id="dash-clock-label" className="text-xs text-muted-foreground uppercase tracking-wider">
                       Day {s.day || 1}
                     </div>
                     <div id="dash-clock" className="text-xl font-bold text-foreground whitespace-nowrap">
                       {s.timeStr}
-                    </div>
-                  </div>
-                  <div className="shrink-0">
-                    <div className="text-xs text-muted-foreground uppercase tracking-wider">
-                      Frequency
-                    </div>
-                    <div id="dash-freq" className={`text-xl font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-red-500" : "text-foreground"}`}>
-                      {s.frequency.toFixed(2)} Hz
                     </div>
                   </div>
                 </div>
@@ -110,26 +103,23 @@ export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onTo
                     </Button>
                   </PopoverTrigger>
                   <PopoverContent side="right" align="start" className="w-[400px] font-share-tech">
-                    <div className="grid gap-4">
-                      <div className="space-y-2">
-                        <h4 className="font-bold leading-none">Day {s.day} Briefing</h4>
-                        <p className="text-sm text-muted-foreground">
-                          Your objectives for the upcoming shift.
-                        </p>
+                    {briefing ? (
+                      <div className="grid gap-4">
+                        <div className="space-y-2">
+                          <h4 className="font-bold leading-none">Day {s.day} Briefing</h4>
+                          <p className="text-sm text-muted-foreground">
+                            Your objectives for the upcoming shift.
+                          </p>
+                        </div>
+                        <div className="bg-muted/20 p-4 rounded-lg border border-border text-sm">
+                          {briefing.isList ? (
+                            <ul className="list-disc pl-5 space-y-2">
+                              {briefing.points.map((point, index) => <li key={index}>{point}</li>)}
+                            </ul>
+                          ) : (<p>{briefing.points[0]}</p>)}
+                        </div>
                       </div>
-                      <div className="bg-muted/20 p-4 rounded-lg border border-border text-sm">
-                        {s.day === 1 && (
-                          <ul className="list-disc pl-5 space-y-2">
-                            <li>Your goal is to avoid a blackout and keep operating costs as low as possible</li>
-                            <li>Your shift runs from 1pm to 11pm.</li>
-                            <li>Load (electrical demand from customers) is expected to rise, peak around 7pm, and then decline later in the night.</li>
-                            <li>There is a steady, moderate wind predicted for whole afternoon and evening.</li>
-                            <li>Keep in mind the solar generation will go down later in the afternoon!</li>
-                          </ul>
-                        )}
-                        {s.day !== 1 && <p>Scenario description for Day {s.day} TBD</p>}
-                      </div>
-                    </div>
+                    ) : <div className="p-4 text-center text-muted-foreground">No briefing available.</div>}
                   </PopoverContent>
                 </Popover>
                 <Popover>
@@ -184,7 +174,7 @@ export function AppSidebar({ stats, isPaused, isFastForward, onTogglePause, onTo
           </TabsList>
 
           <TabsContent value="power" className="bg-sidebar rounded-b-md rounded-tr-md p-4">
-            <EnergyStats stats={s} />
+            <EnergyStats stats={s} statsHistory={statsHistory} />
           </TabsContent>
           <TabsContent value="costs" className="bg-sidebar rounded-b-md rounded-tr-md p-4">
             <FinanceStats stats={s} statsHistory={statsHistory} />

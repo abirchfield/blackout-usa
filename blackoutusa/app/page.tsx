@@ -3,8 +3,7 @@
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
 import { GameEngine } from "@/lib/game/engine"
-import { DashboardStats, Substation, Branch, Alert, AlertHandler } from "@/lib/game/types"
-import { DashboardStats, Substation, Branch, Alert, Hint } from "@/lib/game/types"
+import { DashboardStats, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
 import { AppHeader } from "@/components/app-header"
 import { AppSidebar } from "@/components/app-sidebar"
 import { SubstationModal } from "@/components/modals/substation-modal"
@@ -19,10 +18,11 @@ export default function Page() {
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isQuitOpen, setIsQuitOpen] = useState(false)
-  const [isBriefingOpen, setIsBriefingOpen] = useState(false)
+  const [isBriefingOpen, setIsBriefingOpen] = useState(false) // This will now control the Popover
   const [isFinishedOpen, setIsFinishedOpen] = useState(false)
   const [selectedSub, setSelectedSub] = useState<Substation | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
+  const [currentBriefing, setCurrentBriefing] = useState<Briefing | null>(null)
   const [isInitialTutorial, setIsInitialTutorial] = useState(false)
 
   // Game States
@@ -31,9 +31,11 @@ export default function Page() {
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
   const [hints, setHints] = useState<Array<{id: number, time: string, message: string}>>([])
   const [statsHistory, setStatsHistory] = useState<DashboardStats[]>([])
+  const [targetDay, setTargetDay] = useState(1)
+  const [isDayTransition, setIsDayTransition] = useState(false)
 
   // Theme
-  const { resolvedTheme, setTheme } = useTheme()
+  const { resolvedTheme } = useTheme()
   
   // Refs for loop access
   const isPausedRef = useRef(isPaused)
@@ -48,12 +50,6 @@ export default function Page() {
     isFastForwardRef.current = isFastForward
   }, [isFastForward])
 
-  useEffect(() => {
-    if (engineRef.current && resolvedTheme) {
-      engineRef.current.setTheme(resolvedTheme as 'light' | 'dark');
-    }
-  }, [resolvedTheme]);
-
   // Engine Integration
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<GameEngine | null>(null)
@@ -65,11 +61,6 @@ export default function Page() {
     // Initialize Engine
     if (canvasRef.current && !engineRef.current) {
       engineRef.current = new GameEngine(canvasRef.current);
-
-      // Set initial theme right after creation to prevent flicker/mismatch
-      if (resolvedTheme) {
-        engineRef.current.setTheme(resolvedTheme as 'light' | 'dark');
-      }
 
       // --- Connect Engine to React UI ---
       engineRef.current.onInteract = (type, data) => {
@@ -143,18 +134,30 @@ export default function Page() {
     }
   }, [])
 
-  // Logic ported from script.js start_day1() and start_day()
-  const startGameForDay = (dayToStart: number) => {
-    engineRef.current?.startDay(dayToStart);
-    setStatsHistory([]); // Reset history for the new day
+  useEffect(() => {
+    if (engineRef.current && resolvedTheme) {
+      engineRef.current.setTheme(resolvedTheme as 'light' | 'dark');
+    }
+  }, [resolvedTheme]);
+
+  const showBriefingForDay = (dayToShow: number) => {
+    setTargetDay(dayToShow);
+    const briefing = engineRef.current?.getBriefingForDay(dayToShow);
+    setCurrentBriefing(briefing || null);
+    setIsBriefingOpen(true); // This will now open the Popover in the sidebar
+    setIsPaused(true);
+    setIsDayTransition(true);
   }
 
   const handleStartGame = () => {
     setIsWelcomeOpen(false)
-    startGameForDay(1);
-    setIsHelpOpen(true)
-    setIsInitialTutorial(true)
-    setIsPaused(true) // pause_modal() behavior
+    setTargetDay(1);
+    const briefing = engineRef.current?.getBriefingForDay(1);
+    setCurrentBriefing(briefing || null);
+    setStatsHistory([]);
+    setIsHelpOpen(true);
+    setIsInitialTutorial(true);
+    setIsPaused(true);
   }
 
   const removeAlert = (id: number) => {
@@ -190,21 +193,18 @@ export default function Page() {
     // though the input field itself maintains its own state.
     setSelectedSub(engineRef.current?.state.subs[subId] || null);
   }
-
-  const handleReplayDay = () => {
-    startGameForDay(dashboardStats?.day || 1);
+  
+  const handleReplayDay = (currentDay: number) => {
+    showBriefingForDay(currentDay);
     setIsFinishedOpen(false);
     setIsQuitOpen(false);
-    setIsPaused(false);
   }
 
-  const handleNextDay = () => {
-    const currentDay = dashboardStats?.day || 1;
+  const handleNextDay = (currentDay: number) => {
     const nextDay = currentDay < 5 ? currentDay + 1 : 1;
-    startGameForDay(nextDay)
+    showBriefingForDay(nextDay);
     setIsFinishedOpen(false);
     setIsQuitOpen(false);
-    setIsPaused(false);
   }
 
   const handleQuitToStart = () => {
@@ -217,15 +217,6 @@ export default function Page() {
 
   const handleBranchSelect = (branch: Branch) => {
     setSelectedBranch(branch);
-  }
-
-  const handleBriefingOpenChange = (open: boolean) => {
-    setIsBriefingOpen(open);
-    if (open) {
-      setIsPaused(true);
-    } else {
-      setIsPaused(false);
-    }
   }
 
   return (
@@ -245,7 +236,22 @@ export default function Page() {
           onTogglePause={togglePause}
           onToggleFastForward={toggleFastForward}
           isBriefingOpen={isBriefingOpen}
-          onBriefingOpenChange={handleBriefingOpenChange}
+          onBriefingOpenChange={(open) => {
+            setIsBriefingOpen(open);
+            if (open) {
+              setIsPaused(true);
+            } else { // Briefing is closing
+              if (isDayTransition) {
+                engineRef.current?.startDay(targetDay);
+                setStatsHistory([]);
+                setIsDayTransition(false); // Reset flag
+              }
+              if (!isHelpOpen && !isQuitOpen && !isFinishedOpen) {
+                setIsPaused(false);
+              }
+            }
+          }}
+          briefing={currentBriefing}
           alerts={alerts}
           onRemoveAlert={removeAlert}
           hints={hints}
@@ -276,10 +282,12 @@ export default function Page() {
             onOpenChange={(open) => {
               setIsHelpOpen(open);
               if (!open) {
-                if (isInitialTutorial) {
+                if (isInitialTutorial) { // After tutorial, show briefing
+                  setIsDayTransition(true);
                   setIsBriefingOpen(true);
                   setIsInitialTutorial(false);
-                } else {
+                } else if (!isQuitOpen && !isFinishedOpen) {
+                  // Only unpause if no other "pausing" modals are open
                   setIsPaused(false);
                 }
               }
@@ -311,6 +319,7 @@ export default function Page() {
           <QuitModal
             open={isQuitOpen}
             onOpenChange={setIsQuitOpen}
+            day={dashboardStats?.day || 1}
             onQuitToStart={handleQuitToStart}
             onReplayDay={handleReplayDay}
             onNextDay={handleNextDay}
