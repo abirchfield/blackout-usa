@@ -8,7 +8,8 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Substation, Unit, STATUS_IN, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "@/lib/game/types"
+import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "@/lib/game/types"
+import { Wind, Sun, Atom, Flame, Plug } from "lucide-react"
 
 interface SubstationsListProps {
   subs?: Record<string, Substation>;
@@ -16,18 +17,20 @@ interface SubstationsListProps {
 }
 
 const getGenIndicatorStyle = (unit: Unit, sub: Substation) => {
+  // Deactivated state: unfilled circle
+  if (unit.Status === STATUS_DIS) {
+    return { className: 'border border-muted-foreground w-2 h-2 rounded-full', style: {} };
+  }
+
   const pmax_unit = sub.Pmax / sub.Units;
   const brightness = pmax_unit > 0 ? unit.P / pmax_unit : 0;
-  let colorClass = 'bg-gray-700'; // Default for DIS
+  let colorClass = '';
   let animationClass = '';
 
   switch (unit.Status) {
     case STATUS_IN:
     case STATUS_STARTUP:
-      if (sub.Category === CATEGORY_WIND) colorClass = 'bg-green-500';
-      else if (sub.Category === CATEGORY_SOLAR) colorClass = 'bg-yellow-500';
-      else if (sub.Category === CATEGORY_NUCLEAR) colorClass = 'bg-pink-500';
-      else colorClass = 'bg-gray-400';
+      colorClass = 'bg-green-500';
       if (unit.Status === STATUS_STARTUP) animationClass = 'animate-pulse';
       break;
     case STATUS_SHUTDOWN:
@@ -43,16 +46,36 @@ const getGenIndicatorStyle = (unit: Unit, sub: Substation) => {
 };
 
 const getLoadIndicatorStyle = (unit: Unit) => {
-  let colorClass = 'bg-muted-foreground'; // Default for DIS
+  // Deactivated state: unfilled circle
+  if (unit.Status === STATUS_DIS) {
+    return { className: 'border border-muted-foreground w-2 h-2 rounded-full' };
+  }
+  let colorClass = '';
   switch (unit.Status) {
     case STATUS_IN:
-      colorClass = 'bg-foreground'; // Theme-aware: white on dark, black on light
+      colorClass = 'bg-green-500';
       break;
     case STATUS_TRIP:
       colorClass = 'bg-red-500';
       break;
   }
   return { className: `${colorClass} w-2 h-2 rounded-full` };
+};
+
+const GenerationTypeIcon = ({ category }: { category: string }) => {
+  const iconProps = { className: "w-3.5 h-3.5" };
+  switch (category) {
+    case CATEGORY_WIND:
+      return <Wind {...iconProps} className="w-3.5 h-3.5 text-blue-500" />;
+    case CATEGORY_SOLAR:
+      return <Sun {...iconProps} className="w-3.5 h-3.5 text-yellow-500" />;
+    case CATEGORY_NUCLEAR:
+      return <Atom {...iconProps} className="w-3.5 h-3.5 text-pink-500" />;
+    case CATEGORY_LOAD:
+      return <Plug {...iconProps} className="w-3.5 h-3.5 text-gray-500" />;
+    default: // Assuming other types are thermal
+      return <Flame {...iconProps} className="w-3.5 h-3.5 text-red-500" />;
+  }
 };
 
 export function SubstationsList({ subs, onSubstationSelect }: SubstationsListProps) {
@@ -77,7 +100,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                   <TableRow key={sub.Number} className="cursor-pointer" onClick={() => onSubstationSelect(sub)}>
                     <TableCell className="font-medium text-xs py-2 truncate">{sub.Name}</TableCell>
                     <TableCell className="py-2">
-                      {sub.Category === 'Load' && (
+                      {sub.Category === CATEGORY_LOAD && (
                         <div className="flex items-center gap-1 flex-wrap">
                           {sub.U.map((unit, index) => {
                             const { className } = getLoadIndicatorStyle(unit);
@@ -87,7 +110,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                       )}
                     </TableCell>
                     <TableCell className="py-2">
-                      {sub.Category !== 'Load' && (
+                      {sub.Category !== CATEGORY_LOAD && (
                         <div className="flex items-center gap-1 flex-wrap">
                           {sub.U.map((unit, index) => {
                             const { className, style } = getGenIndicatorStyle(unit, sub);
@@ -96,7 +119,12 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                         </div>
                       )}
                     </TableCell>
-                    <TableCell className="text-right text-xs py-2">{totalPower.toFixed(0)} MW</TableCell>
+                    <TableCell className="text-right text-xs py-2">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <span>{totalPower.toFixed(0)} MW</span>
+                        <GenerationTypeIcon category={sub.Category} />
+                      </div>
+                    </TableCell>
                   </TableRow>
                 )
               })

@@ -1,4 +1,4 @@
-import { Substation, Branch, DashboardStats, GameState, InteractionHandler, AlertHandler, HintHandler, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "./types";
+import { Substation, Branch, DashboardStats, GameState, InteractionHandler, AlertHandler, HintHandler, Briefing, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "./types";
 import { scenario_data } from "./scenario_data";
 import { GameDrawer } from "./drawer";
 import { GameHandler } from "./handler";
@@ -129,7 +129,6 @@ export class GameEngine {
 
   constructor(canvas: HTMLCanvasElement) {
     this.drawer = new GameDrawer(canvas);
-    // @ts-ignore - GameHandler constructor expects this.state to be fully initialized
     this.handler = new GameHandler(canvas, this.state, () => this.draw());
     
     this.init();
@@ -162,9 +161,7 @@ export class GameEngine {
     // Link branches to substations (ported from ready() in script.js)
     for (const key in this.state.branches) {
       const branch = this.state.branches[key];
-      // @ts-ignore - raw data has IDs as strings, we link objects here
       branch.sub1 = this.state.subs[branch.FromNum];
-      // @ts-ignore
       branch.sub2 = this.state.subs[branch.ToNum];
       if (branch.sub1 && branch.sub2) {
         branch.dist = Math.sqrt(
@@ -178,10 +175,10 @@ export class GameEngine {
 
   public setDefaults() {
     // Reset units
-    for (let key in this.state.subs) {
-      let sub = this.state.subs[key];
+    for (const key in this.state.subs) {
+      const sub = this.state.subs[key];
       for (let iu = 0; iu < sub.Units; ++iu) {
-        let u = sub.U[iu];
+        const u = sub.U[iu];
         u.Status = u.Status0;
         u.P = u.Pset = u.P0;
         u.StatusCount = 0;
@@ -192,8 +189,8 @@ export class GameEngine {
       }
     }
     // Reset branches
-    for (let key in this.state.branches) {
-      let br = this.state.branches[key];
+    for (const key in this.state.branches) {
+      const br = this.state.branches[key];
       br.P = 0;
       br.Status1 = STATUS_IN;
       br.Status2 = STATUS_IN;
@@ -245,11 +242,11 @@ export class GameEngine {
     }
 
     // Common setup for all days after day-specific changes
-    for (let key in this.state.subs) {
-        let sub = this.state.subs[key];
+    for (const key in this.state.subs) {
+        const sub = this.state.subs[key];
         for (let iu = 0 ; iu < sub.Units; ++iu) {
-            let u = sub.U[iu];
-            let pmax = sub.Pmax / sub.Units;
+            const u = sub.U[iu];
+            const pmax = sub.Pmax / sub.Units;
             if (sub.Category === CATEGORY_WIND) {
                 u.P = pmax * this.state.fr_wind;
                 u.Pset = pmax;
@@ -262,6 +259,15 @@ export class GameEngine {
     }
   }
   
+  public getCurrentScenarioBriefing(): Briefing | null {
+    return this.currentScenario?.briefing || null;
+  }
+
+  public getBriefingForDay(day: number): Briefing | null {
+    const scenario = scenarios[day] || null;
+    return scenario?.briefing || null;
+  }
+
   public toggleUnitStatus(subId: string, unitIndex: number) {
     const sub = this.state.subs[subId];
     if (!sub) return;
@@ -429,7 +435,7 @@ export class GameEngine {
   }
 
   private _calculatePowerBalance() {
-    let PL = 0, PGSET = 0, PBASE = 0, PGMIN = 0, PGMAX = 0;
+    let PL = 0, PGSET = 0, PGMIN = 0, PGMAX = 0;
     for (const key in this.state.subs) {
         const sub = this.state.subs[key];
         for (let iu = 0; iu < sub.Units; ++iu) {
@@ -444,19 +450,16 @@ export class GameEngine {
             if (sub.Category === CATEGORY_LOAD) {
                 PL += pmax * this.state.fr_load;
             } else if (u.Status === STATUS_SHUTDOWN) {
-                PBASE += pmax;
                 PGMIN += Math.max(0, u.P - sub.Ramp);
                 PGMAX += Math.max(0, u.P - sub.Ramp);
                 PGSET += Math.max(0, u.P - sub.Ramp);
             } else if (sub.Category === CATEGORY_WIND) {
-                PBASE += pmax;
                 const pavail = pmax * this.state.fr_wind;
                 if (tempset > pavail) tempset = pavail;
                 PGMIN += Math.max(u.P - sub.Ramp, 0);
                 PGMAX += Math.min(u.P + sub.Ramp, pavail);
                 PGSET += tempset;
             } else if (sub.Category === CATEGORY_SOLAR) {
-                PBASE += pmax;
                 const pavail = pmax * this.state.fr_solar;
                 if (tempset > pavail) tempset = pavail;
                 PGMIN += Math.max(u.P - sub.Ramp, 0);
@@ -465,13 +468,11 @@ export class GameEngine {
             } else {
                 if (u.Status === STATUS_STARTUP) {
                     if (u.StatusCount >= sub.StartTime) {
-                        PBASE += pmax;
                         PGMIN += Math.min(u.P + sub.Ramp, Math.max(pmin, u.P - sub.Ramp));
                         PGMAX += Math.min(pmax, u.P + sub.Ramp);
                         PGSET += tempset;
                     }
                 } else {
-                    PBASE += pmax;
                     PGMIN += Math.max(pmin, u.P - sub.Ramp);
                     PGMAX += Math.min(pmax, u.P + sub.Ramp);
                     PGSET += tempset;
@@ -713,9 +714,9 @@ export class GameEngine {
 
   public getDashboardStats(): DashboardStats {
     // Format time string
-    let h = Math.floor(this.state.t / 60) + 1;
-    let m = (this.state.t - (h - 1) * 60);
-    let timeStr = `${h}:${m < 10 ? "0" + m : m} PM`;
+    const h = Math.floor(this.state.t / 60) + 1;
+    const m = (this.state.t - (h - 1) * 60);
+    const timeStr = `${h}:${m < 10 ? "0" + m : m} PM`;
 
     return {
       day: this.state.day,

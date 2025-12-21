@@ -7,11 +7,11 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Slider } from "@/components/ui/slider"
-import { Substation, Unit } from "@/lib/game/types"
+import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "@/lib/game/types"
 import { UnitRow } from "@/components/modals/substation-controls/gen-unit"
+import { Button } from "@/components/ui/button"
 
 // --- Substation Modal Component ---
 interface SubstationModalProps {
@@ -43,15 +43,15 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
   };
 
   const getSubDescription = () => {
-    if (sub.Category === "Load") {
+    if (sub.Category === CATEGORY_LOAD) {
       return `This substation has ${sub.Units} load circuits.`;
     }
     let baseText = `This substation has ${sub.Units} ${sub.Category} generating units.`;
-    if (sub.Category === "Wind" && frWind !== undefined) {
+    if (sub.Category === CATEGORY_WIND && frWind !== undefined) {
       const p_avail = (frWind * sub.Pmax / sub.Units).toFixed(0);
       baseText += `<br/>At current wind levels, ${(frWind * 100).toFixed(0)}% of Max power is available (${p_avail} MW per unit).`;
     }
-    if (sub.Category === "Solar PV" && frSolar !== undefined) {
+    if (sub.Category === CATEGORY_SOLAR && frSolar !== undefined) {
       const p_avail = (frSolar * sub.Pmax / sub.Units).toFixed(0);
       baseText += `<br/>With current solar availability, ${(frSolar * 100).toFixed(0)}% of Max power is available (${p_avail} MW per unit).`;
     }
@@ -59,12 +59,17 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
   }
 
   const getLoadIndicatorStyle = (unit: Unit) => {
-    let colorClass = 'bg-muted-foreground'; // Default for DIS
+    // Deactivated state: unfilled circle
+    if (unit.Status === STATUS_DIS) {
+      return { className: 'border border-muted-foreground w-3 h-3 rounded-full' };
+    }
+
+    let colorClass = '';
     switch (unit.Status) {
-      case 'IN':
-        colorClass = 'bg-foreground'; // Theme-aware: white on dark, black on light
+      case STATUS_IN:
+        colorClass = 'bg-green-500';
         break;
-      case 'TRIP':
+      case STATUS_TRIP:
         colorClass = 'bg-red-500';
         break;
     }
@@ -72,29 +77,31 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
   };
 
   const getIndicatorStyle = (unit: Unit, sub: Substation) => {
+    // Deactivated state: unfilled circle
+    if (unit.Status === STATUS_DIS) {
+      return { className: 'border border-muted-foreground w-3 h-3 rounded-full', style: {} };
+    }
+
     const pmax_unit = sub.Pmax / sub.Units;
     const brightness = pmax_unit > 0 ? unit.P / pmax_unit : 0;
-    let colorClass = 'bg-gray-700'; // Default for DIS
+    let colorClass = '';
     let animationClass = '';
 
     switch (unit.Status) {
-      case 'IN':
-      case 'STARTUP':
-        if (sub.Category === 'Wind') colorClass = 'bg-green-500';
-        else if (sub.Category === 'Solar PV') colorClass = 'bg-yellow-500';
-        else if (sub.Category === 'Nuclear Steam') colorClass = 'bg-pink-500';
-        else colorClass = 'bg-gray-400';
-        if (unit.Status === 'STARTUP') animationClass = 'animate-pulse';
+      case STATUS_IN:
+      case STATUS_STARTUP:
+        colorClass = 'bg-green-500';
+        if (unit.Status === STATUS_STARTUP) animationClass = 'animate-pulse';
         break;
-      case 'SHUTDOWN':
+      case STATUS_SHUTDOWN:
         colorClass = 'bg-gray-600';
         break;
-      case 'TRIP':
+      case STATUS_TRIP:
         colorClass = 'bg-red-500';
         break;
     }
 
-    const opacity = unit.Status === 'IN' ? Math.max(0.2, brightness) : 1;
+    const opacity = unit.Status === STATUS_IN ? Math.max(0.2, brightness) : 1;
     return { className: `${colorClass} ${animationClass} w-3 h-3 rounded-full transition-all`, style: { opacity } };
   };
 
@@ -103,7 +110,7 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle>{sub.Name} Substation</DialogTitle>
-          {sub.Category !== 'Load' && (
+          {sub.Category !== CATEGORY_LOAD && (
             <div className="flex items-center gap-2 pt-2">
               {sub.U.map((unit, index) => {
                 const { className, style } = getIndicatorStyle(unit, sub);
@@ -111,7 +118,7 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
               })}
             </div>
           )}
-          {sub.Category === 'Load' && (
+          {sub.Category === CATEGORY_LOAD && (
             <div className="flex items-center gap-2 pt-2">
               {sub.U.map((unit, index) => {
                 const { className } = getLoadIndicatorStyle(unit);
@@ -135,6 +142,9 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
             />
           ))}
         </div>
+        <DialogFooter className="mt-4">
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

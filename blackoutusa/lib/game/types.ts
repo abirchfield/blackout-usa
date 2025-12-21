@@ -67,6 +67,12 @@ export interface ScenarioData {
   nsubs: number;
 }
 
+export interface Briefing {
+  title: string;
+  points: string[];
+  isList: boolean;
+}
+
 export interface Alert {
   message: string;
   critical: boolean;

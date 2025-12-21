@@ -18,8 +18,11 @@ interface WelcomeModalProps {
 
 export function WelcomeModal({ open, onOpenChange, onStartGame }: WelcomeModalProps) {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[600px] font-share-tech">
+    <Dialog open={open} onOpenChange={() => {
+      // Do nothing. This prevents dismissal via overlay click, Esc, or the 'X' button.
+      // The modal must be closed via an explicit action inside it.
+    }}>
+      <DialogContent className="sm:max-w-[600px] font-share-tech [&>button]:hidden">
         <DialogHeader>
           <DialogTitle className="text-2xl font-bold">Welcome to the Blackout USA Game!</DialogTitle>
           <DialogDescription className="hidden">Game Introduction</DialogDescription>

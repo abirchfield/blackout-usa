@@ -1,13 +1,25 @@
-import { GameState, AlertHandler, HintHandler, STATUS_TRIP, STATUS_SHUTDOWN, STATUS_IN, STATUS_DIS } from "./types";
+import { GameState, AlertHandler, HintHandler, Briefing, STATUS_TRIP, STATUS_SHUTDOWN, STATUS_IN, STATUS_DIS } from "./types";
 
 export interface IScenario {
     readonly day: number;
+    readonly briefing: Briefing;
     start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
     update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
 }
 
 class Day1Scenario implements IScenario {
     readonly day = 1;
+    readonly briefing: Briefing = {
+        title: "Day 1 Briefing",
+        isList: true,
+        points: [
+            "Your goal is to avoid a blackout and keep operating costs as low as possible.",
+            "Your shift runs from 1pm to 11pm.",
+            "Load (electrical demand from customers) is expected to rise, peak around 7pm, and then decline later in the night.",
+            "There is a steady, moderate wind predicted for the whole afternoon and evening.",
+            "Keep in mind the solar generation will go down later in the afternoon!",
+        ]
+    };
 
     start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
@@ -20,7 +32,8 @@ class Day1Scenario implements IScenario {
         onHint?.({ message: "For the rest of the day, watch the reserves carefully. If they get below 500 MW you need to find new generation to start up." });
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    update(state: GameState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -34,6 +47,18 @@ class Day1Scenario implements IScenario {
 class Day2Scenario implements IScenario {
     readonly day = 2;
 
+    readonly briefing: Briefing = {
+        title: "Day 2 Briefing",
+        isList: true,
+        points: [
+            "Your goal is to avoid a blackout and keep operating costs as low as possible.",
+            "Wind availability will rise steadily this afternoon, up to nearly 100% by 4pm and remain high for the rest of your shift.",
+            "Other conditions are the same as yesterday.",
+            "Unfortunately, at 2:30 PM both transmission lines from Abilene to Ft Worth will need to be taken offline due to some unavoidable maintenance issues.",
+            "Watch transmission line loading. If lines are overloaded 120% or more they may trip, triggering a cascade and blackout!",
+        ]
+    };
+
     start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
@@ -41,7 +66,8 @@ class Day2Scenario implements IScenario {
         onHint?.({ message: "Watch the East-West lines. If they turn yellow or orange start shutting down western generation" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    update(state: GameState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -59,6 +85,17 @@ class Day2Scenario implements IScenario {
 class Day3Scenario implements IScenario {
     readonly day = 3;
 
+    readonly briefing: Briefing = {
+        title: "Day 3 Briefing",
+        isList: true,
+        points: [
+            "Your goal is to avoid a blackout and keep operating costs as low as possible.",
+            "Wind is expected to be high, as yesterday.",
+            "Tornados are expected near Abilene around 5pm, and any nearby transmission lines are subject to tripping.",
+            "In addition, a scheduled shutdown of Wadsworth Unit #1 begins at 1:30 PM.",
+        ]
+    };
+
     start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
@@ -66,7 +103,8 @@ class Day3Scenario implements IScenario {
         onHint?.({ message: "No hints for Day 3: You can do this!" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    update(state: GameState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -95,6 +133,16 @@ class Day3Scenario implements IScenario {
 class Day4Scenario implements IScenario {
     readonly day = 4;
 
+    readonly briefing: Briefing = {
+        title: "Day 4 Briefing",
+        isList: true,
+        points: [
+            "Your goal is to avoid a blackout and keep operating costs as low as possible.",
+            "Generators will be tripping significantly due to cold weather.",
+            "Intentional load shedding will be necessary to avoid frequency issues and blackout.",
+        ]
+    };
+
     start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
@@ -102,7 +150,8 @@ class Day4Scenario implements IScenario {
         onHint?.({ message: "Things can happen really fast when there is rapid loss of generation. Stay vigilent!" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    update(state: GameState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -122,6 +171,14 @@ class Day4Scenario implements IScenario {
 
 class Day5Scenario implements IScenario {
     readonly day = 5;
+
+    readonly briefing: Briefing = {
+        title: "Day 5 Briefing",
+        isList: false,
+        points: [
+            "Ready for the last challenge? On Day 5, your shift starts after an extreme hurricane hit this morning. Many loads, lines, and generators along the gulf coast are tripped. Throughout the day, crews are working tirelessly to get these tripped elements ready for restoration. Your job is to get service restored to customers as quickly and safely as possible. Note that when a line or substation turns from red to white it is eligible to be restored."
+        ]
+    };
 
     start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
@@ -168,7 +225,8 @@ class Day5Scenario implements IScenario {
         onHint?.({ message: "Keep checking the coastal substations and lines to see if anything new has become ready for restoration" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    update(state: GameState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
