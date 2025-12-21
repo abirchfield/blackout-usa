@@ -101,12 +101,29 @@ export class GameDrawer {
         this.ctx.lineTo((-state.x0 + s2.Longitude) * state.scaleX + circuit_offX, (state.y0 - s2.Latitude) * state.scaleY + circuit_offY);
 
         if (branch.Status2 === "IN") {
-            // Use same color as first circuit for simplicity
-            this.ctx.strokeStyle = this.ctx.strokeStyle;
+            // Recalculate color for second circuit
+            if (Math.abs(branch.P) > branch.Circuits * branch.Pmax * 1.2) this.ctx.strokeStyle = "Orange";
+            else if (Math.abs(branch.P) > branch.Circuits * branch.Pmax) this.ctx.strokeStyle = "Yellow";
+            else this.ctx.strokeStyle = "White";
+
             this.ctx.lineWidth = r;
             this.ctx.setLineDash([]);
             this.ctx.stroke();
-            // Could add animated dots here too if desired
+            
+            // Animated dots for circuit 2
+            if (Math.abs(branch.P) > 10) {
+              this.ctx.strokeStyle = "Black";
+              this.ctx.lineWidth = r * 1.5;
+              this.ctx.setLineDash([6, 26]);
+              this.ctx.lineDashOffset = 2 * state.anim_cycle_state + 1;
+              this.ctx.stroke();
+              
+              this.ctx.strokeStyle = "Lime";
+              this.ctx.lineWidth = r * 1.5;
+              this.ctx.setLineDash([4, 28]);
+              this.ctx.lineDashOffset = 2 * state.anim_cycle_state;
+              this.ctx.stroke();
+            }
         } else {
             this.ctx.strokeStyle = branch.Status2 === "TRIP" ? "Red" : "White";
             this.ctx.lineWidth = r;

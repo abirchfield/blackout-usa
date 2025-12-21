@@ -7,6 +7,7 @@ import * as math from "mathjs";
 export class GameEngine {
   private drawer: GameDrawer;
   private handler: GameHandler;
+  public static readonly GAME_DURATION = 600;
   
   // Simulation State (formerly G)
   public state: GameState = {
@@ -218,7 +219,7 @@ export class GameEngine {
 
   private runGameStep(): boolean {
     // This is a port of do_next_game_step() from script.js
-    if (this.state.t >= 600) {
+    if (this.state.t >= GameEngine.GAME_DURATION) {
       // Invalidate Ybus to force a rebuild on the next day, just in case.
       this.state.Ybus = null;
       return true; // Day finished
@@ -440,9 +441,56 @@ export class GameEngine {
         pvec.set([i, 0], subPower / 100.0);
     }
 
-    // Power Flow Calculation (simplified for now, full Y-bus logic is complex)
-    // This part is computationally intensive and would need the full Y-bus implementation
-    // For now, we'll just calculate metrics based on the P values we just set.
+    // Y-bus if necessary
+    if (!this.state.Ybus) {
+        this.state.Ybus = math.zeros(this.state.nsubs, this.state.nsubs) as math.Matrix;
+        for (let key in this.state.branches) {
+            let br = this.state.branches[key];
+            let ybr = -1 / br.Z;
+            let i = parseInt(br.FromNum) - 1;
+            let j = parseInt(br.ToNum) - 1;
+            if (br.Status1 === "IN") {
+                this.state.Ybus.set([i, i], this.state.Ybus.get([i, i]) + ybr);
+                this.state.Ybus.set([i, j], this.state.Ybus.get([i, j]) - ybr);
+                this.state.Ybus.set([j, i], this.state.Ybus.get([j, i]) - ybr);
+                this.state.Ybus.set([j, j], this.state.Ybus.get([j, j]) + ybr);
+            }
+            if (br.Circuits === 2 && br.Status2 === "IN") {
+                this.state.Ybus.set([i, i], this.state.Ybus.get([i, i]) + ybr);
+                this.state.Ybus.set([i, j], this.state.Ybus.get([i, j]) - ybr);
+                this.state.Ybus.set([j, i], this.state.Ybus.get([j, i]) - ybr);
+                this.state.Ybus.set([j, j], this.state.Ybus.get([j, j]) + ybr);
+            }
+        }
+        for (let key in this.state.subs) {
+            let sub = this.state.subs[key];
+            let i = parseInt(sub.Number) - 1;
+            if (sub.Number === "6" || sub.island === -1) {
+                this.state.Ybus.set([i, i], this.state.Ybus.get([i, i]) - 1000);
+            }
+        }
+        this.state.Yinv = math.lup(this.state.Ybus);
+    }
+
+    // Power flow
+    let theta = math.lusolve(this.state.Yinv!, pvec) as math.Matrix;
+    
+    for (let key in this.state.branches) {
+        let br = this.state.branches[key];
+        let ybr = -1 / br.Z;
+        let i = parseInt(br.FromNum) - 1;
+        let j = parseInt(br.ToNum) - 1;
+        let ang_i = theta.get([i, 0]);
+        let ang_j = theta.get([j, 0]);
+        let pflow = -ybr * (ang_i - ang_j) * 100;
+        br.P = 0;
+        if (br.Status1 === "IN") {
+            br.P += pflow;
+        }
+        if (br.Circuits === 2 && br.Status2 === "IN") {
+            br.P += pflow;
+        }
+    }
 
     // Metrics and costs
     this.state.total_load_served = 0;
@@ -510,6 +558,7 @@ export class GameEngine {
     return {
       day: this.state.day,
       timeStr,
+      timeStep: this.state.t,
       frequency: this.state.frequency,
       loadServed: this.state.total_load_served,
       loadUnserved: this.state.total_load_unserved,

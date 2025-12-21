@@ -1,15 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react"
-import { Play, Pause, FastForward, HelpCircle, X, AlertTriangle } from "lucide-react"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog"
+import { HelpCircle, X, AlertTriangle } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { AppSidebar } from "@/components/app-sidebar"
 import { GameEngine } from "@/lib/game/engine"
@@ -34,11 +26,24 @@ export default function Page() {
 
   // Game States
   const [day, setDay] = useState(0) // Start at 0, set to 1 on game start
-  const [isPaused, setIsPaused] = useState(false)
+  const [isPaused, setIsPaused] = useState(true)
   const [isFastForward, setIsFastForward] = useState(false)
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
   const [alertIdCounter, setAlertIdCounter] = useState(0)
   
+  // Refs for loop access
+  const isPausedRef = useRef(isPaused)
+  const isFastForwardRef = useRef(isFastForward)
+
+  // Sync refs with state
+  useEffect(() => {
+    isPausedRef.current = isPaused
+  }, [isPaused])
+
+  useEffect(() => {
+    isFastForwardRef.current = isFastForward
+  }, [isFastForward])
+
   // Engine Integration
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<GameEngine | null>(null)
@@ -68,8 +73,8 @@ export default function Page() {
       const loop = (timestamp: number) => {
         if (engineRef.current) {
           // Update Logic
-          if (!isPaused) {
-            const gameSpeed = isFastForward ? 50 : 500; // ms per game minute
+          if (!isPausedRef.current) {
+            const gameSpeed = isFastForwardRef.current ? 50 : 500; // ms per game minute
             if (timestamp - lastGameStepTime > gameSpeed) {
               const isDayOver = engineRef.current.update(1);
               lastGameStepTime = timestamp;
@@ -175,29 +180,24 @@ export default function Page() {
         <h2 className="text-2xl font-bold font-share-tech text-foreground mr-4">
           Blackout USA
         </h2>
-        <div className="ml-auto flex items-center gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={togglePause}
-            title={isPaused ? "Resume" : "Pause"}
-            className="cursor-pointer"
-          >
-            {isPaused ? <Play className="h-4 w-4 text-red-500" /> : <Pause className="h-4 w-4" />}
+        <div className="ml-auto flex items-center gap-4">
+          <div className="flex items-center gap-2 text-sm font-medium max-w-[300px] lg:max-w-[500px] hidden md:flex">
+            <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
+            <span className="truncate" title={alerts.length > 0 ? alerts[0].message : "No alerts to show"}>
+              {alerts.length > 0 ? alerts[0].message : "No alerts to show"}
+            </span>
+          </div>
+          <Button variant="outline" onClick={() => setIsAlertsOpen(true)} className="cursor-pointer">
+            View all Alerts
           </Button>
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={toggleFastForward}
-            title={isFastForward ? "Normal Speed" : "Fast Forward"}
-            className="cursor-pointer"
-          >
-            {isFastForward ? <Play className="h-4 w-4 text-green-500" /> : <FastForward className="h-4 w-4" />}
-          </Button>
+          <div className="flex items-center gap-1 border-l pl-2">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsHelpOpen(true)}
+            onClick={() => {
+              setIsHelpOpen(true)
+              setIsPaused(true)
+            }}
             title="Help"
             className="cursor-pointer"
           >
@@ -212,10 +212,18 @@ export default function Page() {
           >
             <X className="h-4 w-4" />
           </Button>
+          </div>
         </div>
       </header>
       <div className="flex flex-1 overflow-hidden">
-        <AppSidebar stats={dashboardStats} />
+        <AppSidebar 
+          stats={dashboardStats} 
+          day={day}
+          isPaused={isPaused}
+          isFastForward={isFastForward}
+          onTogglePause={togglePause}
+          onToggleFastForward={toggleFastForward}
+        />
         <main className="flex-1 flex flex-col overflow-hidden relative min-w-0">
         <div className="game-wrapper relative h-full w-full">
           <div className="main-section">
@@ -247,7 +255,10 @@ export default function Page() {
           {/* Help Modal */}
           <HelpModal 
             open={isHelpOpen} 
-            onOpenChange={setIsHelpOpen} 
+            onOpenChange={(open) => {
+              setIsHelpOpen(open)
+              if (!open) setIsPaused(false)
+            }} 
             day={day} 
           />
 
@@ -276,17 +287,6 @@ export default function Page() {
         </div>
         </main>
       </div>
-      <footer className="flex h-16 shrink-0 items-center justify-between border-t bg-background px-4 text-foreground shadow-sm z-10">
-        <Button variant="outline" onClick={() => setIsAlertsOpen(true)} className="shrink-0 mr-4 cursor-pointer">
-          View all Alerts
-        </Button>
-        <div className="flex flex-1 items-center gap-2 text-sm font-medium min-w-0">
-          <AlertTriangle className="h-4 w-4 text-muted-foreground shrink-0" />
-          <span className="truncate">
-            {alerts.length > 0 ? alerts[0].message : "No alerts to show"}
-          </span>
-        </div>
-      </footer>
     </div>
   )
 }
