@@ -74,6 +74,12 @@ export interface Alert {
 
 export type AlertHandler = (alert: Alert, reset?: boolean) => void;
 
+export interface Hint {
+  message: string;
+}
+
+export type HintHandler = (hint: Hint, reset?: boolean) => void;
+
 export type InteractionHandler = (type: 'sub' | 'branch', data: Substation | Branch) => void;
 
 export interface GameState {

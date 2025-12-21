@@ -1,26 +1,26 @@
-import { GameState, AlertHandler, STATUS_TRIP, STATUS_SHUTDOWN, STATUS_IN, STATUS_DIS } from "./types";
+import { GameState, AlertHandler, HintHandler, STATUS_TRIP, STATUS_SHUTDOWN, STATUS_IN, STATUS_DIS } from "./types";
 
 export interface IScenario {
     readonly day: number;
-    start(state: GameState, onAlert: AlertHandler | undefined): void;
-    update(state: GameState, onAlert: AlertHandler | undefined): void;
+    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
+    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
 }
 
 class Day1Scenario implements IScenario {
     readonly day = 1;
 
-    start(state: GameState, onAlert: AlertHandler | undefined): void {
+    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
         onAlert?.({ message: "Your shift has started. Click \"View all Alerts\" to see additional hints for what to do.", critical: false }, true);
-        onAlert?.({ message: "Hint #1: The McCamey Solar PV plant in West Texas is currently disconnected. You might as well start up all 3 units at that plant to get more, low-cost energy.", critical: false });
-        onAlert?.({ message: "Hint #2: The Mission Gas Turbine plant in South Texas has very high costs. Try shutting down 1-3 of these units while you still have plenty of reserves.", critical: false });
-        onAlert?.({ message: "Hint #3: You are going to need more reserves in the evening once the solar has gone down and the load is higher.", critical: false });
-        onAlert?.({ message: "Hint #4: For the rest of the day, watch the reserves carefully. If they get below 500 MW you need to find new generation to start up.", critical: false });
+        onHint?.({ message: "The McCamey Solar PV plant in West Texas is currently disconnected. You might as well start up all 3 units at that plant to get more, low-cost energy." });
+        onHint?.({ message: "The Mission Gas Turbine plant in South Texas has very high costs. Try shutting down 1-3 of these units while you still have plenty of reserves." });
+        onHint?.({ message: "You are going to need more reserves in the evening once the solar has gone down and the load is higher." });
+        onHint?.({ message: "For the rest of the day, watch the reserves carefully. If they get below 500 MW you need to find new generation to start up." });
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined): void {
+    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -34,14 +34,14 @@ class Day1Scenario implements IScenario {
 class Day2Scenario implements IScenario {
     readonly day = 2;
 
-    start(state: GameState, onAlert: AlertHandler | undefined): void {
+    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
-        onAlert?.({ message: "Hint for Day 2: Watch the East-West lines. If they turn yellow or orange start shutting down western generation", critical: false }, true);
+        onHint?.({ message: "Watch the East-West lines. If they turn yellow or orange start shutting down western generation" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined): void {
+    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -59,14 +59,14 @@ class Day2Scenario implements IScenario {
 class Day3Scenario implements IScenario {
     readonly day = 3;
 
-    start(state: GameState, onAlert: AlertHandler | undefined): void {
+    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
-        onAlert?.({ message: "No hints for Day 3: You can do this!", critical: false }, true);
+        onHint?.({ message: "No hints for Day 3: You can do this!" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined): void {
+    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -95,14 +95,14 @@ class Day3Scenario implements IScenario {
 class Day4Scenario implements IScenario {
     readonly day = 4;
 
-    start(state: GameState, onAlert: AlertHandler | undefined): void {
+    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
-        onAlert?.({ message: "Hint for Day 4: Things can happen really fast when there is rapid loss of generation. Stay vigilent!", critical: false }, true);
+        onHint?.({ message: "Things can happen really fast when there is rapid loss of generation. Stay vigilent!" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined): void {
+    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -123,7 +123,7 @@ class Day4Scenario implements IScenario {
 class Day5Scenario implements IScenario {
     readonly day = 5;
 
-    start(state: GameState, onAlert: AlertHandler | undefined): void {
+    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
@@ -165,10 +165,10 @@ class Day5Scenario implements IScenario {
         for (i=0;i<2;++i) state.subs["26"].U[i].P = 290; 
         for (i=0;i<3;++i) state.subs["19"].U[i].Status = STATUS_IN; 
         
-        onAlert?.({ message: "Hint for Day 5: Keep checking the coastal substations and lines to see if anything new has become ready for restoration", critical: false }, true);
+        onHint?.({ message: "Keep checking the coastal substations and lines to see if anything new has become ready for restoration" }, true);
     }
 
-    update(state: GameState, onAlert: AlertHandler | undefined): void {
+    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
