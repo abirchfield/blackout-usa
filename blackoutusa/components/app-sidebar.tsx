@@ -138,13 +138,13 @@ export function AppSidebar({ stats }: AppSidebarProps) {
               <div>
                 <div className="text-xs text-muted-foreground">Avg Cost</div>
                 <div id="dash-avcost" className="text-lg font-bold text-foreground">
-                  $0
+                  ${s.avgCost.toFixed(2)}/MWh
                 </div>
               </div>
               <div>
                 <div className="text-xs text-muted-foreground">Total Cost</div>
                 <div id="dash-tcost" className="text-lg font-bold text-foreground">
-                  $0
+                  {fmtMoneyM(s.totalCost)}
                 </div>
               </div>
             </div>
