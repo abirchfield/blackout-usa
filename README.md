@@ -20,7 +20,7 @@ are those of the author(s) and do not necessarily reflect the views of the Natio
 - Need to display the start-up time for the generation substations.
 - In the `energy` tab, display the MW values for the four energy categories for readability.
 - Find a way to shrink the pause/play controls so we can display the frequency (one of the more important values to know) always. Right now, it is only in the energy tab.
-- In the line modal, use the same formatting as the generation modal to be consistent.
+- Use Squares instead of circles for the load indicators in the substation tab.
 - Add legend for indicator circles in the `lines` and `substations` tabs
 - Small inconsistancy with how pause/play/FF works
 
@@ -31,3 +31,4 @@ are those of the author(s) and do not necessarily reflect the views of the Natio
 - Find an abbreviated term for `OUT-OF-SERVICE` that sometimes causes text wrapping.
 - Generally improve the `finance` tab, which is basically useless at the moment.
 - In the generation substation modal, display the generation type icon.
+- In the line modal, use the same formatting as the generation modal to be consistent.
