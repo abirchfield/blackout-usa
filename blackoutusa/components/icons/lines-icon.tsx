@@ -1,6 +1,6 @@
 import React from "react";
 
-interface LinesIconProps extends React.SVGProps<SVGSVGElement> {}
+type LinesIconProps = React.SVGProps<SVGSVGElement>;
 
 export const LinesIcon = (props: LinesIconProps) => {
   // --- CONFIGURATION ---

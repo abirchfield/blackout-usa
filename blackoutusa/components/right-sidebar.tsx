@@ -4,7 +4,6 @@ import { BookText, Bell, Lightbulb, ArrowRight, RotateCw, Check, Lock } from "lu
 import {
   Sidebar,
   SidebarContent,
-  SidebarSeparator,
 } from "@/components/ui/sidebar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardStats, Briefing } from "@/lib/game/types"
