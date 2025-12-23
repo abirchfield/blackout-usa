@@ -43,7 +43,7 @@ const getBranchIndicator = (branch: Branch) => {
 
 export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
   return (
-    <div className="max-h-[calc(100vh-22rem)] overflow-y-auto">
+    <div>
       <Table>
         <TableHeader>
           <TableRow>
