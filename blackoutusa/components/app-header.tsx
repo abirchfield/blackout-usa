@@ -4,7 +4,7 @@ import { useTheme } from "next-themes"
 import { HelpCircle, X, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { DashboardStats } from "@/lib/game/types"
-import { TimeController } from "./dash/time-controller"
+import { TimeController } from "./header/time-controller"
 
 interface AppHeaderProps {
   onHelpClick: () => void;
@@ -21,7 +21,7 @@ export function AppHeader({ onHelpClick, onQuitClick, stats, progress, isPaused,
   const { resolvedTheme, setTheme } = useTheme()
   const s = stats || {
     day: 1,
-    timeStr: "...",
+    timeStr: "1:00 PM",
   }
 
   return (

@@ -16,6 +16,7 @@ interface CircuitDisplayProps {
   branch: Branch;
   circuitNum: 1 | 2;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
+  isPaused?: boolean;
 }
 
 function CircuitIndicator({ status }: { status: string }) {
@@ -42,7 +43,7 @@ function CircuitIndicator({ status }: { status: string }) {
   return <div className={`${className} flex-shrink-0`} title={title} />;
 }
 
-function CircuitDisplay({ branch, circuitNum, onCircuitAction }: CircuitDisplayProps) {
+function CircuitDisplay({ branch, circuitNum, onCircuitAction, isPaused }: CircuitDisplayProps) {
   const status = circuitNum === 1 ? branch.Status1 : branch.Status2;
   
   // Flow on a single circuit. If both are in, total P is shared.
@@ -85,7 +86,7 @@ function CircuitDisplay({ branch, circuitNum, onCircuitAction }: CircuitDisplayP
             variant={status === STATUS_IN ? "destructive" : "secondary"}
             size="sm"
             onClick={() => onCircuitAction(branch.Number, circuitNum)}
-            disabled={buttonDisabled}
+            disabled={buttonDisabled || isPaused}
           >
             {buttonText}
           </Button>
@@ -100,9 +101,10 @@ interface BranchModalProps {
   branch: Branch | null;
   onClose: () => void;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
+  isPaused?: boolean;
 }
 
-export function BranchModal({ branch, onClose, onCircuitAction }: BranchModalProps) {
+export function BranchModal({ branch, onClose, onCircuitAction, isPaused }: BranchModalProps) {
   if (!branch) return null;
 
   const fromSub = branch.sub1?.Name || branch.FromSub;
@@ -119,9 +121,9 @@ export function BranchModal({ branch, onClose, onCircuitAction }: BranchModalPro
           </DialogDescription>
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto pr-4">
-          <CircuitDisplay branch={branch} circuitNum={1} onCircuitAction={onCircuitAction} />
+          <CircuitDisplay branch={branch} circuitNum={1} onCircuitAction={onCircuitAction} isPaused={isPaused} />
           {branch.Circuits === 2 && (
-            <CircuitDisplay branch={branch} circuitNum={2} onCircuitAction={onCircuitAction} />
+            <CircuitDisplay branch={branch} circuitNum={2} onCircuitAction={onCircuitAction} isPaused={isPaused} />
           )}
         </div>
         <DialogFooter className="mt-4">

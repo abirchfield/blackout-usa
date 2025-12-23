@@ -8,7 +8,9 @@ import {
 } from "@/components/ui/sidebar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { DashboardStats, Briefing } from "@/lib/game/types"
+import { ResultDetails } from "@/lib/game/scenarios"
 import { Button } from "@/components/ui/button"
+import { Badge } from "@/components/ui/badge"
 import { AlertsList } from "./modals/alerts-modal"
 import { HintsList } from "./modals/hints-modal"
 
@@ -27,62 +29,54 @@ interface RightSidebarProps {
   onStartDay: () => void;
   onNextDay: (currentDay: number) => void;
   onReplayDay: (currentDay: number) => void;
-}
-
-function getResultMessage(day: number, totalCost: number): string {
-  const costM = (totalCost / 1000000).toFixed(2);
-  let record = 0;
-  let good = 0;
-  let okay = 0;
-
-  if (day === 1) { record = 1.65; good = 2.0; okay = 10.0; }
-  else if (day === 2) { record = 1.41; good = 2.0; okay = 10.0; }
-  else if (day === 3) { record = 3.35; good = 5.0; okay = 15.0; }
-  else if (day === 4) { record = 3.22; good = 8.0; okay = 20.0; }
-  else if (day === 5) { record = 12.90; good = 18.0; okay = 30.0; }
-
-  if (totalCost / 1000000 < record) {
-    return `Total cost for your shift was $${costM}M.<br/>Amazing!! This is better than the prior record, $${record}M.<br/>Super job managing the grid today and keeping costs low &#x1F44D;&#xfe0e;`;
-  } else if (totalCost / 1000000 < good) {
-    return `Total cost for your shift was $${costM}M.<br/>Great job! The record for this scenario is $${record}M.<br/>Super job managing the grid today and keeping costs low &#x1F44D;&#xfe0e;`;
-  } else if (totalCost / 1000000 < okay) {
-    return `Total cost for your shift was $${costM}M.<br/>Not too bad. We would hope to keep the cost under $${good}M for this scenario.<br/>Feel free to give it another try &#x1F44D;&#xfe0e;`;
-  } else {
-    return `Total cost for your shift was $${costM}M.<br/>That's too high! We would hope to keep the cost under $${good}M for this scenario.<br/>Feel free to give it another try &#x1F44D;&#xfe0e;`;
-  }
+  dayResultDetails: ResultDetails | null;
+  activeTab: string;
+  onTabChange: (tab: string) => void;
 }
 
 interface DayResultsProps {
   stats?: DashboardStats;
   day: number;
+  resultDetails: ResultDetails | null;
 }
 
-function DayResults({ stats, day }: DayResultsProps) {
-  if (!stats) return <div className="p-4 text-center text-muted-foreground">No results available.</div>;
+function DayResults({ stats, day, resultDetails }: DayResultsProps) {
+  if (!stats || !resultDetails) return <div className="p-4 text-center text-muted-foreground">No results available.</div>;
 
-  const resultMessage = getResultMessage(day, stats.totalCost);
+  const performanceMap = {
+    record: { title: "Record Breaker", variant: 'default' as const },
+    good: { title: "Great Job", variant: 'secondary' as const },
+    okay: { title: "Not Bad", variant: 'outline' as const },
+    bad: { title: "Could Be Better", variant: 'destructive' as const },
+  };
+  const performance = performanceMap[resultDetails.performance];
 
   return (
-    <div className="space-y-4">
-      <h4 className="font-bold leading-none">Day {day} Results</h4>
-      <div
-        className="text-sm"
-        dangerouslySetInnerHTML={{ __html: resultMessage }}
-      />
-      <div className="border-t pt-4 mt-4">
+    <div className="space-y-6">
+      <h4 className="font-bold leading-none text-base">Day {day} Results</h4>
+
+      <div className="flex flex-col gap-3 rounded-lg border bg-card p-4 text-card-foreground text-sm">
+        <Badge variant={performance.variant} className="self-start">{performance.title}</Badge>
+        <p>
+          Total cost for your shift was <strong className="text-base font-mono">${resultDetails.costM}M</strong>.
+        </p>
+        <p className="text-muted-foreground" dangerouslySetInnerHTML={{ __html: resultDetails.message }} />
+      </div>
+
+      <div className="border-t pt-4">
         <h4 className="text-base font-bold mb-2">Additional Stats</h4>
-        <div className="text-xs space-y-1">
-          <p>Total generator operating cost: ${(stats.totalOpCost / 1000).toFixed(0)}k</p>
-          <p>Total fuel cost: ${(stats.totalFuelCost / 1000).toFixed(0)}k</p>
-          <p>Total unserved load cost: ${(stats.totalUnservedCost / 1000).toFixed(0)}k</p>
-          <p>Average cost of power: ${stats.avgCost.toFixed(2)}/MWh</p>
+        <div className="text-xs space-y-1.5 text-muted-foreground">
+          <div className="flex justify-between items-center"><span>Op. Cost:</span> <span className="font-mono text-foreground">${(stats.totalOpCost / 1000).toFixed(0)}k</span></div>
+          <div className="flex justify-between items-center"><span>Fuel Cost:</span> <span className="font-mono text-foreground">${(stats.totalFuelCost / 1000).toFixed(0)}k</span></div>
+          <div className="flex justify-between items-center"><span>Unserved Cost:</span> <span className="font-mono text-foreground">${(stats.totalUnservedCost / 1000).toFixed(0)}k</span></div>
+          <div className="flex justify-between items-center"><span>Avg. Cost:</span> <span className="font-mono text-foreground">${stats.avgCost.toFixed(2)}/MWh</span></div>
         </div>
       </div>
     </div>
   );
 }
 
-export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [], onRemoveHint, isDayFinished, isDayTransition, targetDay, totalDays, completedDays, onStartDay, onNextDay, onReplayDay }: RightSidebarProps) {
+export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [], onRemoveHint, isDayFinished, isDayTransition, targetDay, totalDays, completedDays, onStartDay, onNextDay, onReplayDay, dayResultDetails, activeTab, onTabChange }: RightSidebarProps) {
   // Default values if stats are not yet available
   const s = stats || {
     day: 1,
@@ -93,7 +87,7 @@ export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [
       <SidebarContent className="font-share-tech flex flex-col overflow-hidden">
         {/* Briefing, Alerts, Hints*/}
 
-        <Tabs defaultValue="brief" className="w-full px-2 pt-2 flex-1 flex flex-col min-h-0">
+        <Tabs value={activeTab} onValueChange={onTabChange} className="w-full px-2 pt-2 flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-3 rounded-none bg-transparent p-0">
             <TabsTrigger value="brief" className="flex items-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground">
               <BookText className="h-4 w-4" />
@@ -125,6 +119,7 @@ export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [
                 <DayResults
                   stats={stats}
                   day={s.day}
+                  resultDetails={dayResultDetails}
                 />
               ) : (
                 briefing ? (

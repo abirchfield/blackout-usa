@@ -1,10 +1,17 @@
 import { GameState, AlertHandler, HintHandler, Briefing, STATUS_TRIP, STATUS_SHUTDOWN, STATUS_IN, STATUS_DIS } from "./types";
 
+export interface ResultDetails {
+    performance: 'record' | 'good' | 'okay' | 'bad';
+    costM: string;
+    message: string;
+}
+
 export interface IScenario {
     readonly day: number;
     readonly briefing: Briefing;
     start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
     update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
+    getResultDetails(totalCost: number): ResultDetails;
 }
 
 class Day1Scenario implements IScenario {
@@ -40,6 +47,39 @@ class Day1Scenario implements IScenario {
         if (state.fr_wind < .53 && state.fr_wind > .43) {
             if (Math.random() < .25) state.fr_wind += 0.0001;
             else if (Math.random() < 0.333) state.fr_wind -= 0.0001;
+        }
+    }
+
+    getResultDetails(totalCost: number): ResultDetails {
+        const costM = (totalCost / 1000000);
+        const record = 1.65;
+        const good = 2.0;
+        const okay = 10.0;
+
+        if (costM < record) {
+            return {
+                performance: 'record',
+                costM: costM.toFixed(2),
+                message: `Amazing!! This is better than the prior record, $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < good) {
+            return {
+                performance: 'good',
+                costM: costM.toFixed(2),
+                message: `Great job! The record for this scenario is $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < okay) {
+            return {
+                performance: 'okay',
+                costM: costM.toFixed(2),
+                message: `Not too bad. We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
+        } else {
+            return {
+                performance: 'bad',
+                costM: costM.toFixed(2),
+                message: `That's too high! We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
         }
     }
 }
@@ -78,6 +118,39 @@ class Day2Scenario implements IScenario {
             state.branches["26"].Status2 = STATUS_TRIP;
             onAlert?.({ message: `Maintenance requires tripping both Abiline - Ft Worth lines`, critical: false });
             state.Ybus = null;
+        }
+    }
+
+    getResultDetails(totalCost: number): ResultDetails {
+        const costM = (totalCost / 1000000);
+        const record = 1.41;
+        const good = 2.0;
+        const okay = 10.0;
+
+        if (costM < record) {
+            return {
+                performance: 'record',
+                costM: costM.toFixed(2),
+                message: `Amazing!! This is better than the prior record, $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < good) {
+            return {
+                performance: 'good',
+                costM: costM.toFixed(2),
+                message: `Great job! The record for this scenario is $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < okay) {
+            return {
+                performance: 'okay',
+                costM: costM.toFixed(2),
+                message: `Not too bad. We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
+        } else {
+            return {
+                performance: 'bad',
+                costM: costM.toFixed(2),
+                message: `That's too high! We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
         }
     }
 }
@@ -128,6 +201,39 @@ class Day3Scenario implements IScenario {
             onAlert?.({ message: `Scheduled shutdown of Wadsworth Unit #1 begins`, critical: false });
         }
     }
+
+    getResultDetails(totalCost: number): ResultDetails {
+        const costM = (totalCost / 1000000);
+        const record = 3.35;
+        const good = 5.0;
+        const okay = 15.0;
+
+        if (costM < record) {
+            return {
+                performance: 'record',
+                costM: costM.toFixed(2),
+                message: `Amazing!! This is better than the prior record, $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < good) {
+            return {
+                performance: 'good',
+                costM: costM.toFixed(2),
+                message: `Great job! The record for this scenario is $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < okay) {
+            return {
+                performance: 'okay',
+                costM: costM.toFixed(2),
+                message: `Not too bad. We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
+        } else {
+            return {
+                performance: 'bad',
+                costM: costM.toFixed(2),
+                message: `That's too high! We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
+        }
+    }
 }
 
 class Day4Scenario implements IScenario {
@@ -165,6 +271,39 @@ class Day4Scenario implements IScenario {
                 u.Status = STATUS_TRIP;
                 onAlert?.({ message: `${sub.Name} unit #${(outage[2] as number) + 1} trips due to cold weather`, critical: true });
             }
+        }
+    }
+
+    getResultDetails(totalCost: number): ResultDetails {
+        const costM = (totalCost / 1000000);
+        const record = 3.22;
+        const good = 8.0;
+        const okay = 20.0;
+
+        if (costM < record) {
+            return {
+                performance: 'record',
+                costM: costM.toFixed(2),
+                message: `Amazing!! This is better than the prior record, $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < good) {
+            return {
+                performance: 'good',
+                costM: costM.toFixed(2),
+                message: `Great job! The record for this scenario is $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < okay) {
+            return {
+                performance: 'okay',
+                costM: costM.toFixed(2),
+                message: `Not too bad. We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
+        } else {
+            return {
+                performance: 'bad',
+                costM: costM.toFixed(2),
+                message: `That's too high! We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
         }
     }
 }
@@ -256,6 +395,39 @@ class Day5Scenario implements IScenario {
                 }
             }
         });
+    }
+
+    getResultDetails(totalCost: number): ResultDetails {
+        const costM = (totalCost / 1000000);
+        const record = 12.90;
+        const good = 18.0;
+        const okay = 30.0;
+
+        if (costM < record) {
+            return {
+                performance: 'record',
+                costM: costM.toFixed(2),
+                message: `Amazing!! This is better than the prior record, $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < good) {
+            return {
+                performance: 'good',
+                costM: costM.toFixed(2),
+                message: `Great job! The record for this scenario is $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
+            };
+        } else if (costM < okay) {
+            return {
+                performance: 'okay',
+                costM: costM.toFixed(2),
+                message: `Not too bad. We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
+        } else {
+            return {
+                performance: 'bad',
+                costM: costM.toFixed(2),
+                message: `That's too high! We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
+            };
+        }
     }
 }
 

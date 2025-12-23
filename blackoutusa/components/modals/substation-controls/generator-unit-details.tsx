@@ -15,6 +15,7 @@ interface GeneratorUnitDetailsProps {
   onSetSetpoint: (subId: string, unitIndex: number, newSetpoint: number) => void;
   setpointValue: number;
   onSetpointChange: (index: number, value: number) => void;
+  isPaused?: boolean;
 }
 
 /**
@@ -28,6 +29,7 @@ export function GeneratorUnitDetails({
   onSetSetpoint,
   setpointValue,
   onSetpointChange,
+  isPaused,
 }: GeneratorUnitDetailsProps) {
   const pmax_unit = sub.Pmax / sub.Units;
   const pmin_unit = sub.Pmin / sub.Units;
@@ -109,6 +111,7 @@ export function GeneratorUnitDetails({
                 min={pmin_unit}
                 max={pmax_unit}
                 step={1}
+                disabled={isPaused}
               />
               <div className="h-1.5 w-full rounded-full bg-muted" title={`Actual Output: ${unit.P.toFixed(0)} MW`}>
                 <div
@@ -122,7 +125,7 @@ export function GeneratorUnitDetails({
               <p className="text-foreground/80">{unit.P.toFixed(0)} MW</p>
             </div>
             <div className="w-28 flex justify-end">
-              <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)}>Shut Down</Button>
+              <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Shut Down</Button>
             </div>
           </div>
         );
@@ -130,7 +133,7 @@ export function GeneratorUnitDetails({
         return (
           <div className="flex items-center justify-end gap-4 w-full">
             <div className="w-[150px] space-y-2">
-              <Slider defaultValue={[pmin_unit]} min={pmin_unit} max={pmax_unit} disabled />
+              <Slider defaultValue={[pmin_unit]} min={pmin_unit} max={pmax_unit} disabled={true} />
               <div className="h-1.5 w-full rounded-full bg-muted">
                 <div
                   className="h-1.5 rounded-full bg-primary/50"
@@ -143,7 +146,7 @@ export function GeneratorUnitDetails({
               <p className="text-foreground/80">--- MW</p>
             </div>
             <div className="w-28 flex justify-end">
-              <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)} title={`Startup Time: ${(sub.StartTime / 60).toFixed(1)} hr`}>
+              <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)} title={`Startup Time: ${(sub.StartTime / 60).toFixed(1)} hr`} disabled={isPaused}>
                 Start Up
               </Button>
             </div>
@@ -159,7 +162,7 @@ export function GeneratorUnitDetails({
         return (
           <div className="flex items-center justify-end gap-4 w-full">
             <div className="w-[150px] space-y-2">
-              <Slider value={[unit.P]} min={pmin_unit} max={pmax_unit} disabled />
+              <Slider value={[unit.P]} min={pmin_unit} max={pmax_unit} disabled={true} />
               <div className="h-1.5 w-full rounded-full bg-muted">
                 <div className="h-1.5 rounded-full bg-primary/50 transition-all" style={{ width: `0%` }}/>
               </div>
@@ -184,7 +187,7 @@ export function GeneratorUnitDetails({
         return (
           <div className="flex items-center justify-end gap-4 w-full">
             <div className="w-[150px] space-y-2">
-              <Slider value={[unit.P]} min={pmin_unit} max={pmax_unit} disabled />
+              <Slider value={[unit.P]} min={pmin_unit} max={pmax_unit} disabled={true} />
               <div className="h-1.5 w-full rounded-full bg-muted">
                 <div
                   className="h-1.5 rounded-full bg-primary/50 transition-all"

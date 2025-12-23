@@ -2,7 +2,7 @@ import { Substation, Branch, DashboardStats, GameState, InteractionHandler, Aler
 import { scenario_data } from "./scenario_data";
 import { GameDrawer } from "./drawer";
 import { GameHandler } from "./handler";
-import { scenarios, IScenario } from "./scenarios";
+import { scenarios, IScenario, ResultDetails } from "./scenarios";
 import * as math from "mathjs"; 
 
 // --- Unit Control ---
@@ -48,22 +48,23 @@ const POWER_BALANCE_ALPHA_MIN = -1;
 const POWER_BALANCE_ALPHA_MAX = 1;
 
 // --- Game Configuration ---
-const INITIAL_VIEW_X0 = -107;
-const INITIAL_VIEW_Y0 = 37;
-const INITIAL_SCALE = 100;
+const INITIAL_VIEW_X0 = -105; // Fallback initial X, will be overwritten by drawer
+const INITIAL_VIEW_Y0 = 36;   // Fallback initial Y, will be overwritten by drawer
+const INITIAL_SCALE = 50;     // Fallback initial scale, will be overwritten by drawer
 const VIEW_SCALE_ADJUST = 0.25;
-const MAP_BOUNDS_XMAX = -80;
-const MAP_BOUNDS_XMIN = -112;
-const MAP_BOUNDS_YMAX = 40;
-const MAP_BOUNDS_YMIN = 23;
-const ZOOM_LIMIT_MAX = 800;
-const ZOOM_LIMIT_MIN = 50;
+const MAP_BOUNDS_XMAX = -92;  // Map's rightmost longitude
+const MAP_BOUNDS_XMIN = -107; // Map's leftmost longitude
+const MAP_BOUNDS_YMAX = 37;   // Map's topmost latitude
+const MAP_BOUNDS_YMIN = 25;   // Map's bottommost latitude
+const ZOOM_LIMIT_MAX = 500;
+// ZOOM_LIMIT_MIN is now dynamically set by GameDrawer.
 const MAX_UNIT_SETPOINT = 10000;
 
 export class GameEngine {
   private drawer: GameDrawer;
   private handler: GameHandler;
   private currentScenario: IScenario | null = null;
+  private isViewInitialized = false;
   public static readonly GAME_DURATION = 600;
   
   // Simulation State (formerly G)
@@ -76,14 +77,14 @@ export class GameEngine {
     ymax: MAP_BOUNDS_YMAX,
     ymin: MAP_BOUNDS_YMIN,
     scale_max: ZOOM_LIMIT_MAX,
-    scale_min: ZOOM_LIMIT_MIN,
+    scale_min: 0, // Will be set dynamically by drawer
     t: 0,
     day: 1,
     frequency: BASE_FREQUENCY,
-    scaleX: INITIAL_SCALE,
-    scaleY: INITIAL_SCALE,
-    x0: INITIAL_VIEW_X0,
-    y0: INITIAL_VIEW_Y0,
+    scaleX: INITIAL_SCALE, // Fallback, will be overwritten by drawer
+    scaleY: INITIAL_SCALE, // Fallback, will be overwritten by drawer
+    x0: INITIAL_VIEW_X0,     // Fallback, will be overwritten by drawer
+    y0: INITIAL_VIEW_Y0,     // Fallback, will be overwritten by drawer
     theme: 'dark',
     
     // Input State
@@ -153,8 +154,10 @@ export class GameEngine {
   }
 
   private init() {
-    this.state.subs = scenario_data.subs;
-    this.state.branches = scenario_data.branches;
+    // Deep copy scenario data to prevent mutation of the original data module.
+    // This ensures that each game instance starts with a fresh, unmodified state.
+    this.state.subs = JSON.parse(JSON.stringify(scenario_data.subs));
+    this.state.branches = JSON.parse(JSON.stringify(scenario_data.branches));
     this.state.borders = scenario_data.borders;
     this.state.nsubs = scenario_data.nsubs;
 
@@ -164,16 +167,14 @@ export class GameEngine {
       branch.sub1 = this.state.subs[branch.FromNum];
       branch.sub2 = this.state.subs[branch.ToNum];
       if (branch.sub1 && branch.sub2) {
-        branch.dist = Math.sqrt(
-          Math.pow(branch.sub1.Latitude - branch.sub2.Latitude, 2) +
-          Math.pow(branch.sub1.Longitude - branch.sub2.Longitude, 2)
-        );
+        // Recalculating distance is not strictly necessary as it's not used, but it's good practice.
+        branch.dist = Math.hypot(branch.sub1.Latitude - branch.sub2.Latitude, branch.sub1.Longitude - branch.sub2.Longitude);
       }
     }
     this.setDefaults();
   }
 
-  public setDefaults() {
+  public setDefaults(resetView = true) { // Added resetView parameter
     // Reset units
     for (const key in this.state.subs) {
       const sub = this.state.subs[key];
@@ -195,11 +196,10 @@ export class GameEngine {
       br.Status1 = STATUS_IN;
       br.Status2 = STATUS_IN;
     }
-    // Reset View
-    this.state.x0 = INITIAL_VIEW_X0;
-    this.state.y0 = INITIAL_VIEW_Y0;
-    this.state.scaleX = INITIAL_SCALE;
-    this.state.scaleY = INITIAL_SCALE;
+    if (resetView) {
+      // Flag the view to be re-initialized by the drawer on the next frame.
+      this.isViewInitialized = false;
+    }
     
     // Reset Game State
     this.state.t = 0;
@@ -230,7 +230,7 @@ export class GameEngine {
   }
 
   public startDay(day: number) {
-    this.setDefaults();
+    this.setDefaults(false); // Don't reset view when starting a new day, only game state
     this.state.day = day;
     
     this.currentScenario = scenarios[day] || null;
@@ -266,6 +266,14 @@ export class GameEngine {
   public getBriefingForDay(day: number): Briefing | null {
     const scenario = scenarios[day] || null;
     return scenario?.briefing || null;
+  }
+
+  public getResultsForDay(day: number, totalCost: number): ResultDetails | null {
+    const scenario = scenarios[day];
+    if (scenario) {
+        return scenario.getResultDetails(totalCost);
+    }
+    return null;
   }
 
   public toggleUnitStatus(subId: string, unitIndex: number) {
@@ -708,8 +716,16 @@ export class GameEngine {
     }
   }
 
-  public draw() {
-    this.drawer.draw(this.state);
+  public draw(isPaused?: boolean, isFastForward?: boolean) {
+    // First, ensure canvas dimensions are up-to-date. This is critical for the initial view calculation.
+    this.drawer.resizeCanvas();
+
+    // One-time initialization of the view after the canvas is ready.
+    if (!this.isViewInitialized && this.drawer.isCanvasReady()) {
+      this.drawer.setInitialView(this.state);
+      this.isViewInitialized = true;
+    }
+    this.drawer.draw(this.state, isPaused ?? true, isFastForward ?? false);
   }
 
   public getDashboardStats(): DashboardStats {
@@ -743,7 +759,7 @@ export class GameEngine {
     };
   }
 
-  public handleResize() {
-    this.drawer.draw(this.state);
+  public handleResize(isPaused?: boolean, isFastForward?: boolean) {
+    this.drawer.draw(this.state, isPaused ?? true, isFastForward ?? false);
   }
 }
