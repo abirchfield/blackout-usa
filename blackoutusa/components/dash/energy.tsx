@@ -5,7 +5,7 @@ import { SidebarSeparator } from "@/components/ui/sidebar"
 import { DashboardStats } from "@/lib/game/types"
 import { fmtMW, fmtMoneyK, fmtMoneyM } from "@/lib/utils"
 import { AreaChart, Area } from "recharts"
-import { ChartContainer, ChartTooltip, ChartTooltipContent } from "@/components/ui/chart"
+import { ChartContainer } from "@/components/ui/chart"
 
 interface EnergyStatsProps {
   stats: DashboardStats;
@@ -25,30 +25,11 @@ export function EnergyStats({ stats, statsHistory }: EnergyStatsProps) {
     })) || [];
   }, [statsHistory]);
 
-  const financeChartData = useMemo(() => {
-    return statsHistory?.map(stat => ({
-      time: stat.timeStr,
-      totalCost: stat.totalCost / 1000000, // in $M
-      avgCost: stat.avgCost,
-      opCost: stat.totalOpCost / 1000, // in $k
-      fuelCost: stat.totalFuelCost / 1000, // in $k
-      unservedCost: stat.totalUnservedCost / 1000, // in $k
-    })) || [];
-  }, [statsHistory]);
-
   const energyChartConfig = {
     wind: { label: "Wind", color: "hsl(142.1 76.2% 44.9%)" }, // text-green-500
     solar: { label: "Solar", color: "hsl(47.9 95.8% 53.1%)" }, // text-yellow-500
     thermal: { label: "Thermal", color: "hsl(215.4 16.3% 47.1%)" }, // text-gray-500
     nuclear: { label: "Nuclear", color: "hsl(332.6 79.1% 57.8%)" }, // text-pink-500
-  } as const
-
-  const financeChartConfig = {
-    totalCost: { label: "Total Cost", color: "var(--primary)" },
-    avgCost: { label: "Avg. Cost", color: "var(--chart-4)" },
-    opCost: { label: "Op Cost", color: "var(--chart-1)" },
-    fuelCost: { label: "Fuel Cost", color: "var(--chart-2)" },
-    unservedCost: { label: "Unserved Cost", color: "var(--chart-3)" },
   } as const
 
   const showCharts = energyChartData.length > 1;
@@ -57,14 +38,14 @@ export function EnergyStats({ stats, statsHistory }: EnergyStatsProps) {
     <div className="space-y-4">
       <div className="grid grid-cols-2 gap-x-2 gap-y-4">
       <div>
-        <div className="text-xs text-muted-foreground">Load Served</div>
-        <div id="dash-sload" className="text-xl font-bold text-foreground">
+        <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Load Served</div>
+        <div id="dash-sload" className="text-lg font-bold text-sidebar-foreground">
           {fmtMW(s.loadServed)}
         </div>
       </div>
       <div>
-        <div className="text-xs text-muted-foreground">Load Unserved</div>
-        <div id="dash-uload" className="text-xl font-bold text-foreground">
+        <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Load Unserved</div>
+        <div id="dash-uload" className="text-lg font-bold text-sidebar-foreground">
           {fmtMW(s.loadUnserved)}
         </div>
       </div>
@@ -73,28 +54,28 @@ export function EnergyStats({ stats, statsHistory }: EnergyStatsProps) {
         <div
           id="dash-reserve"
           className={`text-xl font-bold ${
-            s.reserves < 50 ? "text-red-500" : s.reserves < 500 ? "text-orange-500" : "text-foreground"
+            s.reserves < 50 ? "text-red-500" : s.reserves < 500 ? "text-orange-500" : "text-sidebar-foreground"
           }`}
         >
           {fmtMW(s.reserves)}
         </div>
       </div>
       <div>
-        <div className="text-xs text-muted-foreground">Frequency</div>
-        <div id="dash-freq" className={`text-xl font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-red-500" : "text-foreground"}`}>
+        <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Frequency</div>
+        <div id="dash-freq" className={`text-lg font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-red-500" : "text-sidebar-foreground"}`}>
           {s.frequency.toFixed(2)} Hz
         </div>
       </div>
       </div>
 
-      <SidebarSeparator />
+      <SidebarSeparator className="bg-sidebar-border/50" />
 
       <div>
         <div className="flex items-baseline justify-between">
-          <div className="text-xs text-muted-foreground">Generation Mix</div>
+          <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold mb-2">Generation Mix</div>
         </div>
         {showCharts && (
-          <div className="h-24 w-full">
+          <div className="h-20 w-full">
             <ChartContainer config={energyChartConfig} className="h-full w-full">
               <AreaChart data={energyChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }} >
                 <Area dataKey="nuclear" type="natural" fill="var(--color-nuclear)" fillOpacity={0.4} strokeWidth={0} stackId="a" />
@@ -106,7 +87,7 @@ export function EnergyStats({ stats, statsHistory }: EnergyStatsProps) {
           </div>
         )}
         {showCharts && (
-          <div className="flex items-center justify-center gap-x-4 text-xs pt-2 text-muted-foreground">
+          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] pt-2 text-sidebar-foreground/70">
             {Object.keys(energyChartConfig)
               .reverse()
               .map((key) => {
@@ -122,133 +103,37 @@ export function EnergyStats({ stats, statsHistory }: EnergyStatsProps) {
         )}
       </div>
 
-      <SidebarSeparator />
+      <SidebarSeparator className="bg-sidebar-border/50" />
 
       <div className="space-y-4">
-        <div className="space-y-2">
-          {/* Total Cost */}
-          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
-            <div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Total Cost</div>
-              <div id="dash-tcost" className="text-2xl font-bold">{fmtMoneyM(s.totalCost)}</div>
-            </div>
-            {showCharts && (
-              <div className="h-10 w-32">
-                <ChartContainer config={financeChartConfig} className="h-full w-full">
-                  <AreaChart data={financeChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <Area dataKey="totalCost" type="natural" fill="var(--color-totalCost)" fillOpacity={0.2} stroke="var(--color-totalCost)" strokeWidth={2} />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent
-                        indicator="line"
-                        formatter={(value) => [`$${Number(value).toFixed(2)}M`, "Total Cost"]}
-                      />}
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              </div>
-            )}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Cost</div>
+            <div id="dash-tcost" className="text-xl font-bold text-sidebar-foreground">{fmtMoneyM(s.totalCost)}</div>
           </div>
-
-          {/* Avg. Cost */}
-          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
-            <div>
-              <div className="text-xs text-muted-foreground uppercase tracking-wider">Avg. Cost</div>
-              <div id="dash-avcost" className="text-2xl font-bold">${s.avgCost.toFixed(2)}/MWh</div>
-            </div>
-            {showCharts && (
-              <div className="h-10 w-32">
-                <ChartContainer config={financeChartConfig} className="h-full w-full">
-                  <AreaChart data={financeChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <Area dataKey="avgCost" type="natural" fill="var(--color-avgCost)" fillOpacity={0.2} stroke="var(--color-avgCost)" strokeWidth={2} />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent
-                        indicator="line"
-                        formatter={(value) => [`$${Number(value).toFixed(2)}/MWh`, "Avg. Cost"]}
-                      />}
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              </div>
-            )}
+          <div>
+            <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Avg. Cost</div>
+            <div id="dash-avcost" className="text-xl font-bold text-sidebar-foreground">${s.avgCost.toFixed(2)}</div>
           </div>
         </div>
 
-        <SidebarSeparator />
-
-        <div className="space-y-2">
-          <div className="text-sm font-medium text-muted-foreground">
-            Total Cost Breakdown
+        <div className="space-y-2 p-3 rounded-lg bg-sidebar-accent/30 border border-sidebar-border/50">
+          <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">
+            Cost Breakdown
           </div>
-          {/* Op Cost */}
-          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
+          <div className="grid grid-cols-3 gap-2">
             <div>
-              <div className="text-sm text-muted-foreground">Op Cost</div>
-              <div className="font-bold text-foreground">{fmtMoneyK(s.totalOpCost)}</div>
+              <div className="text-[9px] text-sidebar-foreground/50 uppercase">Op.</div>
+              <div className="text-xs font-bold text-sidebar-foreground">{fmtMoneyK(s.totalOpCost)}</div>
             </div>
-            {showCharts && (
-              <div className="h-10 w-32">
-                <ChartContainer config={financeChartConfig} className="h-full w-full">
-                  <AreaChart data={financeChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <Area dataKey="opCost" type="natural" fill="var(--color-opCost)" fillOpacity={0.2} stroke="var(--color-opCost)" strokeWidth={2} />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent
-                        indicator="line"
-                        formatter={(value) => [`$${Number(value).toFixed(0)}k`, "Op Cost"]}
-                      />}
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              </div>
-            )}
-          </div>
-          {/* Fuel Cost */}
-          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
             <div>
-              <div className="text-sm text-muted-foreground">Fuel Cost</div>
-              <div className="font-bold text-foreground">{fmtMoneyK(s.totalFuelCost)}</div>
+              <div className="text-[9px] text-sidebar-foreground/50 uppercase">Fuel</div>
+              <div className="text-xs font-bold text-sidebar-foreground">{fmtMoneyK(s.totalFuelCost)}</div>
             </div>
-            {showCharts && (
-              <div className="h-10 w-32">
-                <ChartContainer config={financeChartConfig} className="h-full w-full">
-                  <AreaChart data={financeChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <Area dataKey="fuelCost" type="natural" fill="var(--color-fuelCost)" fillOpacity={0.2} stroke="var(--color-fuelCost)" strokeWidth={2} />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent
-                        indicator="line"
-                        formatter={(value) => [`$${Number(value).toFixed(0)}k`, "Fuel Cost"]}
-                      />}
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              </div>
-            )}
-          </div>
-          {/* Unserved Cost */}
-          <div className="grid grid-cols-[1fr_auto] items-center gap-4">
             <div>
-              <div className="text-sm text-muted-foreground">Unserved Cost</div>
-              <div className="font-bold text-foreground">{fmtMoneyK(s.totalUnservedCost)}</div>
+              <div className="text-[9px] text-sidebar-foreground/50 uppercase">Unserved</div>
+              <div className="text-xs font-bold text-sidebar-foreground">{fmtMoneyK(s.totalUnservedCost)}</div>
             </div>
-            {showCharts && (
-              <div className="h-10 w-32">
-                <ChartContainer config={financeChartConfig} className="h-full w-full">
-                  <AreaChart data={financeChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }}>
-                    <Area dataKey="unservedCost" type="natural" fill="var(--color-unservedCost)" fillOpacity={0.2} stroke="var(--color-unservedCost)" strokeWidth={2} />
-                    <ChartTooltip
-                      cursor={false}
-                      content={<ChartTooltipContent
-                        indicator="line"
-                        formatter={(value) => [`$${Number(value).toFixed(0)}k`, "Unserved Cost"]}
-                      />}
-                    />
-                  </AreaChart>
-                </ChartContainer>
-              </div>
-            )}
           </div>
         </div>
       </div>

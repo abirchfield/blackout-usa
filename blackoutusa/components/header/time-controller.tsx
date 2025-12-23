@@ -9,7 +9,6 @@ interface TimeControllerProps {
   isFastForward: boolean;
   onTogglePause: () => void;
   onToggleFastForward: () => void;
-  showLabels?: boolean;
 }
 
 export function TimeController({ 
@@ -17,11 +16,9 @@ export function TimeController({
   isPaused, 
   isFastForward, 
   onTogglePause, 
-  onToggleFastForward,
-  showLabels = true
+  onToggleFastForward
 }: TimeControllerProps) {
   return (
-    <div className="flex flex-col w-full gap-1">
       <div className="flex items-center gap-3 w-full">
         <Button
           variant="ghost"
@@ -48,12 +45,5 @@ export function TimeController({
           <FastForward className={`h-3 w-3 ${isFastForward ? "fill-current" : ""}`} />
         </Button>
       </div>
-      {showLabels && (
-        <div className="flex justify-between text-[10px] uppercase text-muted-foreground font-semibold leading-none px-11">
-          <span>1 PM</span>
-          <span>11 PM</span>
-        </div>
-      )}
-    </div>
   )
 }

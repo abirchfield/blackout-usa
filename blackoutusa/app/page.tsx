@@ -2,17 +2,26 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
+import { cn } from "@/lib/utils"
 import { scenarios, ResultDetails } from "@/lib/game/scenarios"
 import { GameEngine } from "@/lib/game/engine"
 import { DashboardStats, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
 import { AppHeader } from "@/components/app-header"
-import { AppSidebar } from "@/components/app-sidebar"
+import { Sidebar, SidebarContent } from "@/components/ui/sidebar"
+import { EnergyStats } from "@/components/dash/energy"
 import { RightSidebar } from "@/components/right-sidebar"
 import { SubstationModal } from "@/components/modals/substation-modal"
 import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
 import { HelpModal } from "@/components/modals/help-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
+import { TimeController } from "@/components/header/time-controller"
+import { Switch } from "@/components/ui/switch"
+import { Label } from "@/components/ui/label"
+import { SubstationsList } from "@/components/dash/substations"
+import { BranchesList } from "@/components/dash/branches"
+import { SubstationIcon } from "@/components/icons/substation-icon"
+import { LinesIcon } from "@/components/icons/lines-icon"
 
 const initialDashboardStats: DashboardStats = {
   day: 1,
@@ -61,6 +70,7 @@ export default function Page() {
   const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
   const [dayResultDetails, setDayResultDetails] = useState<ResultDetails | null>(null);
   const [rightSidebarTab, setRightSidebarTab] = useState('brief');
+  const [viewMode, setViewMode] = useState<'visual' | 'tabular'>('visual');
 
   // Theme
   const { resolvedTheme } = useTheme()
@@ -294,37 +304,87 @@ export default function Page() {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full overflow-hidden">
+    <div className="flex flex-col min-h-screen lg:h-screen w-full lg:overflow-hidden">
       <AppHeader
-        stats={dashboardStats}
         onHelpClick={() => {
           setIsHelpOpen(true);
         }}
         onQuitClick={() => {
           setIsQuitOpen(true);
         }}
-        progress={progress}
-        isPaused={isPaused}
-        isFastForward={isFastForward}
-        onTogglePause={togglePause}
-        onToggleFastForward={toggleFastForward}
       />
-      <div className="flex flex-1 overflow-hidden">
-        <AppSidebar
-          stats={dashboardStats}
-          subs={engineRef.current?.state.subs}
-          branches={engineRef.current?.state.branches}
-          statsHistory={statsHistory}
-          onSubstationSelect={handleSubstationSelect}
-          onBranchSelect={handleBranchSelect}
-        />
-        <main className="flex-1 flex flex-col overflow-hidden relative min-w-0">
-        <div className="game-wrapper relative h-full w-full">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-row flex-1 lg:overflow-hidden">
+          <Sidebar collapsible="none" className={cn("group w-full lg:w-96 border-r border-border bg-sidebar lg:!top-16 lg:!h-[calc(100vh-4rem)] h-auto overflow-visible", "order-2 md:order-1 md:col-span-1 lg:order-1")}>
+            <SidebarContent className="font-share-tech flex flex-col overflow-y-auto p-4">
+              <EnergyStats stats={dashboardStats} statsHistory={statsHistory} />
+            </SidebarContent>
+          </Sidebar>
+          <main className="order-1 md:order-3 md:col-span-2 lg:order-2 flex-1 flex flex-col relative min-w-0 min-h-[600px] lg:min-h-0 lg:overflow-hidden">
+          <div className="flex flex-wrap items-center justify-center gap-x-6 gap-y-3 p-3 border-b bg-muted/30 font-share-tech z-10">
+            <div className="flex items-center gap-2">
+              <span className="text-xl font-semibold text-muted-foreground uppercase">Day</span>
+              <span className="w-[2ch] text-left text-xl font-semibold text-muted-foreground tabular-nums">
+                {dashboardStats.day || 1}
+              </span>
+            </div>
+            <div className="h-6 w-px bg-border" />
+            <span className="w-[10ch] text-center text-xl font-bold text-foreground tabular-nums tracking-wider">{dashboardStats.timeStr}</span>
+            <div className="h-6 w-px bg-border" />
+            <div className="w-full max-w-xs sm:w-64">
+              <TimeController
+                progress={progress}
+                isPaused={isPaused}
+                isFastForward={isFastForward}
+                onTogglePause={togglePause}
+                onToggleFastForward={toggleFastForward}
+              />
+            </div>
+            <div className="h-6 w-px bg-border" />
+            <div className="flex items-center gap-2">
+              <Label htmlFor="view-mode" className="text-sm font-medium uppercase text-muted-foreground">Tabular</Label>
+              <Switch
+                id="view-mode"
+                checked={viewMode === 'visual'}
+                onCheckedChange={(checked) => setViewMode(checked ? 'visual' : 'tabular')}
+                className="data-[state=checked]:bg-primary"
+              />
+              <Label htmlFor="view-mode" className="text-sm font-medium uppercase text-muted-foreground">Visual</Label>
+            </div>
+          </div>
+        <div className="game-wrapper relative flex-1 w-full min-h-[400px]">
           <canvas
             ref={canvasRef}
-            tabIndex={1}
-            className="h-full w-full"
+            tabIndex={0}
+            aria-label="Interactive Texas electrical grid map"
+            role="application"
+            className={`h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary ${viewMode !== 'visual' ? 'hidden' : ''}`}
           ></canvas>
+
+          {viewMode === 'tabular' && (
+            <div className="absolute inset-0 flex flex-row overflow-hidden bg-background text-foreground">
+              <div className="flex-1 overflow-y-auto border-r p-4">
+                <h2 className="text-xl font-bold mb-4 font-share-tech uppercase text-muted-foreground flex items-center gap-2">
+                  <SubstationIcon className="h-5 w-5" />
+                  Substations
+                </h2>
+                <SubstationsList 
+                  subs={engineRef.current?.state.subs} 
+                  onSubstationSelect={handleSubstationSelect} 
+                />
+              </div>
+              <div className="flex-1 overflow-y-auto p-4">
+                <h2 className="text-xl font-bold mb-4 font-share-tech uppercase text-muted-foreground flex items-center gap-2">
+                  <LinesIcon className="h-7 w-7" />
+                  Transmission Lines
+                </h2>
+                <BranchesList 
+                  branches={engineRef.current?.state.branches} 
+                  onBranchSelect={handleBranchSelect} 
+                />
+              </div>
+            </div>
+          )}
+
           {/* Modals */}
           <WelcomeModal 
             open={isWelcomeOpen}
@@ -387,8 +447,9 @@ export default function Page() {
           dayResultDetails={dayResultDetails}
           activeTab={rightSidebarTab}
           onTabChange={setRightSidebarTab}
+          className="order-3 md:order-2 md:col-span-1 lg:order-3"
         />
-      </div>
+        </div>
     </div>
   )
 }

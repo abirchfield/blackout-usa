@@ -758,8 +758,4 @@ export class GameEngine {
       fr_solar: this.state.fr_solar,
     };
   }
-
-  public handleResize(isPaused?: boolean, isFastForward?: boolean) {
-    this.drawer.draw(this.state, isPaused ?? true, isFastForward ?? false);
-  }
 }

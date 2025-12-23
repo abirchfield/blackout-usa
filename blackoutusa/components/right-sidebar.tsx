@@ -1,6 +1,7 @@
 "use client"
 
 import { BookText, Bell, Lightbulb, ArrowRight, RotateCw, Check, Lock } from "lucide-react"
+import { cn } from "@/lib/utils"
 import {
   Sidebar,
   SidebarContent,
@@ -31,6 +32,7 @@ interface RightSidebarProps {
   dayResultDetails: ResultDetails | null;
   activeTab: string;
   onTabChange: (tab: string) => void;
+  className?: string;
 }
 
 interface DayResultsProps {
@@ -75,24 +77,24 @@ function DayResults({ stats, day, resultDetails }: DayResultsProps) {
   );
 }
 
-export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [], onRemoveHint, isDayFinished, isDayTransition, targetDay, totalDays, completedDays, onStartDay, onNextDay, onReplayDay, dayResultDetails, activeTab, onTabChange }: RightSidebarProps) {
+export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [], onRemoveHint, isDayFinished, isDayTransition, targetDay, totalDays, completedDays, onStartDay, onNextDay, onReplayDay, dayResultDetails, activeTab, onTabChange, className }: RightSidebarProps) {
   // Default values if stats are not yet available
   const s = stats || {
     day: 1,
   } as DashboardStats;
 
   return (
-    <Sidebar collapsible="none" className="group w-96 border-l border-border bg-sidebar !top-16 !h-[calc(100vh-4rem)]">
+    <Sidebar collapsible="none" className={cn("group w-full lg:w-96 border-l border-border bg-sidebar lg:!top-16 lg:!h-[calc(100vh-4rem)] h-auto", className)}>
       <SidebarContent className="font-share-tech flex flex-col overflow-hidden">
         {/* Briefing, Alerts, Hints*/}
 
         <Tabs value={activeTab} onValueChange={onTabChange} className="w-full px-2 pt-2 flex-1 flex flex-col min-h-0">
           <TabsList className="grid w-full grid-cols-3 rounded-none bg-transparent p-0">
-            <TabsTrigger value="brief" className="flex items-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground">
+            <TabsTrigger value="brief" className="flex items-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background z-10">
               <BookText className="h-4 w-4" />
               <span className="mr-auto">Briefing</span>
             </TabsTrigger>
-            <TabsTrigger value="alerts" className="flex items-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground">
+            <TabsTrigger value="alerts" className="flex items-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background z-10">
               <Bell className="h-4 w-4" />
               <span className="mr-auto">Alerts</span>
               {alerts.length > 0 && (
@@ -101,7 +103,7 @@ export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [
                 </span>
               )}
             </TabsTrigger>
-            <TabsTrigger value="hints" className="flex items-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground">
+            <TabsTrigger value="hints" className="flex items-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 ring-offset-background z-10">
               <Lightbulb className="h-4 w-4" />
               <span className="mr-auto">Hints</span>
               {hints.length > 0 && (
@@ -112,7 +114,7 @@ export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="brief" className="bg-sidebar rounded-b-md rounded-tl-md flex flex-col flex-1 min-h-0">
+          <TabsContent value="brief" className="bg-sidebar rounded-b-md rounded-tl-md flex flex-col flex-1 min-h-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <div className="p-4 flex-1 overflow-y-auto">
               {isDayFinished ? (
                 <DayResults
@@ -166,10 +168,10 @@ export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [
               </div>
             </div>
           </TabsContent>
-          <TabsContent value="alerts" className="bg-sidebar rounded-b-md rounded-tl-md p-4">
+          <TabsContent value="alerts" className="bg-sidebar rounded-b-md rounded-tl-md p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <AlertsList alerts={alerts} onRemoveAlert={onRemoveAlert} />
           </TabsContent>
-          <TabsContent value="hints" className="bg-sidebar rounded-b-md rounded-tl-md p-4">
+          <TabsContent value="hints" className="bg-sidebar rounded-b-md rounded-tl-md p-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2">
             <HintsList hints={hints} onRemoveHint={onRemoveHint} />
           </TabsContent>
         </Tabs>

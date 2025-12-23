@@ -84,9 +84,9 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
       <Table className="table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[45%]">Substation</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead className="w-[90px] text-right">Power</TableHead>
+            <TableHead className="w-[45%] text-muted-foreground">Substation</TableHead>
+            <TableHead className="text-muted-foreground">Status</TableHead>
+            <TableHead className="w-[90px] text-right text-muted-foreground">Power</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -97,7 +97,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                 const totalPower = sub.U.reduce((acc, unit) => acc + unit.P, 0);
                 return (
                   <TableRow key={sub.Number} className="cursor-pointer" onClick={() => onSubstationSelect(sub)}>
-                    <TableCell className="font-medium text-xs py-2 truncate">{sub.Name}</TableCell>
+                    <TableCell className="font-medium text-xs py-2 truncate text-foreground">{sub.Name}</TableCell>
                     <TableCell className="py-2 pr-2">
                       <div className="flex items-center gap-1 flex-wrap">
                         {sub.Category === CATEGORY_LOAD 
@@ -112,7 +112,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                         }
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-xs py-2">
+                    <TableCell className="text-right text-xs py-2 text-foreground">
                       <div className="flex items-center justify-end gap-1.5">
                         <span>{totalPower.toFixed(0)} MW</span>
                         <GenerationTypeIcon category={sub.Category} />

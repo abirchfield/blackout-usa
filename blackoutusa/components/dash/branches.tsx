@@ -47,8 +47,8 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px]">Line</TableHead>
-            <TableHead className="text-right">State</TableHead>
+            <TableHead className="w-[200px] text-muted-foreground">Line</TableHead>
+            <TableHead className="text-right text-muted-foreground">State</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -68,7 +68,7 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
 
                 return (
                   <TableRow key={branch.Number} className="cursor-pointer" onClick={() => onBranchSelect(branch)}>
-                    <TableCell className="font-medium text-xs py-2 truncate pr-4">{branch.sub1?.Name} - {branch.sub2?.Name}</TableCell>
+                    <TableCell className="font-medium text-xs py-2 truncate pr-4 text-foreground">{branch.sub1?.Name} - {branch.sub2?.Name}</TableCell>
                     <TableCell className="py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div className={indicator.className} title={indicator.title} />
@@ -77,7 +77,7 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
                             <div className="h-1.5 w-10 rounded-full bg-muted" title={`Loading: ${loading.toFixed(0)}%`}>
                               <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(100, loading)}%` }} />
                             </div>
-                            <span className="text-xs font-mono w-8 text-right">{loading.toFixed(0)}%</span>
+                            <span className="text-xs font-mono w-8 text-right text-foreground">{loading.toFixed(0)}%</span>
                            </>
                         )}
                       </div>
