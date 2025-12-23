@@ -2,24 +2,24 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
+import { scenarios } from "@/lib/game/scenarios"
 import { GameEngine } from "@/lib/game/engine"
 import { DashboardStats, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
 import { AppHeader } from "@/components/app-header"
 import { AppSidebar } from "@/components/app-sidebar"
+import { RightSidebar } from "@/components/right-sidebar"
 import { SubstationModal } from "@/components/modals/substation-modal"
 import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
 import { HelpModal } from "@/components/modals/help-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
-import { FinishedModal } from "@/components/modals/finished-modal"
+import { Button } from "@/components/ui/button"
 
 export default function Page() {
   // Modal States
   const [isWelcomeOpen, setIsWelcomeOpen] = useState(false)
   const [isHelpOpen, setIsHelpOpen] = useState(false)
   const [isQuitOpen, setIsQuitOpen] = useState(false)
-  const [isBriefingOpen, setIsBriefingOpen] = useState(false) // This will now control the Popover
-  const [isFinishedOpen, setIsFinishedOpen] = useState(false)
   const [selectedSub, setSelectedSub] = useState<Substation | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
   const [currentBriefing, setCurrentBriefing] = useState<Briefing | null>(null)
@@ -27,12 +27,14 @@ export default function Page() {
 
   // Game States
   const [isPaused, setIsPaused] = useState(true)
+  const [isDayFinished, setIsDayFinished] = useState(false)
   const [isFastForward, setIsFastForward] = useState(false)
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
   const [hints, setHints] = useState<Array<{id: number, time: string, message: string}>>([])
   const [statsHistory, setStatsHistory] = useState<DashboardStats[]>([])
   const [targetDay, setTargetDay] = useState(1)
   const [isDayTransition, setIsDayTransition] = useState(false)
+  const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
 
   // Theme
   const { resolvedTheme } = useTheme()
@@ -54,6 +56,10 @@ export default function Page() {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<GameEngine | null>(null)
   const [dashboardStats, setDashboardStats] = useState<DashboardStats | undefined>(undefined)
+
+  // Calculate progress for the header's time controller
+  const timeStep = dashboardStats?.timeStep || 0;
+  const progress = Math.min(100, Math.max(0, (timeStep / GameEngine.GAME_DURATION) * 100));
 
   useEffect(() => {
     setIsWelcomeOpen(true)
@@ -116,7 +122,8 @@ export default function Page() {
 
               if (isDayOver) {
                 setIsPaused(true);
-                setIsFinishedOpen(true);
+                setIsDayFinished(true);
+                setCompletedDays(prev => new Set(prev).add(newStats.day));
               }
             }
           }
@@ -144,8 +151,6 @@ export default function Page() {
     setTargetDay(dayToShow);
     const briefing = engineRef.current?.getBriefingForDay(dayToShow);
     setCurrentBriefing(briefing || null);
-    setIsBriefingOpen(true); // This will now open the Popover in the sidebar
-    setIsPaused(true);
     setIsDayTransition(true);
   }
 
@@ -182,6 +187,18 @@ export default function Page() {
     }
   }
 
+  const handleStartDay = () => {
+    if (isDayTransition) {
+      engineRef.current?.startDay(targetDay);
+      setStatsHistory([]);
+      setIsDayTransition(false); // Reset flag
+    }
+    // Only unpause if no other "pausing" modals are open
+    if (!isHelpOpen && !isQuitOpen) {
+      setIsPaused(false);
+    }
+  }
+
   const handleUnitAction = (subId: string, unitIndex: number) => {
     engineRef.current?.toggleUnitStatus(subId, unitIndex);
     setSelectedSub(engineRef.current?.state.subs[subId] || null); // Refresh modal data
@@ -196,14 +213,15 @@ export default function Page() {
   
   const handleReplayDay = (currentDay: number) => {
     showBriefingForDay(currentDay);
-    setIsFinishedOpen(false);
+    setIsDayFinished(false);
     setIsQuitOpen(false);
   }
 
   const handleNextDay = (currentDay: number) => {
-    const nextDay = currentDay < 5 ? currentDay + 1 : 1;
+    const totalDays = Object.keys(scenarios).length;
+    const nextDay = currentDay < totalDays ? currentDay + 1 : 1;
     showBriefingForDay(nextDay);
-    setIsFinishedOpen(false);
+    setIsDayFinished(false);
     setIsQuitOpen(false);
   }
 
@@ -222,40 +240,24 @@ export default function Page() {
   return (
     <div className="flex flex-col h-screen w-full overflow-hidden">
       <AppHeader
+        stats={dashboardStats}
         onHelpClick={() => {
           setIsHelpOpen(true);
           setIsPaused(true);
         }}
-        onQuitClick={() => setIsQuitOpen(true)}
+        onQuitClick={() => {
+          setIsQuitOpen(true);
+          setIsPaused(true);
+        }}
+        progress={progress}
+        isPaused={isPaused}
+        isFastForward={isFastForward}
+        onTogglePause={togglePause}
+        onToggleFastForward={toggleFastForward}
       />
       <div className="flex flex-1 overflow-hidden">
         <AppSidebar
           stats={dashboardStats}
-          isPaused={isPaused}
-          isFastForward={isFastForward}
-          onTogglePause={togglePause}
-          onToggleFastForward={toggleFastForward}
-          isBriefingOpen={isBriefingOpen}
-          onBriefingOpenChange={(open) => {
-            setIsBriefingOpen(open);
-            if (open) {
-              setIsPaused(true);
-            } else { // Briefing is closing
-              if (isDayTransition) {
-                engineRef.current?.startDay(targetDay);
-                setStatsHistory([]);
-                setIsDayTransition(false); // Reset flag
-              }
-              if (!isHelpOpen && !isQuitOpen && !isFinishedOpen) {
-                setIsPaused(false);
-              }
-            }
-          }}
-          briefing={currentBriefing}
-          alerts={alerts}
-          onRemoveAlert={removeAlert}
-          hints={hints}
-          onRemoveHint={removeHint}
           subs={engineRef.current?.state.subs}
           branches={engineRef.current?.state.branches}
           statsHistory={statsHistory}
@@ -284,9 +286,8 @@ export default function Page() {
               if (!open) {
                 if (isInitialTutorial) { // After tutorial, show briefing
                   setIsDayTransition(true);
-                  setIsBriefingOpen(true);
                   setIsInitialTutorial(false);
-                } else if (!isQuitOpen && !isFinishedOpen) {
+                } else if (!isQuitOpen && !isDayFinished) {
                   // Only unpause if no other "pausing" modals are open
                   setIsPaused(false);
                 }
@@ -305,20 +306,17 @@ export default function Page() {
           />
           <BranchModal branch={selectedBranch} onClose={() => setSelectedBranch(null)} onCircuitAction={(branchId, circuit) => engineRef.current?.toggleBranchCircuitStatus(branchId, circuit)} />
 
-          {/* Finished Day Modal */}
-          <FinishedModal 
-            open={isFinishedOpen}
-            onOpenChange={setIsFinishedOpen}
-            stats={dashboardStats}
-            day={dashboardStats?.day || 1}
-            onNextDay={handleNextDay}
-            onReplay={handleReplayDay}
-            onQuit={handleQuitToStart}
-          />
-
           <QuitModal
             open={isQuitOpen}
-            onOpenChange={setIsQuitOpen}
+            onOpenChange={(open) => {
+              setIsQuitOpen(open);
+              if (!open) {
+                // If we are not in a day transition or end-of-day state, resume.
+                if (!isDayTransition && !isDayFinished) {
+                  setIsPaused(false);
+                }
+              }
+            }}
             day={dashboardStats?.day || 1}
             onQuitToStart={handleQuitToStart}
             onReplayDay={handleReplayDay}
@@ -326,6 +324,22 @@ export default function Page() {
           />
         </div>
         </main>
+        <RightSidebar
+          stats={dashboardStats}
+          briefing={currentBriefing}
+          alerts={alerts}
+          onRemoveAlert={removeAlert}
+          hints={hints}
+          onRemoveHint={removeHint}
+          isDayFinished={isDayFinished}
+          isDayTransition={isDayTransition}
+          targetDay={targetDay}
+          totalDays={Object.keys(scenarios).length}
+          completedDays={Array.from(completedDays)}
+          onStartDay={handleStartDay}
+          onNextDay={handleNextDay}
+          onReplayDay={handleReplayDay}
+        />
       </div>
     </div>
   )

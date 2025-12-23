@@ -80,14 +80,13 @@ const GenerationTypeIcon = ({ category }: { category: string }) => {
 
 export function SubstationsList({ subs, onSubstationSelect }: SubstationsListProps) {
   return (
-    <div className="max-h-[calc(100vh-22rem)] overflow-y-auto">
-      <Table>
+    <div>
+      <Table className="table-fixed">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[120px]">Substation</TableHead>
-            <TableHead>Load Status</TableHead>
-            <TableHead>Supply Status</TableHead>
-            <TableHead className="text-right">Power</TableHead>
+            <TableHead className="w-[45%]">Substation</TableHead>
+            <TableHead>Status</TableHead>
+            <TableHead className="w-[90px] text-right">Power</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -99,25 +98,19 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                 return (
                   <TableRow key={sub.Number} className="cursor-pointer" onClick={() => onSubstationSelect(sub)}>
                     <TableCell className="font-medium text-xs py-2 truncate">{sub.Name}</TableCell>
-                    <TableCell className="py-2">
-                      {sub.Category === CATEGORY_LOAD && (
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {sub.U.map((unit, index) => {
-                            const { className } = getLoadIndicatorStyle(unit);
-                            return <div key={`indicator-${sub.Number}-${index}`} className={className} title={`Circuit #${index + 1}: ${unit.Status}`} />;
-                          })}
-                        </div>
-                      )}
-                    </TableCell>
-                    <TableCell className="py-2">
-                      {sub.Category !== CATEGORY_LOAD && (
-                        <div className="flex items-center gap-1 flex-wrap">
-                          {sub.U.map((unit, index) => {
-                            const { className, style } = getGenIndicatorStyle(unit, sub);
-                            return <div key={`indicator-${sub.Number}-${index}`} className={className} style={style} title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`} />;
-                          })}
-                        </div>
-                      )}
+                    <TableCell className="py-2 pr-2">
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {sub.Category === CATEGORY_LOAD 
+                          ? sub.U.map((unit, index) => {
+                              const { className } = getLoadIndicatorStyle(unit);
+                              return <div key={`indicator-${sub.Number}-${index}`} className={className} title={`Circuit #${index + 1}: ${unit.Status}`} />;
+                            })
+                          : sub.U.map((unit, index) => {
+                              const { className, style } = getGenIndicatorStyle(unit, sub);
+                              return <div key={`indicator-${sub.Number}-${index}`} className={className} style={style} title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`} />;
+                            })
+                        }
+                      </div>
                     </TableCell>
                     <TableCell className="text-right text-xs py-2">
                       <div className="flex items-center justify-end gap-1.5">
@@ -130,7 +123,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
               })
           ) : (
             <TableRow>
-              <TableCell colSpan={4} className="h-24 text-center text-muted-foreground">
+              <TableCell colSpan={3} className="h-24 text-center text-muted-foreground">
                 No substations to show.
               </TableCell>
             </TableRow>
