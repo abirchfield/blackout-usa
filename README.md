@@ -15,20 +15,16 @@ are those of the author(s) and do not necessarily reflect the views of the Natio
 # TODO (React Transition)
 
 ## Crucial TODO
-- Update images in the How-To modal
-- The scenario/day transition works, but the briefing for the wrong day is displayed at the start of the day. For example, when the user finishes `Day 1` and chooses to move to `Day 2`, the briefing for `Day 1` appears instead of `Day 2`. However, if they dismiss the briefing, then click on the briefing button again, `Day 2` briefing is displayed. Small bug should be easy to fix.
+- Update a few images in the How-To modal
 - Need to display the start-up time for the generation substations.
-- In the `energy` tab, display the MW values for the four energy categories for readability.
-- Find a way to shrink the pause/play controls so we can display the frequency (one of the more important values to know) always. Right now, it is only in the energy tab.
-- Use Squares instead of circles for the load indicators in the substation tab.
-- Add legend for indicator circles in the `lines` and `substations` tabs
+- Display the MW values for the four energy categories for readability.
 - Small inconsistancy with how pause/play/FF works
 
 ## Less Crucial TODO
-- Make an option to have the alerts be a static view on the page, or find a nicer way to have them pop up on screen that is not super distracting.
+- After the last day, it goes back to day 1.
 - Key-Bindings (e.g., `Ctrl+O` could open the largest load)
 - In the load modal, make the `IN-SERVICE` tag green
 - Find an abbreviated term for `OUT-OF-SERVICE` that sometimes causes text wrapping.
-- Generally improve the `finance` tab, which is basically useless at the moment.
 - In the generation substation modal, display the generation type icon.
 - In the line modal, use the same formatting as the generation modal to be consistent.
+- Use squares instead of circles for the load indicators in the substation tab.

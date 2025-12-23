@@ -4,33 +4,29 @@ type LinesIconProps = React.SVGProps<SVGSVGElement>;
 
 export const LinesIcon = (props: LinesIconProps) => {
   // --- CONFIGURATION ---
-  // Vertical Heights
-  const H_PEAK = 18;       // Top triangle height
-  const H_NECK = 66;       // Total straight neck height
-  const H_LEGS = 45;       // Splayed leg height
+  const H_PEAK = 18;       // Triangle height
+  const H_NECK = 66;       // Neck height
+  const H_LEGS = 45;       // Leg height
 
   // Y-Coordinates
   const yStart = 5;
-  const y1 = yStart + H_PEAK;       // Top of straight neck
-  const yNode = y1 + (H_NECK / 2);  // X-brace intersection (middle of neck)
-  const yWaist = y1 + H_NECK;       // Bottom of neck / Start of legs
-  const yBase = yWaist + H_LEGS;    // Ground level
+  const y1 = yStart + H_PEAK;       // Top of Neck (23)
+  const yNode = y1 + (H_NECK / 2);  // Middle Node (56)
+  const yWaist = y1 + H_NECK;       // Waist (89)
+  const yBase = yWaist + H_LEGS;    // Base (134)
 
-  // Arm Positioning (Floating relative to y1)
+  // Arm Positions (Floating)
   const yArmTop = y1 + 25;
   const yArmBot = y1 + 50;
 
-  // Horizontal Widths
-  const c = 50;             // Center axis X
-  const wNeck = 15;         // Half-width of neck
-  const wBase = 30;         // Half-width of base feet
-  const wArm = 60;          // Half-width of cross-arms
+  // Widths (X-Coords)
+  const c = 50;             // Center
+  const wNeck = 15;         // Neck radius
+  const wBase = 30;         // Base radius
+  const wArm = 60;          // Arm radius
 
-  // Calculated X-Coords
-  const xNeckL = c - wNeck;
-  const xNeckR = c + wNeck;
-  const xBaseL = c - wBase;
-  const xBaseR = c + wBase;
+  const xNeckL = c - wNeck; const xNeckR = c + wNeck;
+  const xBaseL = c - wBase; const xBaseR = c + wBase;
 
   // Dropper Tips
   const tipH = 10;
@@ -40,7 +36,10 @@ export const LinesIcon = (props: LinesIconProps) => {
   return (
     <svg
       xmlns="http://www.w3.org/2000/svg"
-      viewBox="-12 3 124 136"
+      // ViewBox:
+      // X: -12 to 112 (Width 124) spans the 120-wide arms + padding
+      // Y: 3 to 137 (Height 134) spans peak to base legs + padding
+      viewBox="-12 3 124 134"
       fill="none"
       stroke="currentColor"
       strokeWidth="3"
@@ -49,33 +48,26 @@ export const LinesIcon = (props: LinesIconProps) => {
       {...props}
     >
       {/* --- STRUCTURE --- */}
-      {/* Vertical Rails & Legs */}
+      {/* Rails & Legs */}
       <path d={`M${xNeckL} ${y1} V${yWaist}`} />
       <path d={`M${xNeckR} ${y1} V${yWaist}`} />
       <path d={`M${xNeckL} ${yWaist} L${xBaseL} ${yBase}`} />
       <path d={`M${xNeckR} ${yWaist} L${xBaseR} ${yBase}`} />
 
       {/* --- ARMS --- */}
-      {/* Peak Base */}
-      <path d={`M${xNeckL} ${y1} H${xNeckR}`} />
+      <path d={`M${xNeckL} ${y1} H${xNeckR}`} /> {/* Peak Base */}
 
-      {/* Top Arm (Floating) */}
+      {/* Top Arm */}
       <path d={`M${c - wArm} ${yArmTop} H${xNeckL}`} />
       <path d={`M${xNeckR} ${yArmTop} H${c + wArm}`} />
-      {/* Braces -> Connect UP to y1 */}
       <path d={`M${c - wArm} ${yArmTop} L${xNeckL} ${y1}`} />
       <path d={`M${c + wArm} ${yArmTop} L${xNeckR} ${y1}`} />
 
-      {/* Bottom Arm (Floating) */}
+      {/* Bottom Arm */}
       <path d={`M${c - wArm} ${yArmBot} H${xNeckL}`} />
       <path d={`M${xNeckR} ${yArmBot} H${c + wArm}`} />
-      {/* Braces -> Connect UP to yArmTop */}
       <path d={`M${c - wArm} ${yArmBot} L${xNeckL} ${yArmTop}`} />
       <path d={`M${c + wArm} ${yArmBot} L${xNeckR} ${yArmTop}`} />
-
-      {/* Feet */}
-      <path d={`M${xBaseL - 5} ${yBase} H${xBaseL + 15}`} />
-      <path d={`M${xBaseR - 15} ${yBase} H${xBaseR + 5}`} />
 
       {/* Droppers */}
       <path d={`M${c - wArm} ${yArmTop} V${tTop_y}`} />
@@ -84,17 +76,12 @@ export const LinesIcon = (props: LinesIconProps) => {
       <path d={`M${c + wArm} ${yArmBot} V${tBot_y}`} />
 
       {/* --- LATTICE --- */}
-      {/* Peak Triangle */}
-      <path d={`M${xNeckL} ${y1} L${c} ${yStart} L${xNeckR} ${y1}`} />
-
-      {/* Neck X-Braces */}
-      <path d={`M${xNeckL} ${y1} L${xNeckR} ${yNode}`} />
+      <path d={`M${xNeckL} ${y1} L${c} ${yStart} L${xNeckR} ${y1}`} /> {/* Peak */}
+      <path d={`M${xNeckL} ${y1} L${xNeckR} ${yNode}`} /> {/* Neck Top */}
       <path d={`M${xNeckR} ${y1} L${xNeckL} ${yNode}`} />
-      <path d={`M${xNeckL} ${yNode} L${xNeckR} ${yWaist}`} />
+      <path d={`M${xNeckL} ${yNode} L${xNeckR} ${yWaist}`} /> {/* Neck Bot */}
       <path d={`M${xNeckR} ${yNode} L${xNeckL} ${yWaist}`} />
-
-      {/* Leg X-Brace */}
-      <path d={`M${xNeckL} ${yWaist} L${xBaseR} ${yBase}`} />
+      <path d={`M${xNeckL} ${yWaist} L${xBaseR} ${yBase}`} /> {/* Legs */}
       <path d={`M${xNeckR} ${yWaist} L${xBaseL} ${yBase}`} />
     </svg>
   );

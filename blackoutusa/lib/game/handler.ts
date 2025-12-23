@@ -17,7 +17,7 @@ export class GameHandler {
     this.canvas.addEventListener("mouseleave", this.handleMouseLeave.bind(this));
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this), { passive: false });
-    document.addEventListener("keydown", this.handleKeyDown.bind(this));
+    this.canvas.addEventListener("keydown", this.handleKeyDown.bind(this));
   }
 
   private handleMouseDown(e: MouseEvent) {
@@ -92,7 +92,7 @@ export class GameHandler {
     }
   }
 
-  private handleMouseLeave(e: MouseEvent) {
+  private handleMouseLeave() {
     this.state.inDrag = false;
     this.state.hoverBranch = null;
     this.state.hoverSub = null;
@@ -109,15 +109,23 @@ export class GameHandler {
   }
 
   private handleKeyDown(e: KeyboardEvent) {
-    switch (e.key) {
-      case "PageUp": this.zoomIn(this.canvas.width / 2, this.canvas.height / 2, 1); break;
-      case "PageDown": this.zoomOut(this.canvas.width / 2, this.canvas.height / 2, 1); break;
-      case "ArrowLeft": this.state.x0 -= 50 / this.state.scaleX; break;
-      case "ArrowRight": this.state.x0 += 50 / this.state.scaleX; break;
-      case "ArrowDown": this.state.y0 -= 50 / this.state.scaleY; break;
-      case "ArrowUp": this.state.y0 += 50 / this.state.scaleY; break;
+    const key = e.key.toLowerCase();
+    let handled = true;
+
+    switch (key) {
+      case "pageup": this.zoomIn(this.canvas.width / 2, this.canvas.height / 2, 1); break;
+      case "pagedown": this.zoomOut(this.canvas.width / 2, this.canvas.height / 2, 1); break;
+      case "a": this.state.x0 -= 50 / this.state.scaleX; break;
+      case "d": this.state.x0 += 50 / this.state.scaleX; break;
+      case "s": this.state.y0 -= 50 / this.state.scaleY; break;
+      case "w": this.state.y0 += 50 / this.state.scaleY; break;
+      default: handled = false;
     }
-    this.drawCallback();
+
+    if (handled) {
+      e.preventDefault();
+      this.drawCallback();
+    }
   }
 
   public zoomIn(x: number, y: number, factor: number) {
