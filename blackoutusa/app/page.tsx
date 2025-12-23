@@ -13,7 +13,6 @@ import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
 import { HelpModal } from "@/components/modals/help-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
-import { Button } from "@/components/ui/button"
 
 const initialDashboardStats: DashboardStats = {
   day: 1,
@@ -328,8 +327,7 @@ export default function Page() {
           ></canvas>
           {/* Modals */}
           <WelcomeModal 
-            open={isWelcomeOpen} 
-            onOpenChange={setIsWelcomeOpen} 
+            open={isWelcomeOpen}
             onStartGame={handleStartGame}
             onHowToPlay={handleHowToPlay}
           />

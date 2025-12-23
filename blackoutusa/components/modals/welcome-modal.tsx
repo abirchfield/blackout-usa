@@ -12,13 +12,12 @@ import { Button } from "@/components/ui/button"
 
 interface WelcomeModalProps {
   open: boolean;
-  onOpenChange: (open: boolean) => void;
   onStartGame: () => void;
   onHowToPlay: () => void;
 }
 
-export function WelcomeModal({ open, onOpenChange, onStartGame, onHowToPlay }: WelcomeModalProps) {
-  return (
+export function WelcomeModal({ open, onStartGame, onHowToPlay }: WelcomeModalProps) {
+  return ( 
     <Dialog open={open} onOpenChange={() => {
       // Do nothing. This prevents dismissal via overlay click, Esc, or the 'X' button.
       // The modal must be closed via an explicit action inside it.

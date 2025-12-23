@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP } from "@/lib/game/types";
-import { Clock } from "lucide-react"; // Assuming Clock is used for startup/shutdown indicators
 
 interface GeneratorUnitDetailsProps {
   sub: Substation;

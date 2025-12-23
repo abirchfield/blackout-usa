@@ -1,6 +1,6 @@
 import React from "react";
 
-interface SubstationIconProps extends React.SVGProps<SVGSVGElement> {}
+type SubstationIconProps = React.SVGProps<SVGSVGElement>;
 
 export const SubstationIcon = (props: SubstationIconProps) => {
   // --- CONFIGURATION VARIABLES (Internal Grid 0-100) ---

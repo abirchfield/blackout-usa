@@ -1,6 +1,5 @@
 "use client";
 
-import { Separator } from "@/components/ui/separator"
 import { Substation, Unit, CATEGORY_LOAD } from "@/lib/game/types"
 import { GeneratorUnitDetails } from "./generator-unit-details";
 import { LoadUnitDetails } from "./load-unit-details";
