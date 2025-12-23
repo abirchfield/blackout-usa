@@ -44,11 +44,11 @@ export function AppSidebar({ stats, subs, branches, statsHistory, onSubstationSe
         <Tabs defaultValue="power" className="flex flex-1 flex-col w-full px-2 pt-2 min-h-0">
           <TabsList className="grid w-full grid-cols-3 rounded-none bg-transparent p-0">
             <TabsTrigger value="power" className="flex items-center justify-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Grid Status">
-              <Zap className="h-4 w-4" />
+              <Zap className="h-4 w-4 shrink-0" />
               <span>Power</span>
             </TabsTrigger>
-            <TabsTrigger value="lines" className="flex items-center justify-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Transmission Lines">
-              <LinesIcon className="h-4 w-4 shrink-0" />
+            <TabsTrigger value="lines" className="flex items-center justify-center gap-1.5 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Transmission Lines">
+              <LinesIcon className="h-6 w-6 shrink-0" />
               <span>Lines</span>
             </TabsTrigger>
             <TabsTrigger value="subs" className="flex items-center justify-center gap-2 text-sm relative h-10 rounded-t-md bg-transparent px-3 text-muted-foreground shadow-none transition-none data-[state=active]:bg-sidebar data-[state=active]:text-foreground" title="Substations">

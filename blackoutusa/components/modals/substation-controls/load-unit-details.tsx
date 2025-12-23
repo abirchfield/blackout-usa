@@ -10,12 +10,13 @@ interface LoadUnitDetailsProps {
   unit: Unit;
   index: number;
   onUnitAction: (subId: string, unitIndex: number) => void;
+  isPaused?: boolean;
 }
 
 /**
  * Renders the detailed view and controls for a single load unit (circuit).
  */
-export function LoadUnitDetails({ sub, unit, index, onUnitAction }: LoadUnitDetailsProps) {
+export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: LoadUnitDetailsProps) {
   /**
    * Renders the status badge and text for the load unit.
    */
@@ -61,9 +62,9 @@ export function LoadUnitDetails({ sub, unit, index, onUnitAction }: LoadUnitDeta
   const renderActionControls = () => {
     switch (unit.Status) {
       case STATUS_IN:
-        return <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)}>Disconnect</Button>;
+        return <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Disconnect</Button>;
       case STATUS_DIS:
-        return <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)}>Connect</Button>;
+        return <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Connect</Button>;
       case STATUS_TRIP:
         return null; // Tripped units have no actions
       default:

@@ -21,9 +21,10 @@ interface SubstationModalProps {
   onSetSetpoint: (subId: string, unitIndex: number, newSetpoint: number) => void;
   frWind?: number;
   frSolar?: number;
+  isPaused?: boolean;
 }
 
-export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frWind, frSolar }: SubstationModalProps) {
+export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frWind, frSolar, isPaused }: SubstationModalProps) {
   const [setpoints, setSetpoints] = useState<Record<number, number>>({});
 
   useEffect(() => {
@@ -139,6 +140,7 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
               onSetSetpoint={onSetSetpoint}
               setpointValue={setpoints[index] ?? 0}
               onSetpointChange={handleSetpointChange}
+              isPaused={isPaused}
             />
           ))}
         </div>

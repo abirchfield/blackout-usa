@@ -3,9 +3,16 @@ import { Branch, GameState, Substation, STATUS_IN, STATUS_DIS, STATUS_TRIP, CATE
 // --- Constants ---
 
 // --- Animation ---
-const ANIMATION_CYCLE_FRAMES = 16;
+// --- Debugging ---
+const DEBUG_DRAW_MAP_BOUNDS = false;
+
+// The total length of the dash pattern for power flow. This is the modulus for the animation cycle.
+// It MUST match the sum of the values in POWER_FLOW_DASH_... arrays (e.g., 4 + 28 = 32).
+const POWER_FLOW_PATTERN_LENGTH = 32;
 const MIN_POWER_FOR_ANIMATION = 10;
-const ANIMATION_SPEED_FACTOR = 2;
+// Controls how many pixels the animation moves per frame. Can be a decimal.
+// Slower < 1 < Faster.
+const ANIMATION_SPEED_FACTOR = 0.5;
 
 // --- Colors ---
 const COLOR_TRIPPED = "Red";
@@ -31,7 +38,9 @@ const POWER_FLOW_LINE_WIDTH_FACTOR = 1.5;
 
 // --- Line Dashes ---
 const DISCONNECTED_LINE_DASH = [5, 5];
+// The background dash creates the "gap" for the moving dot. Sum must be POWER_FLOW_PATTERN_LENGTH.
 const POWER_FLOW_DASH_BACKGROUND = [6, 26];
+// The foreground dash IS the moving dot. Sum must be POWER_FLOW_PATTERN_LENGTH.
 const POWER_FLOW_DASH_FOREGROUND = [4, 28];
 
 // --- Math ---
@@ -67,30 +76,36 @@ export class GameDrawer {
   /**
    * Main drawing method, orchestrates the drawing of all game elements.
    */
-  public draw(state: GameState) {
-    this.setupFrame(state);
-
-    this.resizeCanvas();
+  public draw(state: GameState, isPaused: boolean, isFastForward: boolean) {
+    this.setupFrame(state, isPaused, isFastForward);
 
     // Clear canvas
     this.ctx.fillStyle = this.secondaryColor;
     this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
     
+    this.updateZoomLimits(state); // Ensure zoom limits are updated on every draw/resize
     this.applyViewBounds();
 
     this.drawBorders();
     this.drawAllBranches();
     this.drawAllSubstations();
     this.drawHoverLabel();
+
+    if (DEBUG_DRAW_MAP_BOUNDS) {
+      this.drawDebugMapBounds();
+    }
   }
 
   // --- Private Canvas & View Helpers ---
 
-  private setupFrame(state: GameState) {
+  private setupFrame(state: GameState, isPaused: boolean, isFastForward: boolean) {
     this.state = state;
     this.setThemeColors();
     // Update animation state for power flow dots
-    this.state.anim_cycle_state = (this.state.anim_cycle_state + 1) % ANIMATION_CYCLE_FRAMES;
+    if (!isPaused) {
+      const speedFactor = isFastForward ? ANIMATION_SPEED_FACTOR * 3 : ANIMATION_SPEED_FACTOR;
+      this.state.anim_cycle_state = (this.state.anim_cycle_state + speedFactor) % POWER_FLOW_PATTERN_LENGTH;
+    }
   }
 
   private setThemeColors() {
@@ -98,19 +113,92 @@ export class GameDrawer {
     this.secondaryColor = this.state.theme === 'light' ? 'white' : 'black';
   }
 
-  private resizeCanvas() {
+  public resizeCanvas() {
     if (this.canvas.width !== this.canvas.offsetWidth || this.canvas.height !== this.canvas.offsetHeight) {
       this.canvas.width = this.canvas.offsetWidth;
       this.canvas.height = this.canvas.offsetHeight;
+      // After a resize, the view might need to be re-initialized if it hasn't been set yet.
+      // The engine's draw loop handles this logic.
     }
+  }
+
+  // Calculates and sets the initial view (scale and position) to fit the map
+  // within the canvas, and sets the dynamic minimum zoom limit.
+  public setInitialView(state: GameState) {
+    const { width, height } = this.canvas;
+    if (width === 0 || height === 0) return; // Avoid division by zero if canvas isn't ready
+
+    const mapWidth = state.xmax - state.xmin;
+    const mapHeight = state.ymax - state.ymin;
+
+    // Calculate scale to fit the entire map within the canvas
+    const scaleToFitX = width / mapWidth;
+    const scaleToFitY = height / mapHeight;
+
+    // Use the smaller scale to ensure the entire map is visible
+    const initialScale = Math.min(scaleToFitX, scaleToFitY);
+
+    // Set the initial scale and minimum zoom limit
+    state.scaleX = initialScale;
+    state.scaleY = initialScale;
+    state.scale_min = initialScale; // The minimum zoom is now dynamic
+
+    // Calculate x0 and y0 to center the map
+    state.x0 = state.xmin - (width / initialScale - mapWidth) / 2;
+    state.y0 = state.ymax + (height / initialScale - mapHeight) / 2;
+  }
+
+  public isCanvasReady(): boolean {
+    return this.canvas.width > 0;
   }
 
   private applyViewBounds() {
     const { width, height } = this.canvas;
-    if (this.state.x0 < this.state.xmin) this.state.x0 = this.state.xmin;
-    if (this.state.x0 + width / this.state.scaleX > this.state.xmax) this.state.x0 = this.state.xmax - width / this.state.scaleX;
-    if (this.state.y0 - height / this.state.scaleY < this.state.ymin) this.state.y0 = this.state.ymin + height / this.state.scaleY;
-    if (this.state.y0 > this.state.ymax) this.state.y0 = this.state.ymax;
+    const viewWidth = width / this.state.scaleX;
+    const viewHeight = height / this.state.scaleY;
+    const mapWidth = this.state.xmax - this.state.xmin;
+    const mapHeight = this.state.ymax - this.state.ymin;
+
+    // Horizontal bounds
+    if (viewWidth > mapWidth) {
+      // Zoomed out: Keep map inside view.
+      const minX0 = this.state.xmax - viewWidth;
+      const maxX0 = this.state.xmin;
+      if (this.state.x0 < minX0) this.state.x0 = minX0;
+      if (this.state.x0 > maxX0) this.state.x0 = maxX0;
+    } else {
+      // Zoomed in: Keep view inside map.
+      const minX0 = this.state.xmin;
+      const maxX0 = this.state.xmax - viewWidth;
+      if (this.state.x0 < minX0) this.state.x0 = minX0;
+      if (this.state.x0 > maxX0) this.state.x0 = maxX0;
+    }
+
+    // Vertical bounds
+    if (viewHeight > mapHeight) {
+      // Zoomed out: Keep map inside view.
+      const minY0 = this.state.ymax;
+      const maxY0 = this.state.ymin + viewHeight;
+      if (this.state.y0 < minY0) this.state.y0 = minY0;
+      if (this.state.y0 > maxY0) this.state.y0 = maxY0;
+    } else {
+      // Zoomed in: Keep view inside map.
+      const minY0 = this.state.ymin + viewHeight;
+      const maxY0 = this.state.ymax;
+      if (this.state.y0 > maxY0) this.state.y0 = maxY0;
+      if (this.state.y0 < minY0) this.state.y0 = minY0;
+    }
+  }
+
+  // Updates the dynamic minimum zoom limit based on current canvas size
+  public updateZoomLimits(state: GameState) {
+    const { width, height } = this.canvas;
+    const mapWidth = state.xmax - state.xmin;
+    const mapHeight = state.ymax - state.ymin;
+
+    const scaleToFitX = width / mapWidth;
+    const scaleToFitY = height / mapHeight;
+    state.scale_min = Math.min(scaleToFitX, scaleToFitY);
   }
 
   private getScreenPos(lon: number, lat: number): { x: number; y: number } {
@@ -118,6 +206,22 @@ export class GameDrawer {
         x: (-this.state.x0 + lon) * this.state.scaleX,
         y: (this.state.y0 - lat) * this.state.scaleY,
     };
+  }
+
+  private drawDebugMapBounds() {
+    const topLeft = this.getScreenPos(this.state.xmin, this.state.ymax);
+    const bottomRight = this.getScreenPos(this.state.xmax, this.state.ymin);
+
+    this.ctx.strokeStyle = 'cyan';
+    this.ctx.lineWidth = 2;
+    this.ctx.setLineDash([10, 5]);
+    this.ctx.strokeRect(
+        topLeft.x,
+        topLeft.y,
+        bottomRight.x - topLeft.x,
+        bottomRight.y - topLeft.y
+    );
+    this.ctx.setLineDash([]); // Reset for other drawing functions
   }
 
   // --- Private Generic Drawing Helpers ---
@@ -250,7 +354,7 @@ export class GameDrawer {
   }
 
   private drawAnimatedPowerFlow(radius: number) {
-    const baseOffset = ANIMATION_SPEED_FACTOR * this.state.anim_cycle_state;
+    const baseOffset = this.state.anim_cycle_state;
     const lineWidth = radius * POWER_FLOW_LINE_WIDTH_FACTOR;
 
     // Background dash to create a gap for the colored dot

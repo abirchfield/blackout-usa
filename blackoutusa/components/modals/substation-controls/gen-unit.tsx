@@ -13,9 +13,10 @@ interface UnitRowProps {
   onSetSetpoint: (subId: string, unitIndex: number, newSetpoint: number) => void;
   setpointValue: number;
   onSetpointChange: (index: number, value: number) => void;
+  isPaused?: boolean;
 }
 
-export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpointValue, onSetpointChange }: UnitRowProps) {
+export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpointValue, onSetpointChange, isPaused }: UnitRowProps) {
   if (sub.Category === CATEGORY_LOAD) {
     return (
       <LoadUnitDetails
@@ -23,6 +24,7 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
         unit={unit}
         index={index}
         onUnitAction={onUnitAction}
+        isPaused={isPaused}
       />
     );
   }
@@ -36,6 +38,7 @@ export function UnitRow({ sub, unit, index, onUnitAction, onSetSetpoint, setpoin
       onSetSetpoint={onSetSetpoint}
       setpointValue={setpointValue}
       onSetpointChange={onSetpointChange}
+      isPaused={isPaused}
     />
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from "react"
 import { useTheme } from "next-themes"
-import { scenarios } from "@/lib/game/scenarios"
+import { scenarios, ResultDetails } from "@/lib/game/scenarios"
 import { GameEngine } from "@/lib/game/engine"
 import { DashboardStats, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
 import { AppHeader } from "@/components/app-header"
@@ -14,6 +14,30 @@ import { WelcomeModal } from "@/components/modals/welcome-modal"
 import { HelpModal } from "@/components/modals/help-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
 import { Button } from "@/components/ui/button"
+
+const initialDashboardStats: DashboardStats = {
+  day: 1,
+  timeStr: "1:00 PM",
+  timeStep: 0,
+  frequency: 60.0,
+  loadServed: 0,
+  loadUnserved: 0,
+  reserves: 0,
+  windGen: 0,
+  solarGen: 0,
+  thermalGen: 0,
+  nuclearGen: 0,
+  avgCost: 0,
+  totalCost: 0,
+  currentOpCost: 0,
+  currentFuelCost: 0,
+  currentUnservedCost: 0,
+  totalOpCost: 0,
+  totalFuelCost: 0,
+  totalUnservedCost: 0,
+  fr_wind: 1,
+  fr_solar: 1,
+};
 
 export default function Page() {
   // Modal States
@@ -27,6 +51,7 @@ export default function Page() {
 
   // Game States
   const [isPaused, setIsPaused] = useState(true)
+  const [isUserPaused, setIsUserPaused] = useState(true) // For user-initiated pause/play
   const [isDayFinished, setIsDayFinished] = useState(false)
   const [isFastForward, setIsFastForward] = useState(false)
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
@@ -35,6 +60,8 @@ export default function Page() {
   const [targetDay, setTargetDay] = useState(1)
   const [isDayTransition, setIsDayTransition] = useState(false)
   const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
+  const [dayResultDetails, setDayResultDetails] = useState<ResultDetails | null>(null);
+  const [rightSidebarTab, setRightSidebarTab] = useState('brief');
 
   // Theme
   const { resolvedTheme } = useTheme()
@@ -55,7 +82,7 @@ export default function Page() {
   // Engine Integration
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<GameEngine | null>(null)
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats | undefined>(undefined)
+  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(initialDashboardStats)
 
   // Calculate progress for the header's time controller
   const timeStep = dashboardStats?.timeStep || 0;
@@ -67,6 +94,13 @@ export default function Page() {
     // Initialize Engine
     if (canvasRef.current && !engineRef.current) {
       engineRef.current = new GameEngine(canvasRef.current);
+
+      // Set initial UI state before game starts
+      const initialStats = engineRef.current.getDashboardStats();
+      setDashboardStats(initialStats);
+      const initialBriefing = engineRef.current.getBriefingForDay(initialStats.day);
+      setCurrentBriefing(initialBriefing);
+      setTargetDay(initialStats.day);
 
       // --- Connect Engine to React UI ---
       engineRef.current.onInteract = (type, data) => {
@@ -121,15 +155,17 @@ export default function Page() {
               setStatsHistory(prev => [...prev, newStats]);
 
               if (isDayOver) {
-                setIsPaused(true);
                 setIsDayFinished(true);
                 setCompletedDays(prev => new Set(prev).add(newStats.day));
+                setRightSidebarTab('brief');
+                const results = engineRef.current?.getResultsForDay(newStats.day, newStats.totalCost);
+                setDayResultDetails(results || null);
               }
             }
           }
           
           // Draw
-          engineRef.current.draw();
+          engineRef.current.draw(isPausedRef.current, isFastForwardRef.current);
           
         }
         animationFrameId = requestAnimationFrame(loop);
@@ -147,23 +183,41 @@ export default function Page() {
     }
   }, [resolvedTheme]);
 
+  // Centralized logic for pausing the game.
+  // The game is paused if any modal is open, if we are between days,
+  // if the day is over, or if the user explicitly paused it.
+  useEffect(() => {
+    const gameShouldBePaused =
+      isWelcomeOpen ||
+      isHelpOpen ||
+      isQuitOpen ||
+      isDayTransition ||
+      isDayFinished ||
+      isUserPaused;
+    setIsPaused(gameShouldBePaused);
+  }, [isWelcomeOpen, isHelpOpen, isQuitOpen, isDayTransition, isDayFinished, isUserPaused]);
+
   const showBriefingForDay = (dayToShow: number) => {
     setTargetDay(dayToShow);
     const briefing = engineRef.current?.getBriefingForDay(dayToShow);
     setCurrentBriefing(briefing || null);
     setIsDayTransition(true);
+    setRightSidebarTab('brief');
   }
 
-  const handleStartGame = () => {
-    setIsWelcomeOpen(false)
-    setTargetDay(1);
-    const briefing = engineRef.current?.getBriefingForDay(1);
-    setCurrentBriefing(briefing || null);
+  const handleHowToPlay = () => {
+    setIsWelcomeOpen(false);
     setStatsHistory([]);
     setIsHelpOpen(true);
     setIsInitialTutorial(true);
-    setIsPaused(true);
-  }
+  };
+
+  const handleStartGame = () => {
+    setIsWelcomeOpen(false);
+    setStatsHistory([]);
+    setIsDayTransition(true);
+    setIsInitialTutorial(false); // This is now the direct path, skipping the tutorial.
+  };
 
   const removeAlert = (id: number) => {
     setAlerts(prev => prev.filter(a => a.id !== id))
@@ -174,16 +228,19 @@ export default function Page() {
   }
 
   const togglePause = () => {
-    setIsPaused(!isPaused)
-    if (isPaused) setIsFastForward(false) // If unpausing, go to normal speed
+    setIsUserPaused(prev => !prev);
+    // If we are unpausing, ensure fast-forward is off.
+    if (isUserPaused) {
+      setIsFastForward(false);
+    }
   }
 
   const toggleFastForward = () => {
     if (isFastForward) {
       setIsFastForward(false) // Go back to normal
     } else {
-      setIsFastForward(true)
-      setIsPaused(false) // Unpause if paused
+      setIsFastForward(true);
+      setIsUserPaused(false); // Signal user's intent to play
     }
   }
 
@@ -192,10 +249,8 @@ export default function Page() {
       engineRef.current?.startDay(targetDay);
       setStatsHistory([]);
       setIsDayTransition(false); // Reset flag
-    }
-    // Only unpause if no other "pausing" modals are open
-    if (!isHelpOpen && !isQuitOpen) {
-      setIsPaused(false);
+      setIsUserPaused(false); // Start the game
+      setDayResultDetails(null);
     }
   }
 
@@ -214,6 +269,7 @@ export default function Page() {
   const handleReplayDay = (currentDay: number) => {
     showBriefingForDay(currentDay);
     setIsDayFinished(false);
+    setDayResultDetails(null);
     setIsQuitOpen(false);
   }
 
@@ -222,6 +278,7 @@ export default function Page() {
     const nextDay = currentDay < totalDays ? currentDay + 1 : 1;
     showBriefingForDay(nextDay);
     setIsDayFinished(false);
+    setDayResultDetails(null);
     setIsQuitOpen(false);
   }
 
@@ -243,11 +300,9 @@ export default function Page() {
         stats={dashboardStats}
         onHelpClick={() => {
           setIsHelpOpen(true);
-          setIsPaused(true);
         }}
         onQuitClick={() => {
           setIsQuitOpen(true);
-          setIsPaused(true);
         }}
         progress={progress}
         isPaused={isPaused}
@@ -275,7 +330,8 @@ export default function Page() {
           <WelcomeModal 
             open={isWelcomeOpen} 
             onOpenChange={setIsWelcomeOpen} 
-            onStartGame={handleStartGame} 
+            onStartGame={handleStartGame}
+            onHowToPlay={handleHowToPlay}
           />
 
           {/* Help Modal */}
@@ -283,14 +339,9 @@ export default function Page() {
             open={isHelpOpen} 
             onOpenChange={(open) => {
               setIsHelpOpen(open);
-              if (!open) {
-                if (isInitialTutorial) { // After tutorial, show briefing
-                  setIsDayTransition(true);
-                  setIsInitialTutorial(false);
-                } else if (!isQuitOpen && !isDayFinished) {
-                  // Only unpause if no other "pausing" modals are open
-                  setIsPaused(false);
-                }
+              if (!open && isInitialTutorial) { // After tutorial, show briefing
+                setIsDayTransition(true);
+                setIsInitialTutorial(false);
               }
             }} 
           />
@@ -303,19 +354,15 @@ export default function Page() {
             onSetSetpoint={handleSetSetpoint}
             frWind={dashboardStats?.fr_wind}
             frSolar={dashboardStats?.fr_solar}
+            isPaused={isPaused}
           />
-          <BranchModal branch={selectedBranch} onClose={() => setSelectedBranch(null)} onCircuitAction={(branchId, circuit) => engineRef.current?.toggleBranchCircuitStatus(branchId, circuit)} />
+          <BranchModal branch={selectedBranch} onClose={() => setSelectedBranch(null)} onCircuitAction={(branchId, circuit) => engineRef.current?.toggleBranchCircuitStatus(branchId, circuit)} isPaused={isPaused} />
 
           <QuitModal
             open={isQuitOpen}
             onOpenChange={(open) => {
               setIsQuitOpen(open);
-              if (!open) {
-                // If we are not in a day transition or end-of-day state, resume.
-                if (!isDayTransition && !isDayFinished) {
-                  setIsPaused(false);
-                }
-              }
+              // Pause/resume is now handled by the central useEffect
             }}
             day={dashboardStats?.day || 1}
             onQuitToStart={handleQuitToStart}
@@ -339,6 +386,9 @@ export default function Page() {
           onStartDay={handleStartDay}
           onNextDay={handleNextDay}
           onReplayDay={handleReplayDay}
+          dayResultDetails={dayResultDetails}
+          activeTab={rightSidebarTab}
+          onTabChange={setRightSidebarTab}
         />
       </div>
     </div>

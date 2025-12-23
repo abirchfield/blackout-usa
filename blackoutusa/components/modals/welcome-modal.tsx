@@ -14,9 +14,10 @@ interface WelcomeModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   onStartGame: () => void;
+  onHowToPlay: () => void;
 }
 
-export function WelcomeModal({ open, onOpenChange, onStartGame }: WelcomeModalProps) {
+export function WelcomeModal({ open, onOpenChange, onStartGame, onHowToPlay }: WelcomeModalProps) {
   return (
     <Dialog open={open} onOpenChange={() => {
       // Do nothing. This prevents dismissal via overlay click, Esc, or the 'X' button.
@@ -44,8 +45,11 @@ export function WelcomeModal({ open, onOpenChange, onStartGame }: WelcomeModalPr
             </a>
           </p>
         </div>
-        <DialogFooter>
-          <Button onClick={onStartGame} className="w-full text-xl py-6 cursor-pointer">
+        <DialogFooter className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Button variant="secondary" onClick={onHowToPlay} className="text-xl py-6 cursor-pointer">
+            How to Play
+          </Button>
+          <Button onClick={onStartGame} className="text-xl py-6 cursor-pointer">
             Start my first shift!
           </Button>
         </DialogFooter>
