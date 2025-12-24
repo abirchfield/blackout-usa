@@ -6,6 +6,7 @@ import {
   Dialog,
   DialogContent,
   DialogHeader,
+  DialogDescription,
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
@@ -14,6 +15,7 @@ import { GeneratorUnitDetails } from "@/components/controls/unit-controls";
 import { Substation, UnitStatus, SubstationCategory } from "@/lib/game/types";
 import { TimeController } from "@/components/controls/time-controls";
 import { GameEngine } from "@/lib/game/engine";
+import { PersonStanding } from "lucide-react";
 
 interface HelpModalProps {
   open: boolean;
@@ -93,7 +95,27 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       content: (
         <>
           <h4 className="text-2xl font-bold mb-2">The Map</h4>
-          <p>Navigate the Texas electric grid by clicking and dragging to move around (or use arrow keys). Zoom in and out with the scroll wheel (or PageUp/PageDown).</p>
+          <p>Navigate the Texas electric grid by clicking and dragging to move around. Zoom in and out with the scroll wheel.</p>
+          <h4 className="text-2xl font-bold mt-6 mb-2">Keyboard Shortcuts</h4>
+          <p>For easier access, you can use keyboard shortcuts for most common actions. You can view and customize these in the Accessibility Settings (<PersonStanding className="inline-block h-5 w-5" />). Default shortcuts include:</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-base">
+            <ul className="list-disc list-inside space-y-2">
+              <li><span className="font-bold">W, A, S, D:</span> Pan the map.</li>
+              <li><span className="font-bold">Page Up / Down:</span> Zoom in and out.</li>
+              <li><span className="font-bold">Spacebar:</span> Pause or resume time.</li>
+              <li><span className="font-bold">F:</span> Toggle fast-forward.</li>
+              <li><span className="font-bold">Tab / `:</span> Cycle through map elements.</li>
+              <li><span className="font-bold">Enter:</span> Open details for selected element.</li>
+            </ul>
+            <ul className="list-disc list-inside space-y-2">
+              <li><span className="font-bold">C:</span> Center view on selected element.</li>
+              <li><span className="font-bold">T:</span> Cycle through sidebar tabs.</li>
+              <li><span className="font-bold">E:</span> Emergency load shed.</li>
+              <li><span className="font-bold">R:</span> Ramp all generation up.</li>
+              <li><span className="font-bold">L:</span> Disconnect most loaded line.</li>
+              <li><span className="font-bold">K:</span> Disconnect smallest load.</li>
+            </ul>
+          </div>
         </>
       )
     },
@@ -104,8 +126,8 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           <h4 className="text-2xl font-bold mb-2">Loads</h4>
           <p>Square substations represent electric customers: homes and businesses that use electric power. These are also called electrical &quot;loads&quot;. In the game they are marked with solid squares if they are &quot;connected,&quot; meaning the customers have electricity, and empty squares if they are &quot;disconnected,&quot; if the customers are in blackout.</p>
           <div className="flex gap-4 my-4 flex-wrap justify-center">
-            <div className="text-center"><Image src="Figs/Load1.PNG" alt="Diagram of an in-service load substation represented by a solid filled square, indicating that electricity is being delivered to customers." width={248} height={118} className="border border-white mx-auto max-w-full h-auto" /><p>In-service load</p></div>
-            <div className="text-center"><Image src="Figs/Load2.PNG" alt="Diagram of an out-of-service load substation represented by an empty square outline, indicating that customers are currently in a blackout." width={248} height={118} className="border border-white mx-auto max-w-full h-auto" /><p>Out-of-service load</p></div>
+            <div className="text-center"><Image src="Figs/Load1.PNG" alt="Diagram of an in-service load substation represented by a solid filled square, indicating that electricity is being delivered to customers." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>In-service load</p></div>
+            <div className="text-center"><Image src="Figs/Load2.PNG" alt="Diagram of an out-of-service load substation represented by an empty square outline, indicating that customers are currently in a blackout." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>Out-of-service load</p></div>
           </div>
           <p>Click on one of the square load substations to bring up more information. Each substation contains multiple customer circuits. As the electric grid operator, you can switch loads in or out of service. Normally you want all loads in service. There is a cost of $1000/MW/hr for unserved load.</p>
         </>
@@ -118,8 +140,8 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           <h4 className="text-2xl font-bold mb-2">Generators</h4>
           <p>Circle substations represent electric generators, the source of electric power. In the game the circles are colored based on the fuel type. The shading of the generator also represents how much power it is producing: an empty circle is not generating any power, while a full one is producing at its maximum capacity.</p>
           <div className="flex gap-4 my-4 flex-wrap justify-center">
-            <div className="text-center"><Image src="Figs/Gen1.PNG" alt="Icon of a solar power plant shown as a circle completely filled with color, representing operation at maximum generation capacity." width={248} height={118} className="border border-white mx-auto max-w-full h-auto" /><p>Solar plant (full capacity)</p></div>
-            <div className="text-center"><Image src="Figs/Gen2.PNG" alt="Icon of a thermal power plant shown as a circle half-filled with color, representing operation at 50% of its maximum generation capacity." width={248} height={118} className="border border-white mx-auto max-w-full h-auto" /><p>Thermal plant (50% capacity)</p></div>
+            <div className="text-center"><Image src="Figs/Gen1.PNG" alt="Icon of a solar power plant shown as a circle completely filled with color, representing operation at maximum generation capacity." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>Solar plant (full capacity)</p></div>
+            <div className="text-center"><Image src="Figs/Gen2.PNG" alt="Icon of a thermal power plant shown as a circle half-filled with color, representing operation at 50% of its maximum generation capacity." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>Thermal plant (50% capacity)</p></div>
           </div>
           <p>Click on one of the circle generator substations to bring up more information. Each substation contains multiple generating units. As the electric grid operator, you have different decisions depending on the status of the unit.</p>
         </>
@@ -180,9 +202,9 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           <p>Substations (circles and squares) are connected to each other by transmission lines. The animated dots on the line represent the direction the power is flowing. Click on one of the lines to bring up more information.</p>
           <p className="mt-2">If a line is overloaded, it will turn yellow. If it becomes very overloaded, it will turn orange. If a line remains orange, it is at risk of tripping due to overload. Tripped lines (red dash) cannot be reclosed.</p>
           <div className="flex gap-4 my-4 flex-wrap justify-center">
-            <Image src="Figs/Line-2.PNG" alt="Map view of a transmission line colored yellow, which signifies that the line is carrying more power than its normal rating." width={248} height={118} className="border border-white max-w-full h-auto" />
-            <Image src="Figs/Line-3.PNG" alt="Map view of a transmission line colored orange, signifying a critical overload that puts the line at high risk of automatically tripping offline." width={248} height={118} className="border border-white max-w-full h-auto" />
-            <Image src="Figs/Line-4.PNG" alt="Map view of a transmission line shown as a red dashed line, indicating that the line has tripped due to an overload and is no longer carrying power." width={248} height={118} className="border border-white max-w-full h-auto" />
+            <Image src="Figs/Line-2.PNG" alt="Map view of a transmission line colored yellow, which signifies that the line is carrying more power than its normal rating." width={248} height={118} className="border border-white max-w-full h-auto w-auto" />
+            <Image src="Figs/Line-3.PNG" alt="Map view of a transmission line colored orange, signifying a critical overload that puts the line at high risk of automatically tripping offline." width={248} height={118} className="border border-white max-w-full h-auto w-auto" />
+            <Image src="Figs/Line-4.PNG" alt="Map view of a transmission line shown as a red dashed line, indicating that the line has tripped due to an overload and is no longer carrying power." width={248} height={118} className="border border-white max-w-full h-auto w-auto" />
           </div>
           <p>Keep in mind that when a line is removed from service or tripped, the power previously flowing on it will have to find a new path through other lines. If those other lines become overloaded, this can cause cascading outages.</p>
         </>
@@ -210,7 +232,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
             </div>
           </div>
           <p>Below the clock is the grid frequency. This is the most important number for avoiding a blackout! Keep it as close to 60 Hz as possible. If it turns orange, you are getting close to risk of tripping. If it turns red, you will start to see generators, loads, and lines trip offline and a blackout is likely not far off.</p>
-          <div className="my-4"><Image src="Figs/Freq.png" alt="The grid frequency monitor, showing the current system frequency in Hertz. Maintaining this near 60 Hertz is critical for grid stability." width={248} height={118} className="border border-white max-w-full h-auto" /></div>
+          <div className="my-4"><Image src="Figs/Freq.png" alt="The grid frequency monitor, showing the current system frequency in Hertz. Maintaining this near 60 Hertz is critical for grid stability." width={248} height={118} className="border border-white max-w-full h-auto w-auto" /></div>
         </>
       )
     }
@@ -247,6 +269,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       <DialogContent className="sm:max-w-[800px] font-share-tech h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold">How to Play</DialogTitle>
+          <DialogDescription className="sr-only">A multi-page guide on how to play the game.</DialogDescription>
         </DialogHeader>
         <div className="space-y-6 text-lg pr-6 overflow-y-auto flex-1">
           {helpPages[currentPage].content}

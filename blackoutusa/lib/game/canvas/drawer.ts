@@ -1,12 +1,9 @@
 import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "../types";
-import { AppColors, GenerationTypeConfig, ThemeCanvasColors } from "../config";
+import { AppColors, GenerationTypeConfig } from "../config";
 
 // --- Constants ---
 
 // --- Animation ---
-// --- Debugging ---
-const DEBUG_DRAW_MAP_BOUNDS = false;
-
 // The total length of the dash pattern for power flow. This is the modulus for the animation cycle.
 // It MUST match the sum of the values in POWER_FLOW_DASH_... arrays (e.g., 4 + 28 = 32).
 const POWER_FLOW_PATTERN_LENGTH = 32;
@@ -49,6 +46,7 @@ const FONT_HOVER = "20px Arial";
 const LABEL_OFFSET_X = 15;
 const LABEL_OFFSET_Y = 5;
 const LABEL_OUTLINE_WIDTH = 3;
+const LABEL_FADE_END_MULTIPLIER = 2.0; // Labels are fully visible at 2x minimum zoom.
 
 export class GameDrawer {
   private ctx: CanvasRenderingContext2D;
@@ -75,11 +73,18 @@ export class GameDrawer {
    * Main drawing method, orchestrates the drawing of all game elements.
    */
   public draw(state: GameState, isPaused: boolean, isFastForward: boolean) {
+    const dpr = window.devicePixelRatio || 1;
+    this.ctx.save();
+    // Scale the context to match the device's pixel ratio. This ensures sharp rendering on high-DPI screens.
+    this.ctx.scale(dpr, dpr);
+
     this.setupFrame(state, isPaused, isFastForward);
 
     // Clear canvas
     this.ctx.fillStyle = this.secondaryColor;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    // Use the logical (CSS) size for clearing, as the context is now scaled.
+    // This will correctly clear the entire high-resolution backing store.
+    this.ctx.fillRect(0, 0, this.canvas.offsetWidth, this.canvas.offsetHeight);
     
     this.updateZoomLimits(state); // Ensure zoom limits are updated on every draw/resize
     this.applyViewBounds();
@@ -89,9 +94,11 @@ export class GameDrawer {
     this.drawAllSubstations();
     this.drawHoverLabel();
 
-    if (DEBUG_DRAW_MAP_BOUNDS) {
+    if (this.state.debug_draw_map_bounds) {
       this.drawDebugMapBounds();
     }
+
+    this.ctx.restore();
   }
 
   // --- Private Canvas & View Helpers ---
@@ -115,18 +122,28 @@ export class GameDrawer {
   }
 
   public resizeCanvas(): boolean {
-    if (this.canvas.width !== this.canvas.offsetWidth || this.canvas.height !== this.canvas.offsetHeight) {
-      this.canvas.width = this.canvas.offsetWidth;
-      this.canvas.height = this.canvas.offsetHeight;
+    const dpr = window.devicePixelRatio || 1;
+    const { offsetWidth, offsetHeight } = this.canvas;
+
+    // Round the values to the nearest integer. This is crucial for preventing
+    // floating-point comparison issues with non-integer devicePixelRatios (e.g., 1.5),
+    // which would otherwise cause a resize on every frame, resetting the view.
+    const displayWidth = Math.round(offsetWidth * dpr);
+    const displayHeight = Math.round(offsetHeight * dpr);
+
+    // Check if the canvas drawing buffer size needs to be updated.
+    if (this.canvas.width !== displayWidth || this.canvas.height !== displayHeight) {
+      // Set the drawing buffer size to match the device's pixel density for high-res rendering.
+      this.canvas.width = displayWidth;
+      this.canvas.height = displayHeight;
       return true;
     }
     return false;
   }
 
-  // Calculates and sets the initial view (scale and position) to fit the map
-  // within the canvas, and sets the dynamic minimum zoom limit.
   public setInitialView(state: GameState) {
-    const { width, height } = this.canvas;
+    // Use logical (CSS) dimensions for view calculations, not the backing store size.
+    const { offsetWidth: width, offsetHeight: height } = this.canvas;
     if (width === 0 || height === 0) return; // Avoid division by zero if canvas isn't ready
 
     const mapWidth = state.xmax - state.xmin;
@@ -154,7 +171,8 @@ export class GameDrawer {
   }
 
   private applyViewBounds() {
-    const { width, height } = this.canvas;
+    // Use logical (CSS) dimensions for view calculations.
+    const { offsetWidth: width, offsetHeight: height } = this.canvas;
     const viewWidth = width / this.state.scaleX;
     const viewHeight = height / this.state.scaleY;
     const mapWidth = this.state.xmax - this.state.xmin;
@@ -193,7 +211,8 @@ export class GameDrawer {
 
   // Updates the dynamic minimum zoom limit based on current canvas size
   public updateZoomLimits(state: GameState) {
-    const { width, height } = this.canvas;
+    // Use logical (CSS) dimensions for view calculations.
+    const { offsetWidth: width, offsetHeight: height } = this.canvas;
     const mapWidth = state.xmax - state.xmin;
     const mapHeight = state.ymax - state.ymin;
 
@@ -371,6 +390,13 @@ export class GameDrawer {
   }
 
   private drawAllSubstations() {
+    // Calculate label opacity based on zoom level. Labels fade in as the user zooms in
+    // from the minimum zoom level.
+    const zoomForFadeStart = this.state.scale_min;
+    const zoomForFadeEnd = this.state.scale_min * LABEL_FADE_END_MULTIPLIER;
+    let labelOpacity = (this.state.scaleX - zoomForFadeStart) / (zoomForFadeEnd - zoomForFadeStart);
+    labelOpacity = Math.max(0, Math.min(1, labelOpacity)); // Clamp between 0 and 1
+
     for (const key in this.state.subs) {
       const sub = this.state.subs[key];
       const { x: cx, y: cy } = this.getScreenPos(sub.Longitude, sub.Latitude);
@@ -382,9 +408,12 @@ export class GameDrawer {
         this.drawGeneratorSubstation(sub, cx, cy, radius);
       }
 
-      if (this.state.renderCanvasText) {
+      if (this.state.renderCanvasText && labelOpacity > 0) {
+        this.ctx.save();
+        this.ctx.globalAlpha = labelOpacity;
         const font = sub === this.state.hoverSub ? FONT_HOVER : FONT_NORMAL;
         this.drawOutlinedText(sub.Name, cx + LABEL_OFFSET_X, cy + LABEL_OFFSET_Y, font, this.primaryColor, this.secondaryColor);
+        this.ctx.restore();
       }
     }
   }
@@ -394,23 +423,20 @@ export class GameDrawer {
     const Pmax = sub.Pmax * this.state.fr_load;
     
     const allTripped = this.isSubstationTripped(sub);
-    this.ctx.strokeStyle = allTripped ? AppColors.TRIPPED : this.primaryColor;
-    this.ctx.lineWidth = SUBSTATION_BORDER_WIDTH;
+    const displayColor = allTripped ? AppColors.TRIPPED : this.primaryColor;
     
     // Background
-    this.ctx.fillStyle = this.secondaryColor;
-    this.ctx.fillRect(cx - r, cy - r, 2 * r, 2 * r);
+    this.drawCircle(cx, cy, r, { fill: this.secondaryColor });
     
-    // Fill based on load
-    if (Pmax > 0) {
-        this.ctx.fillStyle = this.primaryColor;
-        const fillRatio = Math.max(0, P / Pmax);
-        const fillHeight = 2 * r * fillRatio;
-        this.ctx.fillRect(cx - r, cy + r - fillHeight, 2 * r, fillHeight);
+    // Draw pie chart slice for load level
+    if (Pmax > 0 && P > 0 && !allTripped) {
+        const fillRatio = Math.max(0, Math.min(1, P / Pmax)); // Clamp ratio
+        const endAngle = PIE_CHART_START_ANGLE + (TWO_PI * fillRatio);
+        this.drawPieSlice(cx, cy, r, PIE_CHART_START_ANGLE, endAngle, this.primaryColor);
     }
 
     // Border
-    this.ctx.strokeRect(cx - r, cy - r, 2 * r, 2 * r);
+    this.drawCircle(cx, cy, r, { stroke: displayColor, lineWidth: SUBSTATION_BORDER_WIDTH });
   }
 
   private drawGeneratorSubstation(sub: Substation, cx: number, cy: number, r: number) {

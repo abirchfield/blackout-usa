@@ -13,7 +13,7 @@ interface StatusIndicatorProps {
 
 export function StatusIndicator({ status, category, power = 0, pmax = 1, className = 'w-3 h-3', title: defaultTitle }: StatusIndicatorProps) {
   let indicatorClassName = '';
-  let indicatorStyle: React.CSSProperties = {};
+  const indicatorStyle: React.CSSProperties = {};
   let title = defaultTitle;
 
   if (category === SubstationCategory.Load) {

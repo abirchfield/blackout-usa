@@ -5,7 +5,7 @@ import { useSearchParams, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { scenarios, ResultDetails } from "@/lib/game/scenario/scenarios"
-import { GameEngine } from "@/lib/game/engine"
+import { GameEngine } from "@/lib/game/engine";
 import { GameStatistics, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
 import { AppHeader } from "@/components/header"
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar"
@@ -15,12 +15,14 @@ import { SubstationModal } from "@/components/modals/substation-modal"
 import { BranchModal } from "@/components/modals/branch-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
 import { AccessibilityModal } from "@/components/modals/accessibility-modal"
-import { TimeController } from "@/components/controls/time-controls"
 import { SubstationsList } from "@/components/lists/substation-list"
 import { BranchesList } from "@/components/lists/branch-list"
 import { SubstationIcon } from "@/components/icons/substation-icon"
 import { LinesIcon } from "@/components/icons/lines-icon"
 import { HelpModal } from "@/components/modals/help-modal"
+import { KeyBindings, defaultKeyBindings } from "@/lib/game/key-bindings"
+
+const isStaticExport = process.env.NODE_ENV === 'production';
 
 const initialGameStatistics: GameStatistics = {
   day: 1,
@@ -75,6 +77,7 @@ function GamePageContent() {
   const [viewMode, setViewMode] = useState<'visual' | 'tabular'>('visual');
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [renderCanvasText, setRenderCanvasText] = useState(true);
+  const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultKeyBindings);
 
   // Accessibility States
   const [announcement, setAnnouncement] = useState("");
@@ -115,13 +118,13 @@ function GamePageContent() {
       setIsHelpOpen(true);
       setIsInitialTutorial(true);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showTutorial]);
 
   useEffect(() => {
     // Initialize Engine
     if (canvasRef.current && !engineRef.current) {
       engineRef.current = new GameEngine(canvasRef.current);
+      engineRef.current.setKeyBindings(keyBindings);
       const initialDay = 1;
       engineRef.current.startDay(initialDay); // Load scenario for day 1
       engineRef.current.update(1, false); // Run one simulation step without advancing time to calculate initial metrics
@@ -208,7 +211,7 @@ function GamePageContent() {
         engineRef.current = null;
       }
     }
-  }, [])
+  }, [keyBindings])
 
   useEffect(() => {
     if (engineRef.current && resolvedTheme) {
@@ -227,6 +230,12 @@ function GamePageContent() {
       engineRef.current.setRenderCanvasText(renderCanvasText);
     }
   }, [renderCanvasText]);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setKeyBindings(keyBindings);
+    }
+  }, [keyBindings]);
 
   // This effect ensures that the initial view of the canvas is drawn correctly,
   // especially after a client-side navigation where layout calculations might be delayed.
@@ -345,7 +354,10 @@ function GamePageContent() {
   }
 
   const handleQuitToStart = () => {
-    router.push('/'); // Navigate to the new welcome page
+    // In a static export, the link to the home page needs to point to index.html
+    // to work correctly when opened via the file:// protocol.
+    const homeUrl = isStaticExport ? './index.html' : '/';
+    router.push(homeUrl);
   }
 
   const handleSubstationSelect = (sub: Substation) => {
@@ -433,6 +445,8 @@ function GamePageContent() {
             onAnimationsEnabledChange={setAnimationsEnabled}
             renderCanvasText={renderCanvasText}
             onRenderCanvasTextChange={setRenderCanvasText}
+            keyBindings={keyBindings}
+            onKeyBindingsChange={setKeyBindings}
           />
           {/* === NEW DYNAMIC MODALS === */}
           <SubstationModal 

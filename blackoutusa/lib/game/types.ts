@@ -1,4 +1,5 @@
 import * as math from "mathjs";
+import { KeyBindings } from "./key-bindings";
 
 // --- Statuses ---
 export enum UnitStatus {
@@ -141,6 +142,8 @@ export interface GameState {
   theme: 'light' | 'dark';
   animationsEnabled: boolean;
   renderCanvasText: boolean;
+  debug_draw_map_bounds: boolean;
+  keyBindings: KeyBindings;
   
   // Input State
   inDrag: boolean;

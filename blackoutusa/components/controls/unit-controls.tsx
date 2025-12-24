@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
 import { Substation, Unit, UnitStatus } from "@/lib/game/types";
-import { StartupDial } from "../indicators/startup-indicator";
+import { Power, Timer } from "lucide-react";
 
 interface GeneratorUnitDetailsProps {
   sub: Substation;
@@ -25,6 +25,16 @@ const statusStyles: Record<UnitStatus, { text: string; className: string }> = {
   [UnitStatus.SHUTDOWN]: { text: 'SHUTTING DOWN', className: 'bg-gray-500/20 text-gray-400' },
   [UnitStatus.TRIP]: { text: 'TRIPPED', className: 'bg-red-500/20 text-red-400' },
 };
+
+const MINUTES_IN_HOUR = 60;
+const formatTimeRemaining = (minutes: number): string => {
+  if (minutes > MINUTES_IN_HOUR) {
+    const hours = minutes / MINUTES_IN_HOUR;
+    return `${hours.toFixed(1)}h`;
+  }
+  return `${minutes.toFixed(0)}m`;
+};
+
 
 /**
  * A reusable component that renders an annotated power slider and labeled numeric display.
@@ -50,7 +60,6 @@ const PowerControl = ({
 }) => {
   // Percentages should be based on the full range of the slider, from 0 to pmax.
   const outputPercentage = pmax > 0 ? (actual / pmax) * 100 : 0;
-  const pminPercentage = pmax > 0 ? (pmin / pmax) * 100 : 0;
 
   return (
     <div className="flex items-center gap-x-4">
@@ -162,22 +171,29 @@ export function GeneratorUnitDetails({
           showSetpoint: true,
         };
         actionElement = (
-          <div className="w-28 flex justify-end">
-            <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Shut Down</Button>
+          <div className="w-28 flex items-center justify-end gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground" title={`Characteristic ramp time: ${(sub.StartTime / 60).toFixed(1)} hr`}>
+              <Timer className="h-4 w-4 flex-shrink-0" />
+              <span>{(sub.StartTime / 60).toFixed(1)} hr</span>
+            </div>
+            <Button variant="destructive" size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label="Shut Down Unit" className="cursor-pointer hover:brightness-110 transition-all">
+              <Power className="h-5 w-5" />
+            </Button>
           </div>
         );
         break;
       case UnitStatus.DIS:
         powerControlProps = {
-          setpoint: numericSetpoint,
-          actual: 0,
-          disabled: true,
-          showSetpoint: true,
+          setpoint: numericSetpoint, actual: 0, disabled: true, showSetpoint: true,
         };
         actionElement = (
-          <div className="w-28 flex justify-end">
-            <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)} title={`Startup Time: ${(sub.StartTime / 60).toFixed(1)} hr`} disabled={isPaused}>
-              Start Up
+          <div className="w-28 flex items-center justify-end gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground" title={`Startup Time: ${(sub.StartTime / 60).toFixed(1)} hr`}>
+              <Timer className="h-4 w-4 flex-shrink-0" />
+              <span>{(sub.StartTime / 60).toFixed(1)} hr</span>
+            </div>
+            <Button variant="secondary" size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label="Start Up Unit" className="cursor-pointer hover:brightness-110 transition-all">
+              <Power className="h-5 w-5" />
             </Button>
           </div>
         );
@@ -189,20 +205,35 @@ export function GeneratorUnitDetails({
           disabled: true,
           showSetpoint: true,
         };
+        const startupTimeRemaining = Math.max(0, sub.StartTime - unit.StatusCount);
         actionElement = (
-          <div className="w-28 flex justify-center">
-            <StartupDial startTime={sub.StartTime} statusCount={unit.StatusCount} />
+          <div className="w-28 flex items-center justify-end gap-2">
+            <div className="flex items-center gap-1 text-xs text-yellow-400" title={`Time until online: ${formatTimeRemaining(startupTimeRemaining)}`}>
+              <Timer className="h-4 w-4 flex-shrink-0" />
+              <span>{formatTimeRemaining(startupTimeRemaining)}</span>
+            </div>
+            <Button variant="secondary" size="icon" disabled={true} aria-label="Starting up" className="animate-pulse">
+              <Power className="h-5 w-5" />
+            </Button>
           </div>
         );
         break;
       case UnitStatus.SHUTDOWN:
         powerControlProps = {
-          setpoint: numericSetpoint,
-          actual: unit.P,
-          disabled: true,
-          showSetpoint: true,
+          setpoint: numericSetpoint, actual: unit.P, disabled: true, showSetpoint: true,
         };
-        // actionElement is the default placeholder
+        const shutdownTimeRemaining = Math.max(0, sub.StartTime - unit.StatusCount);
+        actionElement = (
+          <div className="w-28 flex items-center justify-end gap-2">
+            <div className="flex items-center gap-1 text-xs text-muted-foreground" title={`Time until offline: ${formatTimeRemaining(shutdownTimeRemaining)}`}>
+              <Timer className="h-4 w-4 flex-shrink-0" />
+              <span>{formatTimeRemaining(shutdownTimeRemaining)}</span>
+            </div>
+            <Button variant="destructive" size="icon" disabled={true} aria-label="Shutting down" className="animate-pulse">
+              <Power className="h-5 w-5" />
+            </Button>
+          </div>
+        );
         break;
       default:
         return null;

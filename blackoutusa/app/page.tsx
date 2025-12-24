@@ -6,7 +6,14 @@ import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { GameEngine } from "@/lib/game/engine";
 import { AccessibilityModal } from "@/components/modals/accessibility-modal";
+import { KeyBindings, defaultKeyBindings } from "@/lib/game/key-bindings";
 import { PersonStanding } from "lucide-react";
+
+// In a static export (`next export`), links to pages need to point to the
+// generated .html file to work on simple static servers without URL rewriting.
+// This conditional logic ensures the links work in both development (`/game`)
+// and in the static export (`/game.html`).
+const isStaticExport = process.env.NODE_ENV === 'production';
 
 export default function WelcomePage() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
@@ -15,6 +22,10 @@ export default function WelcomePage() {
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
   const [animationsEnabled, setAnimationsEnabled] = useState(true);
   const [renderCanvasText, setRenderCanvasText] = useState(false); // Default to false for home page
+  const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultKeyBindings);
+
+  const gameUrl = isStaticExport ? './game.html' : '/game';
+  const tutorialUrl = isStaticExport ? './game.html?tutorial=true' : '/game?tutorial=true';
 
   useEffect(() => {
     let animationFrameId: number;
@@ -23,6 +34,7 @@ export default function WelcomePage() {
       const engine = new GameEngine(canvasRef.current, { interactive: false });
       engineRef.current = engine;
 
+      engine.setKeyBindings(keyBindings);
       // Pre-calculate power flow to have something to animate
       engine.startDay(1);
       engine.update(1, false);
@@ -51,7 +63,7 @@ export default function WelcomePage() {
         engineRef.current = null;
       };
     }
-  }, [resolvedTheme]);
+  }, [resolvedTheme, keyBindings]);
 
   useEffect(() => {
     if (engineRef.current) {
@@ -64,6 +76,12 @@ export default function WelcomePage() {
       engineRef.current.setRenderCanvasText(renderCanvasText);
     }
   }, [renderCanvasText]);
+
+  useEffect(() => {
+    if (engineRef.current) {
+      engineRef.current.setKeyBindings(keyBindings);
+    }
+  }, [keyBindings]);
 
   return (
     <main className="relative flex min-h-screen flex-col lg:flex-row items-center justify-center p-4 lg:p-8 font-share-tech gap-8">
@@ -103,10 +121,10 @@ export default function WelcomePage() {
         </div>
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Button variant="secondary" asChild className="text-xl py-6 cursor-pointer">
-            <Link href="/game?tutorial=true">How to Play</Link>
+            <Link href={tutorialUrl}>How to Play</Link>
           </Button>
           <Button asChild className="text-xl py-6 cursor-pointer">
-            <Link href="/game">Start my first shift!</Link>
+            <Link href={gameUrl}>Start my first shift!</Link>
           </Button>
         </div>
       </div>
@@ -125,6 +143,8 @@ export default function WelcomePage() {
         onAnimationsEnabledChange={setAnimationsEnabled}
         renderCanvasText={renderCanvasText}
         onRenderCanvasTextChange={setRenderCanvasText}
+        keyBindings={keyBindings}
+        onKeyBindingsChange={setKeyBindings}
       />
     </main>
   );
