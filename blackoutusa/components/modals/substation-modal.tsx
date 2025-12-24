@@ -13,7 +13,6 @@ import { Substation, SubstationCategory } from "@/lib/game/types"
 import { GeneratorUnitDetails } from "@/components/controls/unit-controls"
 import { GenerationTypeConfig } from "@/lib/game/config"
 import { LoadUnitDetails } from "@/components/controls/load-controls"
-import { StatusIndicator } from "@/components/indicators/status-indicator"
 import { Button } from "@/components/ui/button"
 
 const GenerationTypeIcon = ({ category }: { category: string }) => {

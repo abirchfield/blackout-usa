@@ -16,15 +16,12 @@ are those of the author(s) and do not necessarily reflect the views of the Natio
 
 ## Crucial TODO
 - Update a few images in the How-To modal
-- Need to display the start-up time for the generation substations.
-- Display the MW values for the four energy categories for readability.
-- Small inconsistancy with how pause/play/FF works
+- Implement Key-Bindings (They are configurable right now)
+- Tab order on list format is not consistant
+- ensure all alt-texts and aria-labels
 
 ## Less Crucial TODO
 - After the last day, it goes back to day 1.
-- Key-Bindings (e.g., `Ctrl+O` could open the largest load)
-- In the load modal, make the `IN-SERVICE` tag green
-- Find an abbreviated term for `OUT-OF-SERVICE` that sometimes causes text wrapping.
-- In the generation substation modal, display the generation type icon.
-- In the line modal, use the same formatting as the generation modal to be consistent.
-- Use squares instead of circles for the load indicators in the substation tab.
+- In lightmode, it is hard to see the setpoint control for the units
+- When disabling animations, change styling of lines
+- skip to next day only works if the current day has started

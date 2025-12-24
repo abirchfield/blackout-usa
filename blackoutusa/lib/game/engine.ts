@@ -1,8 +1,9 @@
-import { Substation, Branch, GameStatistics, GameState, GameMetrics, InteractionHandler, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, SubstationCategory, Unit } from "./types";
+import { Substation, Branch, GameStatistics, GameState, InteractionHandler, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, SubstationCategory, Unit } from "./types";
 import { scenario_data } from "./scenario/scenario_data";
 import { GameDrawer } from "./canvas/drawer";
 import { GameHandler } from "./canvas/handler";
 import { scenarios, IScenario, ResultDetails } from "./scenario/scenarios";
+import { defaultKeyBindings, KeyBindings } from "./key-bindings";
 import * as math from "mathjs"; 
 
 // --- Physics Constants ---
@@ -54,8 +55,6 @@ const MAP_BOUNDS_XMIN = -107; // Map's leftmost longitude
 const MAP_BOUNDS_YMAX = 36.5;   // Map's topmost latitude
 const MAP_BOUNDS_YMIN = 25.5;   // Map's bottommost latitude
 const ZOOM_LIMIT_MAX = 500;
-// ZOOM_LIMIT_MIN is now dynamically set by GameDrawer.
-const MAX_UNIT_SETPOINT = 10000;
 
 export class GameEngine {
   private drawer: GameDrawer;
@@ -87,6 +86,8 @@ export class GameEngine {
     theme: 'dark',
     animationsEnabled: true,
     renderCanvasText: true,
+    debug_draw_map_bounds: false,
+    keyBindings: defaultKeyBindings,
     
     // Input State
     inDrag: false,
@@ -179,6 +180,10 @@ export class GameEngine {
 
   public setRenderCanvasText(enabled: boolean) {
     this.state.renderCanvasText = enabled;
+  }
+
+  public setKeyBindings(bindings: KeyBindings) {
+    this.state.keyBindings = bindings;
   }
 
   private init() {
