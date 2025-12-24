@@ -1,20 +1,30 @@
 import * as math from "mathjs";
 
 // --- Statuses ---
-export const STATUS_IN = "IN";
-export const STATUS_DIS = "DIS";
-export const STATUS_TRIP = "TRIP";
-export const STATUS_STARTUP = "STARTUP";
-export const STATUS_SHUTDOWN = "SHUTDOWN";
-export type UnitStatus = typeof STATUS_IN | typeof STATUS_DIS | typeof STATUS_TRIP | typeof STATUS_STARTUP | typeof STATUS_SHUTDOWN;
-export type BranchCircuitStatus = typeof STATUS_IN | typeof STATUS_DIS | typeof STATUS_TRIP;
+export enum UnitStatus {
+  IN = "IN",
+  DIS = "DIS",
+  TRIP = "TRIP",
+  STARTUP = "STARTUP",
+  SHUTDOWN = "SHUTDOWN",
+}
 
+export enum BranchStatus {
+  IN = "IN",
+  DIS = "DIS",
+  TRIP = "TRIP",
+}
 // --- Categories ---
-export const CATEGORY_LOAD = "Load";
-export const CATEGORY_WIND = "Wind";
-export const CATEGORY_SOLAR = "Solar PV";
-export const CATEGORY_NUCLEAR = "Nuclear Steam";
-export type SubstationCategory = string; // Allow any string, but provide constants for known types
+export enum SubstationCategory {
+  Load = "Load",
+  Wind = "Wind",
+  Solar = "Solar PV",
+  Nuclear = "Nuclear Steam",
+  Thermal = "Thermal",
+  GasTurbine = "Gas Turbine",
+  GasCombinedCycle = "Gas Combined Cycle",
+  CoalFiredSteam = "Coal-fired Steam",
+}
 
 export interface Unit {
   Status: UnitStatus;
@@ -30,7 +40,7 @@ export interface Substation {
   Latitude: number;
   Longitude: number;
   Units: number;
-  Category: SubstationCategory;
+  Category: SubstationCategory; // Now strongly typed
   Pmax: number;
   Pmin: number;
   FixedCost: number;
@@ -42,14 +52,33 @@ export interface Substation {
   island?: number;
 }
 
+export interface GameMetrics {
+  loadServed: number;
+  loadUnserved: number;
+  reserves: number;
+  windGen: number;
+  solarGen: number;
+  thermalGen: number;
+  nuclearGen: number;
+  currentFuelCost: number;
+  currentOpCost: number;
+  currentUnservedCost: number;
+  totalFuelCost: number;
+  totalOpCost: number;
+  totalUnservedCost: number;
+  totalCost: number;
+  avgCost: number;
+  totalMwh: number;
+}
+
 export interface Branch {
   Number: string;
   FromSub: string;
   ToSub: string;
   FromNum: string;
   ToNum: string;
-  Status1: BranchCircuitStatus;
-  Status2: BranchCircuitStatus;
+  Status1: BranchStatus;
+  Status2: BranchStatus;
   P: number;
   Pmax: number;
   Circuits: number;
@@ -124,50 +153,18 @@ export interface GameState {
   Ybus: math.Matrix | null;
   Yinv: math.LUDecomposition | null;
   
-  // Metrics
-  total_load_served: number;
-  total_load_unserved: number;
-  spin_reserves: number;
-  total_wind: number;
-  total_solar: number;
-  total_thermal: number;
-  total_nuclear: number;
-  current_fuel_cost: number;
-  current_running_cost: number;
-  current_uload_cost: number;
-  total_fuel_cost: number;
-  total_running_cost: number;
-  total_uload_cost: number;
-  total_cost: number;
-  average_cost: number;
-  total_mwh: number;
-
+  metrics: GameMetrics;
   // Physics factors
   fr_load: number;
   fr_wind: number;
   fr_solar: number;
 }
 
-export interface DashboardStats {
+export interface GameStatistics extends GameMetrics {
   day: number;
   timeStr: string;
   timeStep: number;
   frequency: number;
-  loadServed: number;
-  loadUnserved: number;
-  reserves: number;
-  windGen: number;
-  solarGen: number;
-  thermalGen: number;
-  nuclearGen: number;
-  avgCost: number;
-  totalCost: number;
-  currentOpCost: number;
-  currentFuelCost: number;
-  currentUnservedCost: number;
-  totalOpCost: number;
-  totalFuelCost: number;
-  totalUnservedCost: number;
   fr_wind: number;
   fr_solar: number;
 }

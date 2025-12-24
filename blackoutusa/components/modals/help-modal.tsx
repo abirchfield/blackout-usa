@@ -10,9 +10,9 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { GeneratorUnitDetails } from "@/components/controls/gen-controls";
-import { Substation, STATUS_IN, STATUS_DIS, STATUS_STARTUP } from "@/lib/game/types";
-import { TimeController } from "@/components/controls/time-controller";
+import { GeneratorUnitDetails } from "@/components/controls/unit-controls";
+import { Substation, UnitStatus, SubstationCategory } from "@/lib/game/types";
+import { TimeController } from "@/components/controls/time-controls";
 import { GameEngine } from "@/lib/game/engine";
 
 interface HelpModalProps {
@@ -31,7 +31,7 @@ const mockSub: Substation = {
   Latitude: 0,
   Longitude: 0,
   Units: 1,
-  Category: "Thermal",
+  Category: SubstationCategory.Thermal,
   Pmax: 100,
   Pmin: 20,
   FixedCost: 500,
@@ -133,7 +133,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           <div className="my-4 border border-white/20 rounded-lg px-4 pb-4 bg-background/50">
             <GeneratorUnitDetails
               sub={mockSub}
-              unit={{ Status: STATUS_IN, P: 65, Pset: 65, P0: 65, Status0: STATUS_IN, StatusCount: 0 }}
+              unit={{ Status: UnitStatus.IN, P: 65, Pset: 65, P0: 65, Status0: UnitStatus.IN, StatusCount: 0 }}
               index={0}
               onUnitAction={() => {}}
               onSetSetpoint={() => {}}
@@ -146,7 +146,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           <div className="my-4 border border-white/20 rounded-lg px-4 pb-4 bg-background/50">
             <GeneratorUnitDetails
               sub={mockSub}
-              unit={{ Status: STATUS_DIS, P: 0, Pset: 0, P0: 0, Status0: STATUS_DIS, StatusCount: 0 }}
+              unit={{ Status: UnitStatus.DIS, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 0 }}
               index={0}
               onUnitAction={() => {}}
               onSetSetpoint={() => {}}
@@ -159,7 +159,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           <div className="my-4 border border-white/20 rounded-lg px-4 pb-4 bg-background/50">
             <GeneratorUnitDetails
               sub={mockSub}
-              unit={{ Status: STATUS_STARTUP, P: 0, Pset: 0, P0: 0, Status0: STATUS_DIS, StatusCount: 30 }}
+              unit={{ Status: UnitStatus.STARTUP, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 30 }}
               index={0}
               onUnitAction={() => {}}
               onSetSetpoint={() => {}}

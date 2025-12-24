@@ -7,7 +7,7 @@ import {
   SidebarContent,
 } from "@/components/ui/sidebar"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { DashboardStats, Briefing } from "@/lib/game/types"
+import { GameStatistics, Briefing } from "@/lib/game/types"
 import { ResultDetails } from "@/lib/game/scenarios"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -15,7 +15,7 @@ import { AlertsList } from "./modals/alerts-modal"
 import { HintsList } from "./modals/hints-modal"
 
 interface RightSidebarProps {
-  stats?: DashboardStats;
+  stats?: GameStatistics;
   briefing: Briefing | null;
   alerts: Array<{ id: number; time: string; message: string; critical: boolean; }>;
   onRemoveAlert: (id: number) => void;
@@ -36,7 +36,7 @@ interface RightSidebarProps {
 }
 
 interface DayResultsProps {
-  stats?: DashboardStats;
+  stats?: GameStatistics;
   day: number;
   resultDetails: ResultDetails | null;
 }
@@ -81,7 +81,7 @@ export function RightSidebar({ stats, briefing, alerts, onRemoveAlert, hints = [
   // Default values if stats are not yet available
   const s = stats || {
     day: 1,
-  } as DashboardStats;
+  } as GameStatistics;
 
   return (
     <Sidebar collapsible="none" className={cn("group w-full lg:w-96 border-l border-border bg-sidebar lg:!top-16 lg:!h-[calc(100vh-4rem)] h-auto", className)}>

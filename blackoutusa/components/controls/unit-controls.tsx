@@ -4,8 +4,8 @@
 import { Button } from "@/components/ui/button";
 import { Slider } from "@/components/ui/slider";
 import { Separator } from "@/components/ui/separator";
-import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP } from "@/lib/game/types";
-import { StartupDial } from "./startup-dial";
+import { Substation, Unit, UnitStatus } from "@/lib/game/types";
+import { StartupDial } from "../indicators/startup-indicator";
 
 interface GeneratorUnitDetailsProps {
   sub: Substation;
@@ -18,15 +18,13 @@ interface GeneratorUnitDetailsProps {
   isPaused?: boolean;
 }
 
-const statusStyles: Record<string, { text: string; className: string }> = {
-  [STATUS_IN]: { text: 'IN-SERVICE', className: 'bg-green-500/20 text-green-400' },
-  [STATUS_DIS]: { text: 'OUT-OF-SERVICE', className: 'bg-gray-500/20 text-gray-400' },
-  [STATUS_STARTUP]: { text: 'STARTING UP', className: 'bg-yellow-500/20 text-yellow-400 animate-pulse' },
-  [STATUS_SHUTDOWN]: { text: 'SHUTTING DOWN', className: 'bg-gray-500/20 text-gray-400' },
-  [STATUS_TRIP]: { text: 'TRIPPED', className: 'bg-red-500/20 text-red-400' },
+const statusStyles: Record<UnitStatus, { text: string; className: string }> = {
+  [UnitStatus.IN]: { text: 'IN-SERVICE', className: 'bg-green-500/20 text-green-400' },
+  [UnitStatus.DIS]: { text: 'OUT-OF-SERVICE', className: 'bg-gray-500/20 text-gray-400' },
+  [UnitStatus.STARTUP]: { text: 'STARTING UP', className: 'bg-yellow-500/20 text-yellow-400 animate-pulse' },
+  [UnitStatus.SHUTDOWN]: { text: 'SHUTTING DOWN', className: 'bg-gray-500/20 text-gray-400' },
+  [UnitStatus.TRIP]: { text: 'TRIPPED', className: 'bg-red-500/20 text-red-400' },
 };
-
-const RAMP_TO_MIN_SENTINEL = 99999;
 
 /**
  * A reusable component that renders an annotated power slider and labeled numeric display.
@@ -116,12 +114,8 @@ export function GeneratorUnitDetails({
   const pmax_unit = sub.Pmax / sub.Units;
   const pmin_unit = sub.Pmin / sub.Units;
 
-  // If the setpoint from props is the sentinel, it means the unit is ramping to min.
-  // In this case, the UI should treat the setpoint as pmin.
-  const effectiveSetpoint = setpointValue === RAMP_TO_MIN_SENTINEL ? pmin_unit : setpointValue;
-
-  // Coerce the effective setpoint to a number and clamp it to be safe for the UI.
-  const numericSetpoint = Math.max(pmin_unit, Math.min(pmax_unit, Number(effectiveSetpoint) || 0));
+  // Coerce the setpoint from props to a number and clamp it to be safe for the UI.
+  const numericSetpoint = Math.max(pmin_unit, Math.min(pmax_unit, Number(setpointValue) || 0));
 
   const handleSliderChange = (newValue: number[]) => {
     // Clamp the value here to ensure the state in the parent is always valid.
@@ -148,7 +142,7 @@ export function GeneratorUnitDetails({
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.className}`}>
           {style.text}
         </span>
-        {unit.Status === STATUS_TRIP && (
+        {unit.Status === UnitStatus.TRIP && (
           <p className="text-red-500 text-sm">Cannot be restarted.</p>
         )}
       </div>
@@ -159,13 +153,13 @@ export function GeneratorUnitDetails({
    * Renders the action controls (slider, power display, buttons) for the generator unit.
    */
   const renderActionControls = () => {
-    if (unit.Status === STATUS_TRIP) return null;
+    if (unit.Status === UnitStatus.TRIP) return null;
 
     let powerControlProps: Omit<React.ComponentProps<typeof PowerControl>, 'pmin' | 'pmax'>;
     let actionElement: React.ReactNode = <div className="w-28" />; // Default placeholder
 
     switch (unit.Status) {
-      case STATUS_IN:
+      case UnitStatus.IN:
         powerControlProps = {
           setpoint: numericSetpoint,
           actual: unit.P,
@@ -180,9 +174,9 @@ export function GeneratorUnitDetails({
           </div>
         );
         break;
-      case STATUS_DIS:
+      case UnitStatus.DIS:
         powerControlProps = {
-          setpoint: pmin_unit,
+          setpoint: numericSetpoint,
           actual: 0,
           disabled: true,
           showSetpoint: false,
@@ -195,9 +189,9 @@ export function GeneratorUnitDetails({
           </div>
         );
         break;
-      case STATUS_STARTUP:
+      case UnitStatus.STARTUP:
         powerControlProps = {
-          setpoint: pmin_unit,
+          setpoint: numericSetpoint,
           actual: unit.P,
           disabled: true,
           showSetpoint: false,
@@ -208,7 +202,7 @@ export function GeneratorUnitDetails({
           </div>
         );
         break;
-      case STATUS_SHUTDOWN:
+      case UnitStatus.SHUTDOWN:
         powerControlProps = {
           setpoint: numericSetpoint,
           actual: unit.P,

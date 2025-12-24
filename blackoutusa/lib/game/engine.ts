@@ -1,12 +1,9 @@
-import { Substation, Branch, DashboardStats, GameState, InteractionHandler, AlertHandler, HintHandler, Briefing, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "./types";
+import { Substation, Branch, GameStatistics, GameState, GameMetrics, InteractionHandler, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, SubstationCategory, Unit } from "./types";
 import { scenario_data } from "./scenario_data";
-import { GameDrawer } from "./drawer";
-import { GameHandler } from "./handler";
+import { GameDrawer } from "./canvas/drawer";
+import { GameHandler } from "./canvas/handler";
 import { scenarios, IScenario, ResultDetails } from "./scenarios";
 import * as math from "mathjs"; 
-
-// --- Unit Control ---
-const RAMP_TO_MIN_SENTINEL = 99999;
 
 // --- Physics Constants ---
 const BASE_FREQUENCY = 60.0;
@@ -104,24 +101,24 @@ export class GameEngine {
     Ybus: null as math.Matrix | null,
     Yinv: null as math.LUDecomposition | null,
     
-    // Metrics
-    total_load_served: 0, 
-    total_load_unserved: 0, 
-    spin_reserves: 0,
-    total_wind: 0,
-    total_solar: 0,
-    total_thermal: 0,
-    total_nuclear: 0,
-    current_fuel_cost: 0,
-    current_running_cost: 0,
-    current_uload_cost: 0,
-    total_fuel_cost: 0,
-    total_running_cost: 0,
-    total_uload_cost: 0,
-    total_cost: 0,
-    average_cost: 0,
-    total_mwh: 0,
-
+    metrics: {
+      loadServed: 0, 
+      loadUnserved: 0, 
+      reserves: 0,
+      windGen: 0,
+      solarGen: 0,
+      thermalGen: 0,
+      nuclearGen: 0,
+      currentFuelCost: 0,
+      currentOpCost: 0,
+      currentUnservedCost: 0,
+      totalFuelCost: 0,
+      totalOpCost: 0,
+      totalUnservedCost: 0,
+      totalCost: 0,
+      avgCost: 0,
+      totalMwh: 0,
+    },
     // Physics factors
     fr_load: 1,
     fr_wind: 1,
@@ -161,13 +158,14 @@ export class GameEngine {
     this.state.borders = scenario_data.borders;
     this.state.nsubs = scenario_data.nsubs;
 
-    // Link branches to substations (ported from ready() in script.js)
+    // Link branches to substations 
     for (const key in this.state.branches) {
       const branch = this.state.branches[key];
       branch.sub1 = this.state.subs[branch.FromNum];
       branch.sub2 = this.state.subs[branch.ToNum];
+
+      // Unused?
       if (branch.sub1 && branch.sub2) {
-        // Recalculating distance is not strictly necessary as it's not used, but it's good practice.
         branch.dist = Math.hypot(branch.sub1.Latitude - branch.sub2.Latitude, branch.sub1.Longitude - branch.sub2.Longitude);
       }
     }
@@ -183,8 +181,7 @@ export class GameEngine {
         u.Status = u.Status0;
         u.P = u.Pset = u.P0;
         u.StatusCount = 0;
-        if (sub.Category === CATEGORY_SOLAR || sub.Category === CATEGORY_WIND) {
-          // Corrected from script.js: pmax -> Pmax
+        if (sub.Category === SubstationCategory.Solar || sub.Category === SubstationCategory.Wind) {
           u.Pset = sub.Pmax / sub.Units;
         }
       }
@@ -193,8 +190,8 @@ export class GameEngine {
     for (const key in this.state.branches) {
       const br = this.state.branches[key];
       br.P = 0;
-      br.Status1 = STATUS_IN;
-      br.Status2 = STATUS_IN;
+      br.Status1 = BranchStatus.IN;
+      br.Status2 = BranchStatus.IN;
     }
     if (resetView) {
       // Flag the view to be re-initialized by the drawer on the next frame.
@@ -211,22 +208,24 @@ export class GameEngine {
     this.state.fr_solar = 1;
 
     // Reset Metrics
-    this.state.total_load_served = 0;
-    this.state.total_load_unserved = 0;
-    this.state.total_wind = 0;
-    this.state.total_solar = 0;
-    this.state.total_thermal = 0;
-    this.state.total_nuclear = 0;
-    this.state.spin_reserves = 0;
-    this.state.current_fuel_cost = 0;
-    this.state.current_running_cost = 0;
-    this.state.current_uload_cost = 0;
-    this.state.total_fuel_cost = 0;
-    this.state.total_running_cost = 0;
-    this.state.total_uload_cost = 0;
-    this.state.total_cost = 0;
-    this.state.average_cost = 0;
-    this.state.total_mwh = 0;
+    this.state.metrics = {
+      loadServed: 0,
+      loadUnserved: 0,
+      windGen: 0,
+      solarGen: 0,
+      thermalGen: 0,
+      nuclearGen: 0,
+      reserves: 0,
+      currentFuelCost: 0,
+      currentOpCost: 0,
+      currentUnservedCost: 0,
+      totalFuelCost: 0,
+      totalOpCost: 0,
+      totalUnservedCost: 0,
+      totalCost: 0,
+      avgCost: 0,
+      totalMwh: 0,
+    };
   }
 
   public startDay(day: number) {
@@ -247,11 +246,11 @@ export class GameEngine {
         for (let iu = 0 ; iu < sub.Units; ++iu) {
             const u = sub.U[iu];
             const pmax = sub.Pmax / sub.Units;
-            if (sub.Category === CATEGORY_WIND) {
+            if (sub.Category === SubstationCategory.Wind) {
                 u.P = pmax * this.state.fr_wind;
                 u.Pset = pmax;
             }
-            else if (sub.Category === CATEGORY_SOLAR) {
+            else if (sub.Category === SubstationCategory.Solar) {
                 u.P = pmax * this.state.fr_solar;
                 u.Pset = pmax;
             }
@@ -283,16 +282,15 @@ export class GameEngine {
     if (!u) return;
 
     // Logic from sub_click1 in script.js
-    if (sub.Category === CATEGORY_LOAD) {
-        if (u.Status === STATUS_DIS) u.Status = STATUS_IN;
-        else if (u.Status === STATUS_IN) u.Status = STATUS_DIS;
+    if (sub.Category === SubstationCategory.Load) {
+        if (u.Status === UnitStatus.DIS) u.Status = UnitStatus.IN;
+        else if (u.Status === UnitStatus.IN) u.Status = UnitStatus.DIS;
     } else {
-        if (u.Status === STATUS_DIS) {
-            u.Status = STATUS_STARTUP;
+        if (u.Status === UnitStatus.DIS) {
+            u.Status = UnitStatus.STARTUP;
             u.StatusCount = 0;
-            u.Pset = RAMP_TO_MIN_SENTINEL; // Sentinel for "ramp to min"
-        } else if (u.Status === STATUS_IN || u.Status === STATUS_STARTUP) {
-            u.Status = STATUS_SHUTDOWN;
+        } else if (u.Status === UnitStatus.IN || u.Status === UnitStatus.STARTUP) {
+            u.Status = UnitStatus.SHUTDOWN;
             u.StatusCount = 0;
         }
     }
@@ -304,10 +302,10 @@ export class GameEngine {
       const branch = this.state.branches[branchId];
       if (!branch) return;
 
-      if (circuitNum === 1 && branch.Status1 !== STATUS_TRIP) {
-          branch.Status1 = branch.Status1 === STATUS_IN ? STATUS_DIS : STATUS_IN;
-      } else if (circuitNum === 2 && branch.Circuits === 2 && branch.Status2 !== STATUS_TRIP) {
-          branch.Status2 = branch.Status2 === STATUS_IN ? STATUS_DIS : STATUS_IN;
+      if (circuitNum === 1 && branch.Status1 !== BranchStatus.TRIP) {
+          branch.Status1 = branch.Status1 === BranchStatus.IN ? BranchStatus.DIS : BranchStatus.IN;
+      } else if (circuitNum === 2 && branch.Circuits === 2 && branch.Status2 !== BranchStatus.TRIP) {
+          branch.Status2 = branch.Status2 === BranchStatus.IN ? BranchStatus.DIS : BranchStatus.IN;
       }
       this.state.Ybus = null; // Invalidate Ybus
       this.draw();
@@ -316,8 +314,12 @@ export class GameEngine {
   public setUnitSetpoint(subId: string, unitIndex: number, newSetpoint: number) {
     const sub = this.state.subs[subId];
     if (!sub || !sub.U[unitIndex]) return;
-    if (!isNaN(newSetpoint) && newSetpoint >= 0 && newSetpoint <= MAX_UNIT_SETPOINT) {
-      sub.U[unitIndex].Pset = newSetpoint;
+    if (!isNaN(newSetpoint)) {
+      const pmax_unit = sub.Pmax / sub.Units;
+      const pmin_unit = sub.Pmin / sub.Units;
+      // Clamp the setpoint to the unit's operational limits for robustness.
+      const clampedSetpoint = Math.max(pmin_unit, Math.min(pmax_unit, newSetpoint));
+      sub.U[unitIndex].Pset = clampedSetpoint;
     }
   }
 
@@ -370,11 +372,10 @@ export class GameEngine {
             for (let iu = 0; iu < sub.Units; ++iu) {
                 if (Math.random() < freq_prob_trip) {
                     const u = sub.U[iu];
-                    if (u.Status === STATUS_IN || u.Status === STATUS_STARTUP || u.Status === STATUS_SHUTDOWN) {
-                        u.Status = STATUS_TRIP;
+                    if (u.Status === UnitStatus.IN || u.Status === UnitStatus.STARTUP || u.Status === UnitStatus.SHUTDOWN) {
+                        u.Status = UnitStatus.TRIP;
                         u.P = 0;
-                        u.Pset = 0;
-                        this.onAlert?.({ message: `${sub.Category === CATEGORY_LOAD ? "Load" : "Generator"} ${sub.Name} #${iu + 1} tripped due to frequency`, critical: true });
+                        u.Pset = 0;                        this.onAlert?.({ message: `${sub.Category === SubstationCategory.Load ? "Load" : "Generator"} ${sub.Name} #${iu + 1} tripped due to frequency`, critical: true });
                         this.state.Ybus = null;
                     }
                 }
@@ -390,9 +391,9 @@ export class GameEngine {
         else if (Math.abs(br.P) > br.Pmax * br.Circuits * OVERLOAD_TRIP_NORMAL_MULTIPLIER) overload_prob_trip = PROB_TRIP_OVERLOAD_NORMAL;
 
         if (Math.random() < overload_prob_trip) {
-            if (br.Status1 === STATUS_IN || br.Status2 === STATUS_IN) {
-                br.Status1 = STATUS_TRIP;
-                br.Status2 = STATUS_TRIP;
+            if (br.Status1 === BranchStatus.IN || br.Status2 === BranchStatus.IN) {
+                br.Status1 = BranchStatus.TRIP;
+                br.Status2 = BranchStatus.TRIP;
                 this.onAlert?.({ message: `Branch ${br.sub1?.Name}-${br.sub2?.Name} tripped on overloading!`, critical: true });
                 this.state.Ybus = null;
             }
@@ -413,7 +414,7 @@ export class GameEngine {
         changed_something = false;
         for (const key in this.state.branches) {
             const br = this.state.branches[key];
-            if (br.Status1 !== STATUS_IN && (br.Status2 !== STATUS_IN || br.Circuits === 1)) continue;
+            if (br.Status1 !== BranchStatus.IN && (br.Status2 !== BranchStatus.IN || br.Circuits === 1)) continue;
             if (br.sub1?.island !== br.sub2?.island && br.sub1 && br.sub2) {
                 if (br.sub1.island === ROOT_ISLAND_ID || br.sub2.island === ROOT_ISLAND_ID) {
                     br.sub1.island = ROOT_ISLAND_ID;
@@ -430,11 +431,11 @@ export class GameEngine {
         if (sub.island === UNASSIGNED_ISLAND_ID) {
             for (let iu = 0; iu < sub.Units; ++iu) {
                 const u = sub.U[iu];
-                if (u.Status === STATUS_IN || u.Status === STATUS_SHUTDOWN || u.Status === STATUS_STARTUP) {
-                    u.Status = STATUS_TRIP;
+                if (u.Status === UnitStatus.IN || u.Status === UnitStatus.SHUTDOWN || u.Status === UnitStatus.STARTUP) {
+                    u.Status = UnitStatus.TRIP;
                     u.P = 0;
                     u.Pset = 0;
-                    const type = sub.Category === CATEGORY_LOAD ? "Load" : "Generator";
+                    const type = sub.Category === SubstationCategory.Load ? "Load" : "Generator";
                     this.onAlert?.({ message: `${type} ${sub.Name} #${iu + 1} tripped due to separation from grid`, critical: true });
                 }
             }
@@ -451,30 +452,29 @@ export class GameEngine {
             const pmax = sub.Pmax / sub.Units;
             const pmin = sub.Pmin / sub.Units;
             u.StatusCount += 1;
-            if (u.Pset < pmin) u.Pset = pmin;
-            if (u.Pset > pmax) u.Pset = pmax;
-            let tempset = Math.min(u.P + sub.Ramp, Math.max(u.P - sub.Ramp, u.Pset));
-            if (u.Status === STATUS_DIS || u.Status === STATUS_TRIP) continue;
-            if (sub.Category === CATEGORY_LOAD) {
+
+            let tempset = this._calculateUnitTempset(u, sub);
+            if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) continue;
+            if (sub.Category === SubstationCategory.Load) {
                 PL += pmax * this.state.fr_load;
-            } else if (u.Status === STATUS_SHUTDOWN) {
+            } else if (u.Status === UnitStatus.SHUTDOWN) {
                 PGMIN += Math.max(0, u.P - sub.Ramp);
                 PGMAX += Math.max(0, u.P - sub.Ramp);
                 PGSET += Math.max(0, u.P - sub.Ramp);
-            } else if (sub.Category === CATEGORY_WIND) {
+            } else if (sub.Category === SubstationCategory.Wind) {
                 const pavail = pmax * this.state.fr_wind;
                 if (tempset > pavail) tempset = pavail;
                 PGMIN += Math.max(u.P - sub.Ramp, 0);
                 PGMAX += Math.min(u.P + sub.Ramp, pavail);
                 PGSET += tempset;
-            } else if (sub.Category === CATEGORY_SOLAR) {
+            } else if (sub.Category === SubstationCategory.Solar) {
                 const pavail = pmax * this.state.fr_solar;
                 if (tempset > pavail) tempset = pavail;
                 PGMIN += Math.max(u.P - sub.Ramp, 0);
                 PGMAX += Math.min(u.P + sub.Ramp, pavail);
                 PGSET += tempset;
             } else {
-                if (u.Status === STATUS_STARTUP) {
+                if (u.Status === UnitStatus.STARTUP) {
                     if (u.StatusCount >= sub.StartTime) {
                         PGMIN += Math.min(u.P + sub.Ramp, Math.max(pmin, u.P - sub.Ramp));
                         PGMAX += Math.min(pmax, u.P + sub.Ramp);
@@ -514,9 +514,9 @@ export class GameEngine {
         const sub = this.state.subs[key];
         for (let iu = 0; iu < sub.Units; ++iu) {
             const u = sub.U[iu];
-            if (sub.Category === CATEGORY_LOAD && u.Status === STATUS_IN) {
+            if (sub.Category === SubstationCategory.Load && u.Status === UnitStatus.IN) {
                 u.P = (sub.Pmax / sub.Units) * this.state.fr_load;
-            } else if (u.Status === STATUS_DIS || u.Status === STATUS_TRIP) {
+            } else if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) {
                 u.P = 0;
             }
         }
@@ -529,30 +529,31 @@ export class GameEngine {
         alpha = 0.5 * (alpha0 + alpha1);
         for (const key in this.state.subs) {
             const sub = this.state.subs[key];
-            if (sub.Category === CATEGORY_LOAD) continue;
+            if (sub.Category === SubstationCategory.Load) continue;
             for (let iu = 0; iu < sub.Units; ++iu) {
                 const u = sub.U[iu];
-                if (u.Status === STATUS_DIS || u.Status === STATUS_TRIP) continue;
+                if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) continue;
                 
                 const pmax = sub.Pmax / sub.Units;
                 const pmin = sub.Pmin / sub.Units;
-                let tempset = Math.min(u.P + sub.Ramp, Math.max(u.P - sub.Ramp, u.Pset));
+
+                let tempset = this._calculateUnitTempset(u, sub);
                 let tryp = 0;
 
-                if (u.Status === STATUS_SHUTDOWN) {
+                if (u.Status === UnitStatus.SHUTDOWN) {
                     tryp = Math.max(u.P - sub.Ramp, 0);
-                } else if (sub.Category === CATEGORY_WIND) {
+                } else if (sub.Category === SubstationCategory.Wind) {
                     const pavail = pmax * this.state.fr_wind;
                     if (tempset > pavail) tempset = pavail;
                     tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, tempset + alpha * pmax));
-                } else if (sub.Category === CATEGORY_SOLAR) {
+                } else if (sub.Category === SubstationCategory.Solar) {
                     const pavail = pmax * this.state.fr_solar;
                     if (tempset > pavail) tempset = pavail;
                     tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, tempset + alpha * pmax));
                 } else { // Thermal, Nuclear
-                    if (u.Status === STATUS_STARTUP && u.StatusCount >= sub.StartTime) {
+                    if (u.Status === UnitStatus.STARTUP && u.StatusCount >= sub.StartTime) {
                         tryp = Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
-                    } else if (u.Status === STATUS_IN) {
+                    } else if (u.Status === UnitStatus.IN) {
                         tryp = Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
                     }
                 }
@@ -574,36 +575,46 @@ export class GameEngine {
         let subPower = 0;
         for (let iu = 0; iu < sub.Units; ++iu) {
             const u = sub.U[iu];
-            if (u.Status === STATUS_DIS || u.Status === STATUS_TRIP) {
+            if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) {
                 u.P = 0;
                 continue;
             }
 
             const pmax = sub.Pmax / sub.Units;
             const pmin = sub.Pmin / sub.Units;
-            let tempset = Math.min(u.P + sub.Ramp, Math.max(u.P - sub.Ramp, u.Pset));
+            
+            let tempset = this._calculateUnitTempset(u, sub);
             let tryp = 0;
 
-            if (sub.Category === CATEGORY_LOAD) {
+            if (sub.Category === SubstationCategory.Load) {
                 subPower -= u.P;
                 continue;
-            } else if (u.Status === STATUS_SHUTDOWN) {
+            } else if (u.Status === UnitStatus.SHUTDOWN) {
                 tryp = Math.max(u.P - sub.Ramp, 0);
-                if (tryp <= GENERATION_SHUTDOWN_THRESHOLD_MW) u.Status = STATUS_DIS;
-            } else if (sub.Category === CATEGORY_WIND) {
+                if (tryp <= GENERATION_SHUTDOWN_THRESHOLD_MW) u.Status = UnitStatus.DIS;
+            } else if (sub.Category === SubstationCategory.Wind) {
                 const pavail = pmax * this.state.fr_wind;
                 if (tempset > pavail) tempset = pavail;
                 tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, tempset + alpha * pmax));
-            } else if (sub.Category === CATEGORY_SOLAR) {
+            } else if (sub.Category === SubstationCategory.Solar) {
                 const pavail = pmax * this.state.fr_solar;
                 if (tempset > pavail) tempset = pavail;
                 tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, tempset + alpha * pmax));
             } else { // Thermal, Nuclear
-                tryp = Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
+                if (u.Status === UnitStatus.IN || (u.Status === UnitStatus.STARTUP && u.StatusCount >= sub.StartTime)) {
+                    tryp = Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
+                }
             }
 
-            if (u.Status === STATUS_STARTUP) {
-                if (u.StatusCount >= sub.StartTime) { if (tryp >= pmin) u.Status = STATUS_IN; }
+            if (u.Status === UnitStatus.STARTUP) {
+                if (u.StatusCount >= sub.StartTime) { 
+                    if (tryp >= pmin) {
+                        u.Status = UnitStatus.IN;
+                        if (pmin > 0) { // For thermal/nuclear, setpoint defaults to pmin. For renewables, it's preserved.
+                            u.Pset = pmin;
+                        }
+                    }
+                }
                 else { tryp = 0; }
             }
             u.P = tryp;
@@ -620,13 +631,13 @@ export class GameEngine {
             const ybr = -1 / br.Z;
             const i = parseInt(br.FromNum) - 1;
             const j = parseInt(br.ToNum) - 1;
-            if (br.Status1 === STATUS_IN) {
+            if (br.Status1 === BranchStatus.IN) {
                 this.state.Ybus.set([i, i], this.state.Ybus.get([i, i]) + ybr);
                 this.state.Ybus.set([i, j], this.state.Ybus.get([i, j]) - ybr);
                 this.state.Ybus.set([j, i], this.state.Ybus.get([j, i]) - ybr);
                 this.state.Ybus.set([j, j], this.state.Ybus.get([j, j]) + ybr);
             }
-            if (br.Circuits === 2 && br.Status2 === STATUS_IN) {
+            if (br.Circuits === 2 && br.Status2 === BranchStatus.IN) {
                 this.state.Ybus.set([i, i], this.state.Ybus.get([i, i]) + ybr);
                 this.state.Ybus.set([i, j], this.state.Ybus.get([i, j]) - ybr);
                 this.state.Ybus.set([j, i], this.state.Ybus.get([j, i]) - ybr);
@@ -655,10 +666,10 @@ export class GameEngine {
         const ang_j = theta.get([j, 0]);
         const pflow = -ybr * (ang_i - ang_j) * POWER_FLOW_BASE_MW;
         br.P = 0;
-        if (br.Status1 === STATUS_IN) {
+        if (br.Status1 === BranchStatus.IN) {
             br.P += pflow;
         }
-        if (br.Circuits === 2 && br.Status2 === STATUS_IN) {
+        if (br.Circuits === 2 && br.Status2 === BranchStatus.IN) {
             br.P += pflow;
         }
     }
@@ -666,54 +677,69 @@ export class GameEngine {
 
   private _updateMetrics() {
     // Metrics and costs
-    this.state.total_load_served = 0;
-    this.state.total_load_unserved = 0;
-    this.state.total_wind = 0;
-    this.state.total_solar = 0;
-    this.state.total_thermal = 0;
-    this.state.total_nuclear = 0;
-    this.state.spin_reserves = 0;
-    this.state.current_fuel_cost = 0;
-    this.state.current_running_cost = 0;
-    this.state.current_uload_cost = 0;
+    this.state.metrics.loadServed = 0;
+    this.state.metrics.loadUnserved = 0;
+    this.state.metrics.windGen = 0;
+    this.state.metrics.solarGen = 0;
+    this.state.metrics.thermalGen = 0;
+    this.state.metrics.nuclearGen = 0;
+    this.state.metrics.reserves = 0;
+    this.state.metrics.currentFuelCost = 0;
+    this.state.metrics.currentOpCost = 0;
+    this.state.metrics.currentUnservedCost = 0;
 
     for (const key in this.state.subs) {
         const sub = this.state.subs[key];
         for (let iu = 0; iu < sub.Units; ++iu) {
             const u = sub.U[iu];
             const pmax_unit = sub.Pmax / sub.Units;
-            if (sub.Category === CATEGORY_LOAD) {
-                if (u.Status === STATUS_IN) {
-                    this.state.total_load_served += u.P;
+            if (sub.Category === SubstationCategory.Load) {
+                if (u.Status === UnitStatus.IN) {
+                    this.state.metrics.loadServed += u.P;
                 } else {
-                    this.state.total_load_unserved += pmax_unit * this.state.fr_load;
+                    this.state.metrics.loadUnserved += pmax_unit * this.state.fr_load;
                 }
             } else {
-                if (u.Status === STATUS_IN || u.Status === STATUS_STARTUP || u.Status === STATUS_SHUTDOWN) {
-                    this.state.current_running_cost += sub.FixedCost;
-                    this.state.current_fuel_cost += sub.FuelCost * u.P;
+                if (u.Status === UnitStatus.IN || u.Status === UnitStatus.STARTUP || u.Status === UnitStatus.SHUTDOWN) {
+                    this.state.metrics.currentOpCost += sub.FixedCost;
+                    this.state.metrics.currentFuelCost += sub.FuelCost * u.P;
                 }
-                if (u.Status === STATUS_IN) {
-                    if (sub.Category === CATEGORY_WIND) this.state.spin_reserves += pmax_unit * this.state.fr_wind - u.P;
-                    else if (sub.Category === CATEGORY_SOLAR) this.state.spin_reserves += pmax_unit * this.state.fr_solar - u.P;
-                    else this.state.spin_reserves += pmax_unit - u.P;
+                if (u.Status === UnitStatus.IN) {
+                    if (sub.Category === SubstationCategory.Wind) this.state.metrics.reserves += pmax_unit * this.state.fr_wind - u.P;
+                    else if (sub.Category === SubstationCategory.Solar) this.state.metrics.reserves += pmax_unit * this.state.fr_solar - u.P;
+                    else this.state.metrics.reserves += pmax_unit - u.P;
                 }
-                if (sub.Category === CATEGORY_WIND) this.state.total_wind += u.P;
-                else if (sub.Category === CATEGORY_SOLAR) this.state.total_solar += u.P;
-                else if (sub.Category === CATEGORY_NUCLEAR) this.state.total_nuclear += u.P;
-                else this.state.total_thermal += u.P;
+                if (sub.Category === SubstationCategory.Wind) this.state.metrics.windGen += u.P;
+                else if (sub.Category === SubstationCategory.Solar) this.state.metrics.solarGen += u.P;
+                else if (sub.Category === SubstationCategory.Nuclear) this.state.metrics.nuclearGen += u.P;
+                else this.state.metrics.thermalGen += u.P;
             }
         }
     }
-    this.state.current_uload_cost = this.state.total_load_unserved * UNSERVED_LOAD_COST_PER_MW;
-    this.state.total_fuel_cost += this.state.current_fuel_cost / MINUTES_PER_HOUR;
-    this.state.total_running_cost += this.state.current_running_cost / MINUTES_PER_HOUR;
-    this.state.total_uload_cost += this.state.current_uload_cost / MINUTES_PER_HOUR;
-    this.state.total_cost = this.state.total_fuel_cost + this.state.total_running_cost + this.state.total_uload_cost;
-    this.state.total_mwh += (this.state.total_load_served + this.state.total_load_unserved) / MINUTES_PER_HOUR;
-    if (this.state.total_mwh > 0) {
-        this.state.average_cost = this.state.total_cost / this.state.total_mwh;
+    this.state.metrics.currentUnservedCost = this.state.metrics.loadUnserved * UNSERVED_LOAD_COST_PER_MW;
+    this.state.metrics.totalFuelCost += this.state.metrics.currentFuelCost / MINUTES_PER_HOUR;
+    this.state.metrics.totalOpCost += this.state.metrics.currentOpCost / MINUTES_PER_HOUR;
+    this.state.metrics.totalUnservedCost += this.state.metrics.currentUnservedCost / MINUTES_PER_HOUR;
+    this.state.metrics.totalCost = this.state.metrics.totalFuelCost + this.state.metrics.totalOpCost + this.state.metrics.totalUnservedCost;
+    this.state.metrics.totalMwh += (this.state.metrics.loadServed + this.state.metrics.loadUnserved) / MINUTES_PER_HOUR;
+    if (this.state.metrics.totalMwh > 0) {
+        this.state.metrics.avgCost = this.state.metrics.totalCost / this.state.metrics.totalMwh;
     }
+  }
+
+  private _calculateUnitTempset(u: Unit, sub: Substation): number {
+    const pmax = sub.Pmax / sub.Units;
+    const pmin = sub.Pmin / sub.Units;
+
+    // Determine the target setpoint for this tick.
+    let psetForCalc = u.Pset;
+    if (u.Status === UnitStatus.STARTUP && pmin > 0) { // For thermal/nuclear, target pmin during startup
+        psetForCalc = pmin;
+    }
+    psetForCalc = Math.max(pmin, Math.min(pmax, psetForCalc)); // Safeguard clamp
+    
+    const tempset = Math.min(u.P + sub.Ramp, Math.max(u.P - sub.Ramp, psetForCalc));
+    return tempset;
   }
 
   public draw(isPaused?: boolean, isFastForward?: boolean) {
@@ -728,32 +754,18 @@ export class GameEngine {
     this.drawer.draw(this.state, isPaused ?? true, isFastForward ?? false);
   }
 
-  public getDashboardStats(): DashboardStats {
+  public getDashboardStats(): GameStatistics {
     // Format time string
     const h = Math.floor(this.state.t / 60) + 1;
     const m = (this.state.t - (h - 1) * 60);
     const timeStr = `${h}:${m < 10 ? "0" + m : m} PM`;
 
     return {
+      ...this.state.metrics,
       day: this.state.day,
       timeStr,
       timeStep: this.state.t,
       frequency: this.state.frequency,
-      loadServed: this.state.total_load_served,
-      loadUnserved: this.state.total_load_unserved,
-      reserves: this.state.spin_reserves,
-      windGen: this.state.total_wind,
-      solarGen: this.state.total_solar,
-      thermalGen: this.state.total_thermal,
-      nuclearGen: this.state.total_nuclear,
-      avgCost: this.state.average_cost,
-      totalCost: this.state.total_cost,
-      currentOpCost: this.state.current_running_cost, // These are current hourly costs
-      currentFuelCost: this.state.current_fuel_cost,   // These are current hourly costs
-      currentUnservedCost: this.state.current_uload_cost, // These are current hourly costs
-      totalOpCost: this.state.total_running_cost,
-      totalFuelCost: this.state.total_fuel_cost,
-      totalUnservedCost: this.state.total_uload_cost,
       fr_wind: this.state.fr_wind,
       fr_solar: this.state.fr_solar,
     };

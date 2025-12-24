@@ -3,7 +3,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_TRIP } from "@/lib/game/types";
+import { Substation, Unit, UnitStatus } from "@/lib/game/types";
 
 interface LoadUnitDetailsProps {
   sub: Substation;
@@ -13,10 +13,13 @@ interface LoadUnitDetailsProps {
   isPaused?: boolean;
 }
 
-const statusStyles: Record<string, { text: string; className: string }> = {
-  [STATUS_IN]: { text: 'IN-SERVICE', className: 'bg-green-500/20 text-green-400' },
-  [STATUS_DIS]: { text: 'OUT-OF-SERVICE', className: 'bg-gray-500/20 text-gray-400' },
-  [STATUS_TRIP]: { text: 'TRIPPED', className: 'bg-red-500/20 text-red-400' },
+const statusStyles: Record<UnitStatus, { text: string; className: string }> = {
+  [UnitStatus.IN]: { text: 'IN-SERVICE', className: 'bg-green-500/20 text-green-400' },
+  [UnitStatus.DIS]: { text: 'OUT-OF-SERVICE', className: 'bg-gray-500/20 text-gray-400' },
+  [UnitStatus.TRIP]: { text: 'TRIPPED', className: 'bg-red-500/20 text-red-400' },
+  // The following are not applicable to loads but are included for type completeness
+  [UnitStatus.STARTUP]: { text: 'N/A', className: 'bg-yellow-500/20 text-yellow-400' },
+  [UnitStatus.SHUTDOWN]: { text: 'N/A', className: 'bg-gray-500/20 text-gray-400' },
 };
 
 /**
@@ -39,7 +42,7 @@ export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: Lo
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.className}`}>
           {style.text}
         </span>
-        {unit.Status === STATUS_TRIP && (
+        {unit.Status === UnitStatus.TRIP && (
           <p className="text-red-500 text-sm">Cannot be reconnected.</p>
         )}
       </div>
@@ -51,11 +54,11 @@ export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: Lo
    */
   const renderActionControls = () => {
     switch (unit.Status) {
-      case STATUS_IN:
+      case UnitStatus.IN:
         return <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Disconnect</Button>;
-      case STATUS_DIS:
+      case UnitStatus.DIS:
         return <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Connect</Button>;
-      case STATUS_TRIP:
+      case UnitStatus.TRIP:
         return null; // Tripped units have no actions
       default:
         return null;
@@ -73,7 +76,7 @@ export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: Lo
 
         {/* Right part: Action controls */}
         <div className="w-full sm:w-auto flex items-center justify-end gap-x-4">
-          {unit.Status === STATUS_IN && (
+          {unit.Status === UnitStatus.IN && (
             <div className="text-sm font-mono text-right">
               <p className="font-bold">{unit.P.toFixed(0)} MW</p>
             </div>

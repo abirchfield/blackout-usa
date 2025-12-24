@@ -10,8 +10,8 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
-import { Branch, STATUS_IN, STATUS_DIS, STATUS_TRIP } from "@/lib/game/types"
-import { StatusIndicator } from "../ui/status-indicator"
+import { Branch, BranchStatus } from "@/lib/game/types"
+import { StatusIndicator } from "../indicators/status-indicator"
 
 interface CircuitDisplayProps {
   branch: Branch;
@@ -24,7 +24,7 @@ function CircuitDisplay({ branch, circuitNum, onCircuitAction, isPaused }: Circu
   const status = circuitNum === 1 ? branch.Status1 : branch.Status2;
   
   // Flow on a single circuit. If both are in, total P is shared.
-  const inServiceCircuits = (branch.Status1 === STATUS_IN ? 1 : 0) + (branch.Circuits === 2 && branch.Status2 === STATUS_IN ? 1 : 0);
+  const inServiceCircuits = (branch.Status1 === BranchStatus.IN ? 1 : 0) + (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN ? 1 : 0);
   const flow = inServiceCircuits > 0 ? branch.P / inServiceCircuits : 0;
 
   let statusText: string;
@@ -32,15 +32,15 @@ function CircuitDisplay({ branch, circuitNum, onCircuitAction, isPaused }: Circu
   let buttonDisabled = false;
 
   switch (status) {
-    case STATUS_IN:
+    case BranchStatus.IN:
       statusText = `Circuit ${circuitNum} is <strong>IN-SERVICE</strong>.<br/>Flow: ${Math.abs(flow).toFixed(0)} MW<br/>Rating: ${branch.Pmax.toFixed(0)} MW`;
       buttonText = "Open (Disconnect)";
       break;
-    case STATUS_DIS:
+    case BranchStatus.DIS:
       statusText = `Circuit ${circuitNum} is <strong>OUT-OF-SERVICE</strong>.`;
       buttonText = "Close (Connect)";
       break;
-    case STATUS_TRIP:
+    case BranchStatus.TRIP:
       statusText = `Circuit ${circuitNum} has <strong>TRIPPED</strong> and cannot be reclosed.`;
       buttonText = null;
       buttonDisabled = true;
@@ -60,7 +60,7 @@ function CircuitDisplay({ branch, circuitNum, onCircuitAction, isPaused }: Circu
         </div>
         {buttonText && (
           <Button
-            variant={status === STATUS_IN ? "destructive" : "secondary"}
+            variant={status === BranchStatus.IN ? "destructive" : "secondary"}
             size="sm"
             onClick={() => onCircuitAction(branch.Number, circuitNum)}
             disabled={buttonDisabled || isPaused}

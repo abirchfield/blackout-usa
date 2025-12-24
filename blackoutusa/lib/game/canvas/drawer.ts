@@ -1,4 +1,5 @@
-import { Branch, GameState, Substation, STATUS_IN, STATUS_DIS, STATUS_TRIP, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "./types";
+import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "../types";
+import { AppColors, GenerationTypeConfig } from "../config";
 
 // --- Constants ---
 
@@ -13,16 +14,6 @@ const MIN_POWER_FOR_ANIMATION = 10;
 // Controls how many pixels the animation moves per frame. Can be a decimal.
 // Slower < 1 < Faster.
 const ANIMATION_SPEED_FACTOR = 0.5;
-
-// --- Colors ---
-const COLOR_TRIPPED = "Red";
-const COLOR_OVERLOAD_CRITICAL = "Orange";
-const COLOR_OVERLOAD_NORMAL = "Yellow";
-const COLOR_POWER_FLOW = "Lime";
-const COLOR_WIND = "Green";
-const COLOR_SOLAR = "Yellow";
-const COLOR_NUCLEAR = "Magenta";
-const COLOR_THERMAL = "Gray";
 
 // --- Drawing Styles ---
 const BORDER_LINE_WIDTH = 2;
@@ -336,19 +327,19 @@ export class GameDrawer {
     }
 
     switch (status) {
-        case STATUS_IN:
+        case BranchStatus.IN:
             this.strokePath({ style: this.getBranchOverloadColor(branch), width: radius });
             if (Math.abs(branch.P) > MIN_POWER_FOR_ANIMATION) {
                 this.drawAnimatedPowerFlow(radius);
             }
             break;
-        case STATUS_DIS:
+        case BranchStatus.DIS:
             // Draw solid line then dashed on top for disconnected appearance
             this.strokePath({ style: this.primaryColor, width: radius });
             this.strokePath({ style: this.secondaryColor, width: radius * POWER_FLOW_LINE_WIDTH_FACTOR, dash: DISCONNECTED_LINE_DASH });
             break;
-        case STATUS_TRIP:
-            this.strokePath({ style: COLOR_TRIPPED, width: radius, dash: DISCONNECTED_LINE_DASH });
+        case BranchStatus.TRIP:
+            this.strokePath({ style: AppColors.TRIPPED, width: radius, dash: DISCONNECTED_LINE_DASH });
             break;
     }
   }
@@ -361,7 +352,7 @@ export class GameDrawer {
     this.strokePath({ style: this.secondaryColor, width: lineWidth, dash: POWER_FLOW_DASH_BACKGROUND, dashOffset: baseOffset + 1 });
     
     // Foreground colored dot
-    this.strokePath({ style: COLOR_POWER_FLOW, width: lineWidth, dash: POWER_FLOW_DASH_FOREGROUND, dashOffset: baseOffset });
+    this.strokePath({ style: AppColors.POWER_FLOW, width: lineWidth, dash: POWER_FLOW_DASH_FOREGROUND, dashOffset: baseOffset });
   }
 
   private drawAllSubstations() {
@@ -370,7 +361,7 @@ export class GameDrawer {
       const { x: cx, y: cy } = this.getScreenPos(sub.Longitude, sub.Latitude);
       const radius = (sub === this.state.hoverSub) ? SUBSTATION_RADIUS_HOVER : SUBSTATION_RADIUS_NORMAL;
 
-      if (sub.Category === CATEGORY_LOAD) {
+      if (sub.Category === SubstationCategory.Load) {
         this.drawLoadSubstation(sub, cx, cy, radius);
       } else {
         this.drawGeneratorSubstation(sub, cx, cy, radius);
@@ -386,7 +377,7 @@ export class GameDrawer {
     const Pmax = sub.Pmax * this.state.fr_load;
     
     const allTripped = this.isSubstationTripped(sub);
-    this.ctx.strokeStyle = allTripped ? COLOR_TRIPPED : this.primaryColor;
+    this.ctx.strokeStyle = allTripped ? AppColors.TRIPPED : this.primaryColor;
     this.ctx.lineWidth = SUBSTATION_BORDER_WIDTH;
     
     // Background
@@ -412,8 +403,8 @@ export class GameDrawer {
     const genColor = this.getGeneratorColor(sub.Category);
     const allTripped = this.isSubstationTripped(sub);
 
-    const displayColor = allTripped ? COLOR_TRIPPED : genColor;
-    const borderColor = allTripped ? COLOR_TRIPPED : this.primaryColor;
+    const displayColor = allTripped ? AppColors.TRIPPED : genColor;
+    const borderColor = allTripped ? AppColors.TRIPPED : this.primaryColor;
     
     // Draw outer colored circle with border
     this.drawCircle(cx, cy, r * GENERATOR_OUTER_RADIUS_FACTOR, {
@@ -450,22 +441,22 @@ export class GameDrawer {
     let text = `${Math.abs(branch.P).toFixed(0)} MW`;
     let color = this.primaryColor;
 
-    const isTripped = branch.Status1 === STATUS_TRIP || branch.Status2 === STATUS_TRIP;
-    const isDisconnected = branch.Status1 === STATUS_DIS && (branch.Circuits === 1 || branch.Status2 === STATUS_DIS);
+    const isTripped = branch.Status1 === BranchStatus.TRIP || branch.Status2 === BranchStatus.TRIP;
+    const isDisconnected = branch.Status1 === BranchStatus.DIS && (branch.Circuits === 1 || branch.Status2 === BranchStatus.DIS);
     const overloadRatio = Math.abs(branch.P) / (branch.Circuits * branch.Pmax);
     const isCriticallyOverloaded = overloadRatio > BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL;
     const isOverloaded = overloadRatio > BRANCH_OVERLOAD_NORMAL_THRESHOLD;
 
     if (isTripped) {
       text = "TRIPPED - cannot reclose";
-      color = COLOR_TRIPPED;
+      color = AppColors.TRIPPED;
     } else if (isDisconnected) {
       text = "Line out of service";
     } else if (isCriticallyOverloaded) {
-      color = COLOR_OVERLOAD_CRITICAL;
+      color = AppColors.OVERLOAD_CRITICAL;
       text += " (CRITICALLY OVERLOADED)";
     } else if (isOverloaded) {
-      color = COLOR_OVERLOAD_NORMAL;
+      color = AppColors.OVERLOAD_NORMAL;
       text += " (overloaded)";
     }
     
@@ -477,21 +468,16 @@ export class GameDrawer {
   private getBranchOverloadColor(branch: Branch): string {
     const overloadRatio = Math.abs(branch.P) / (branch.Circuits * branch.Pmax);
     if (overloadRatio > BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW) {
-        return COLOR_OVERLOAD_CRITICAL;
+        return AppColors.OVERLOAD_CRITICAL;
     }
     if (overloadRatio > BRANCH_OVERLOAD_NORMAL_THRESHOLD) {
-        return COLOR_OVERLOAD_NORMAL;
+        return AppColors.OVERLOAD_NORMAL;
     }
     return this.primaryColor;
   }
 
   private getGeneratorColor(category: string): string {
-    switch (category) {
-        case CATEGORY_WIND: return COLOR_WIND;
-        case CATEGORY_SOLAR: return COLOR_SOLAR;
-        case CATEGORY_NUCLEAR: return COLOR_NUCLEAR;
-        default: return COLOR_THERMAL;
-    }
+    return GenerationTypeConfig[category as SubstationCategory]?.color || GenerationTypeConfig[SubstationCategory.Thermal].color;
   }
 
   private getSubstationPower(sub: Substation): number {
@@ -501,6 +487,6 @@ export class GameDrawer {
   private isSubstationTripped(sub: Substation): boolean {
     // A substation is considered tripped if all its units are tripped.
     if (sub.Units === 0) return false;
-    return sub.U.every((unit) => unit.Status === STATUS_TRIP);
+    return sub.U.every((unit) => unit.Status === UnitStatus.TRIP);
   }
 }

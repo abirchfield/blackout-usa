@@ -1,23 +1,24 @@
 "use client"
 
 import { SidebarSeparator } from "@/components/ui/sidebar"
-import { DashboardStats } from "@/lib/game/types"
+import { GameStatistics, SubstationCategory } from "@/lib/game/types"
+import { GenerationTypeConfig } from "@/lib/game/config"
 import { fmtMW, fmtMoneyK, fmtMoneyM } from "@/lib/utils"
-import { Wind, Sun, Flame, Atom } from "lucide-react"
 
 interface EnergyStatsProps {
-  stats: DashboardStats;
+  stats: GameStatistics;
 }
 
 export function EnergyStats({ stats }: EnergyStatsProps) {
   const s = stats;
 
-  const generationTypes = [
-    { name: "Nuclear", key: "nuclearGen", color: "text-purple-400", bgColor: "bg-purple-400", icon: Atom },
-    { name: "Thermal", key: "thermalGen", color: "text-orange-400", bgColor: "bg-orange-400", icon: Flame },
-    { name: "Wind", key: "windGen", color: "text-cyan-400", bgColor: "bg-cyan-400", icon: Wind },
-    { name: "Solar", key: "solarGen", color: "text-yellow-400", bgColor: "bg-yellow-400", icon: Sun },
-  ];
+  const generationKeys = {
+    [SubstationCategory.Nuclear]: "nuclearGen",
+    [SubstationCategory.Thermal]: "thermalGen",
+    [SubstationCategory.Wind]: "windGen",
+    [SubstationCategory.Solar]: "solarGen",
+  } as const;
+
   const totalGen = stats.nuclearGen + stats.thermalGen + stats.windGen + stats.solarGen;
 
   return (
@@ -61,20 +62,23 @@ export function EnergyStats({ stats }: EnergyStatsProps) {
           <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Generation Mix</div>
         </div>
         <div className="space-y-3 pt-2">
-          {generationTypes.map((type) => {
-            const value = stats[type.key as keyof DashboardStats] as number;
+          {Object.entries(generationKeys).map(([category, key]) => {
+            const config = GenerationTypeConfig[category as SubstationCategory];
+            if (!config) return null;
+            const value = stats[key as keyof GameStatistics] as number;
             const percentage = totalGen > 0 ? (value / totalGen) * 100 : 0;
+            const Icon = config.icon;
             return (
-              <div key={type.key} className="flex items-center gap-3">
-                <type.icon className={`h-4 w-4 ${type.color} flex-shrink-0`} />
+              <div key={key} className="flex items-center gap-3">
+                <Icon className={`h-4 w-4 ${config.tailwind.text} flex-shrink-0`} />
                 <div className="flex-1 min-w-0">
                   <div className="flex justify-between items-baseline text-xs">
-                    <span className="text-foreground/80 truncate">{type.name}</span>
+                    <span className="text-foreground/80 truncate">{config.name}</span>
                     <span className="font-mono font-bold whitespace-nowrap">{value.toFixed(0)} <span className="text-xs text-muted-foreground">MW</span></span>
                   </div>
                   <div className="h-1.5 w-full rounded-full bg-muted mt-1" title={`${percentage.toFixed(1)}%`}>
                     <div
-                      className={`h-1.5 rounded-full ${type.bgColor}`}
+                      className={`h-1.5 rounded-full ${config.tailwind.bg}`}
                       style={{ width: `${percentage}%` }}
                     />
                   </div>
