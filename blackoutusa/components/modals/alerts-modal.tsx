@@ -14,15 +14,28 @@ interface Alert {
 interface AlertsListProps {
   alerts: Alert[];
   onRemoveAlert: (id: number) => void;
+  onDismissAllAlerts: () => void;
 }
 
-export function AlertsList({ alerts, onRemoveAlert }: AlertsListProps) {
+export function AlertsList({ alerts, onRemoveAlert, onDismissAllAlerts }: AlertsListProps) {
   return (
     <div className="-mx-4 border-t">
       {alerts.length === 0 ? (
         <div className="p-4 text-center text-muted-foreground">No alerts to show</div>
       ) : (
         <div className="flex flex-col">
+          <div className="p-3 border-b">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onDismissAllAlerts}
+              disabled={alerts.length === 0}
+              aria-label="Dismiss all alerts"
+              className="w-full"
+            >
+              Dismiss All Alerts
+            </Button>
+          </div>
           {alerts.map((alert) => (
             <div key={alert.id} className="flex items-start gap-3 border-b p-3">
               <Badge variant="secondary" className="mt-0.5 whitespace-nowrap">{alert.time}</Badge>

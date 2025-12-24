@@ -1,5 +1,5 @@
 import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "../types";
-import { AppColors, GenerationTypeConfig } from "../config";
+import { AppColors, GenerationTypeConfig, ThemeCanvasColors } from "../config";
 
 // --- Constants ---
 
@@ -64,6 +64,13 @@ export class GameDrawer {
     this.ctx = canvas.getContext("2d")!;
   }
 
+  public destroy() {
+    // Currently, GameDrawer doesn't add any event listeners, so this method is
+    // primarily for symmetry with GameHandler and for future-proofing.
+    // If any resources were to be cleaned up (e.g., removing listeners,
+    // stopping observers), this would be the place to do it.
+  }
+
   /**
    * Main drawing method, orchestrates the drawing of all game elements.
    */
@@ -93,24 +100,27 @@ export class GameDrawer {
     this.state = state;
     this.setThemeColors();
     // Update animation state for power flow dots
-    if (!isPaused) {
+    if (!isPaused && this.state.animationsEnabled) {
       const speedFactor = isFastForward ? ANIMATION_SPEED_FACTOR * 3 : ANIMATION_SPEED_FACTOR;
       this.state.anim_cycle_state = (this.state.anim_cycle_state + speedFactor) % POWER_FLOW_PATTERN_LENGTH;
     }
   }
 
   private setThemeColors() {
-    this.primaryColor = this.state.theme === 'light' ? 'black' : 'white';
-    this.secondaryColor = this.state.theme === 'light' ? 'white' : 'black';
+    // Dynamically get the resolved theme colors from the document's computed styles.
+    // This ensures the canvas background perfectly matches the page background.
+    const bodyStyles = window.getComputedStyle(document.body);
+    this.primaryColor = bodyStyles.color;
+    this.secondaryColor = bodyStyles.backgroundColor;
   }
 
-  public resizeCanvas() {
+  public resizeCanvas(): boolean {
     if (this.canvas.width !== this.canvas.offsetWidth || this.canvas.height !== this.canvas.offsetHeight) {
       this.canvas.width = this.canvas.offsetWidth;
       this.canvas.height = this.canvas.offsetHeight;
-      // After a resize, the view might need to be re-initialized if it hasn't been set yet.
-      // The engine's draw loop handles this logic.
+      return true;
     }
+    return false;
   }
 
   // Calculates and sets the initial view (scale and position) to fit the map
@@ -203,7 +213,7 @@ export class GameDrawer {
     const topLeft = this.getScreenPos(this.state.xmin, this.state.ymax);
     const bottomRight = this.getScreenPos(this.state.xmax, this.state.ymin);
 
-    this.ctx.strokeStyle = 'cyan';
+    this.ctx.strokeStyle = AppColors.DEBUG;
     this.ctx.lineWidth = 2;
     this.ctx.setLineDash([10, 5]);
     this.ctx.strokeRect(
@@ -330,7 +340,12 @@ export class GameDrawer {
         case BranchStatus.IN:
             this.strokePath({ style: this.getBranchOverloadColor(branch), width: radius });
             if (Math.abs(branch.P) > MIN_POWER_FOR_ANIMATION) {
-                this.drawAnimatedPowerFlow(radius);
+                if (this.state.animationsEnabled) {
+                    this.drawAnimatedPowerFlow(radius);
+                } else {
+                    // Draw a static line to indicate power flow when animations are off
+                    this.strokePath({ style: AppColors.POWER_FLOW, width: radius * POWER_FLOW_LINE_WIDTH_FACTOR });
+                }
             }
             break;
         case BranchStatus.DIS:
@@ -367,8 +382,10 @@ export class GameDrawer {
         this.drawGeneratorSubstation(sub, cx, cy, radius);
       }
 
-      const font = sub === this.state.hoverSub ? FONT_HOVER : FONT_NORMAL;
-      this.drawOutlinedText(sub.Name, cx + LABEL_OFFSET_X, cy + LABEL_OFFSET_Y, font, this.primaryColor, this.secondaryColor);
+      if (this.state.renderCanvasText) {
+        const font = sub === this.state.hoverSub ? FONT_HOVER : FONT_NORMAL;
+        this.drawOutlinedText(sub.Name, cx + LABEL_OFFSET_X, cy + LABEL_OFFSET_Y, font, this.primaryColor, this.secondaryColor);
+      }
     }
   }
 
@@ -404,7 +421,7 @@ export class GameDrawer {
     const allTripped = this.isSubstationTripped(sub);
 
     const displayColor = allTripped ? AppColors.TRIPPED : genColor;
-    const borderColor = allTripped ? AppColors.TRIPPED : this.primaryColor;
+    const borderColor = displayColor;
     
     // Draw outer colored circle with border
     this.drawCircle(cx, cy, r * GENERATOR_OUTER_RADIUS_FACTOR, {

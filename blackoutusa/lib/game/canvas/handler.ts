@@ -1,4 +1,4 @@
-import { GameState, InteractionHandler } from "./types";
+import { GameState, InteractionHandler } from "../types";
 
 export class GameHandler {
   private canvas: HTMLCanvasElement;
@@ -18,6 +18,16 @@ export class GameHandler {
     this.canvas.addEventListener("mouseup", this.handleMouseUp.bind(this));
     this.canvas.addEventListener("wheel", this.handleWheel.bind(this), { passive: false });
     this.canvas.addEventListener("keydown", this.handleKeyDown.bind(this));
+  }
+
+  public destroy() {
+    // Remove all event listeners to prevent memory leaks and unwanted behavior
+    this.canvas.removeEventListener("mousedown", this.handleMouseDown.bind(this));
+    this.canvas.removeEventListener("mousemove", this.handleMouseMove.bind(this));
+    this.canvas.removeEventListener("mouseleave", this.handleMouseLeave.bind(this));
+    this.canvas.removeEventListener("mouseup", this.handleMouseUp.bind(this));
+    this.canvas.removeEventListener("wheel", this.handleWheel.bind(this));
+    this.canvas.removeEventListener("keydown", this.handleKeyDown.bind(this));
   }
 
   private handleMouseDown(e: MouseEvent) {

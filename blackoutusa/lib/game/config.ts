@@ -3,7 +3,7 @@ import { SubstationCategory } from "./types";
 
 const thermalConfig = {
   name: "Thermal",
-  color: "Gray",
+  color: "#fb923c", // Hex for Tailwind's orange-400
   tailwind: {
     text: "text-orange-400",
     bg: "bg-orange-400",
@@ -25,7 +25,7 @@ export const GenerationTypeConfig: Record<SubstationCategory, {
 }> = {
   [SubstationCategory.Nuclear]: {
     name: "Nuclear",
-    color: "Magenta",
+    color: "#c084fc", // Hex for Tailwind's purple-400
     tailwind: {
       text: "text-purple-400",
       bg: "bg-purple-400",
@@ -39,7 +39,7 @@ export const GenerationTypeConfig: Record<SubstationCategory, {
   [SubstationCategory.CoalFiredSteam]: thermalConfig,
   [SubstationCategory.Wind]: {
     name: "Wind",
-    color: "#06b6d4", // Hex for Tailwind's cyan-400
+    color: "#22d3ee", // Hex for Tailwind's cyan-400
     tailwind: {
       text: "text-cyan-400",
       bg: "bg-cyan-400",
@@ -59,7 +59,7 @@ export const GenerationTypeConfig: Record<SubstationCategory, {
   },
   [SubstationCategory.Load]: {
     name: "Load",
-    color: "Gray",
+    color: "#6b7280", // Hex for Tailwind's gray-500
     tailwind: {
       text: "text-gray-500",
       bg: "bg-gray-500",
@@ -71,8 +71,21 @@ export const GenerationTypeConfig: Record<SubstationCategory, {
 
 // Centralized colors for UI and Canvas elements
 export const AppColors = {
-  TRIPPED: "Red",
-  OVERLOAD_CRITICAL: "Orange",
-  OVERLOAD_NORMAL: "Yellow",
-  POWER_FLOW: "Lime",
+  TRIPPED: "#ef4444", // red-500
+  OVERLOAD_CRITICAL: "#f97316", // orange-500
+  OVERLOAD_NORMAL: "#eab308", // yellow-500
+  POWER_FLOW: "#84cc16", // lime-500
+  DEBUG: "#22d3ee", // cyan-400
+};
+
+// Centralized theme colors for the canvas to match globals.css
+export const ThemeCanvasColors = {
+  light: {
+    primary: 'black',
+    background: '#ffffff', // Corresponds to --background: oklch(1 0 0)
+  },
+  dark: {
+    primary: 'white',
+    background: 'rgb(37, 37, 37)', // Corresponds to --background: oklch(0.145 0 0)
+  }
 };

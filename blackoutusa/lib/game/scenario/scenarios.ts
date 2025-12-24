@@ -1,4 +1,4 @@
-import { GameState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus } from "./types";
+import { GameState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus } from "../types";
 
 export interface ResultDetails {
     performance: 'record' | 'good' | 'okay' | 'bad';
@@ -32,7 +32,6 @@ class Day1Scenario implements IScenario {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
-        onAlert?.({ message: "Your shift has started. Click \"View all Alerts\" to see additional hints for what to do.", critical: false }, true);
         onHint?.({ message: "The McCamey Solar PV plant in West Texas is currently disconnected. You might as well start up all 3 units at that plant to get more, low-cost energy." });
         onHint?.({ message: "The Mission Gas Turbine plant in South Texas has very high costs. Try shutting down 1-3 of these units while you still have plenty of reserves." });
         onHint?.({ message: "You are going to need more reserves in the evening once the solar has gone down and the load is higher." });

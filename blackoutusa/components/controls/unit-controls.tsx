@@ -48,8 +48,9 @@ const PowerControl = ({
   disabled: boolean;
   showSetpoint?: boolean;
 }) => {
-  const range = pmax - pmin;
-  const outputPercentage = range > 0 ? ((actual - pmin) / range) * 100 : 0;
+  // Percentages should be based on the full range of the slider, from 0 to pmax.
+  const outputPercentage = pmax > 0 ? (actual / pmax) * 100 : 0;
+  const pminPercentage = pmax > 0 ? (pmin / pmax) * 100 : 0;
 
   return (
     <div className="flex items-center gap-x-4">
@@ -57,23 +58,15 @@ const PowerControl = ({
         <div className="relative flex h-5 w-full items-center">
           {/* The slider for SETPOINT. Its own fill is hidden by making it transparent. */}
           <div className="w-full" style={{ "--primary": "transparent" } as React.CSSProperties}>
-            <Slider value={[setpoint]} onValueChange={onValueChange} onValueCommit={onValueCommit} min={pmin} max={pmax} step={1} disabled={disabled} />
+            <Slider value={[setpoint]} onValueChange={onValueChange} onValueCommit={onValueCommit} min={0} max={pmax} step={1} disabled={disabled} />
           </div>
-          {/* Pmin indicator dot */}
-          {pmin > 0 && (
-            <div
-              className="pointer-events-none absolute top-1/2 h-1.5 w-1.5 -translate-y-1/2 rounded-full bg-red-500"
-              style={{ left: '2px' }} // Small offset to appear on the track
-              title={`Minimum Power: ${pmin.toFixed(0)} MW`}
-            />
-          )}
           {/* The fill for ACTUAL power. This is an overlay. */}
           <div
             className="pointer-events-none absolute top-1/2 h-2 w-full -translate-y-1/2"
             title={`Actual Output: ${actual.toFixed(0)} MW`}
           >
             <div
-              className="h-full rounded-full bg-white/80"
+              className="h-full rounded-full bg-primary/80"
               style={{ width: `${outputPercentage}%` }}
             />
           </div>
@@ -137,14 +130,14 @@ export function GeneratorUnitDetails({
     }
 
     return (
-      <div className="space-y-1">
-        <p className="font-bold">Unit #{index + 1}</p>
+      <div>
+        <div className="flex items-baseline gap-2">
+          <p className="font-bold">Unit #{index + 1}</p>
+          {unit.Status === UnitStatus.TRIP && <p className="text-red-500 text-sm whitespace-nowrap">Cannot be restarted.</p>}
+        </div>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.className}`}>
           {style.text}
         </span>
-        {unit.Status === UnitStatus.TRIP && (
-          <p className="text-red-500 text-sm">Cannot be restarted.</p>
-        )}
       </div>
     );
   };
@@ -179,7 +172,7 @@ export function GeneratorUnitDetails({
           setpoint: numericSetpoint,
           actual: 0,
           disabled: true,
-          showSetpoint: false,
+          showSetpoint: true,
         };
         actionElement = (
           <div className="w-28 flex justify-end">
@@ -194,7 +187,7 @@ export function GeneratorUnitDetails({
           setpoint: numericSetpoint,
           actual: unit.P,
           disabled: true,
-          showSetpoint: false,
+          showSetpoint: true,
         };
         actionElement = (
           <div className="w-28 flex justify-center">

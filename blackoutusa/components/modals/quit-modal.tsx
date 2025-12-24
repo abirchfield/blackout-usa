@@ -20,12 +20,7 @@ interface QuitModalProps {
 }
 
 export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay, onNextDay }: QuitModalProps) {
-  return (
-    <Dialog open={open} onOpenChange={() => {
-      // Do nothing. This prevents dismissal via overlay click, Esc, or the 'X' button.
-      // The modal must be closed via an explicit action inside it.
-    }}>
-      <DialogContent className="sm:max-w-[600px] font-share-tech [&>button]:hidden">
+  return ( <Dialog open={open} onOpenChange={onOpenChange}> <DialogContent className="sm:max-w-[600px] font-share-tech">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold">Quit the game?</DialogTitle>
           <DialogDescription className="hidden">Quit options</DialogDescription>
@@ -42,9 +37,6 @@ export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay,
           <Button className="w-full justify-center gap-2 py-6 text-lg" onClick={() => onNextDay(day)}>
             <span>Skip to Next Day</span>
             <ArrowRight className="h-5 w-5" />
-          </Button>
-          <Button variant="outline" className="w-full justify-center gap-2 py-6 text-lg mt-4" onClick={() => onOpenChange(false)}>
-            Cancel
           </Button>
         </div>
       </DialogContent>

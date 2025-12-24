@@ -243,11 +243,8 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   }, [open, currentPage]);
 
   return (
-    <Dialog open={open} onOpenChange={() => {
-      // Do nothing. This prevents dismissal via overlay click, Esc, or the 'X' button.
-      // The modal must be closed via an explicit action inside it.
-    }}>
-      <DialogContent className="sm:max-w-[800px] font-share-tech h-[85vh] flex flex-col [&>button]:hidden">
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[800px] font-share-tech h-[85vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold">How to Play</DialogTitle>
         </DialogHeader>

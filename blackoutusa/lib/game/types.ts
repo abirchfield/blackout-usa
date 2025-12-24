@@ -55,7 +55,11 @@ export interface Substation {
 export interface GameMetrics {
   loadServed: number;
   loadUnserved: number;
-  reserves: number;
+  reserves: number; // Total reserves
+  reservesWind: number;
+  reservesSolar: number;
+  reservesThermal: number;
+  reservesNuclear: number;
   windGen: number;
   solarGen: number;
   thermalGen: number;
@@ -135,6 +139,8 @@ export interface GameState {
   x0: number;
   y0: number;
   theme: 'light' | 'dark';
+  animationsEnabled: boolean;
+  renderCanvasText: boolean;
   
   // Input State
   inDrag: boolean;

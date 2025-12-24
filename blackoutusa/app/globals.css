@@ -123,6 +123,11 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Custom slider thumb color for visibility in both modes */
+  [role="slider"] {
+    @apply border-2 border-background bg-primary;
+  }
 }
 
 /* Custom Scrollbar Styles */
