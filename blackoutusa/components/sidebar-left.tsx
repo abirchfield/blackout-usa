@@ -1,38 +1,24 @@
 "use client"
 
-import { useMemo } from "react"
 import { SidebarSeparator } from "@/components/ui/sidebar"
 import { DashboardStats } from "@/lib/game/types"
 import { fmtMW, fmtMoneyK, fmtMoneyM } from "@/lib/utils"
-import { AreaChart, Area } from "recharts"
-import { ChartContainer } from "@/components/ui/chart"
+import { Wind, Sun, Flame, Atom } from "lucide-react"
 
 interface EnergyStatsProps {
   stats: DashboardStats;
-  statsHistory?: DashboardStats[];
 }
 
-export function EnergyStats({ stats, statsHistory }: EnergyStatsProps) {
+export function EnergyStats({ stats }: EnergyStatsProps) {
   const s = stats;
 
-  const energyChartData = useMemo(() => {
-    return statsHistory?.map(stat => ({
-      time: stat.timeStr,
-      wind: stat.windGen,
-      solar: stat.solarGen,
-      thermal: stat.thermalGen,
-      nuclear: stat.nuclearGen,
-    })) || [];
-  }, [statsHistory]);
-
-  const energyChartConfig = {
-    wind: { label: "Wind", color: "hsl(142.1 76.2% 44.9%)" }, // text-green-500
-    solar: { label: "Solar", color: "hsl(47.9 95.8% 53.1%)" }, // text-yellow-500
-    thermal: { label: "Thermal", color: "hsl(215.4 16.3% 47.1%)" }, // text-gray-500
-    nuclear: { label: "Nuclear", color: "hsl(332.6 79.1% 57.8%)" }, // text-pink-500
-  } as const
-
-  const showCharts = energyChartData.length > 1;
+  const generationTypes = [
+    { name: "Nuclear", key: "nuclearGen", color: "text-purple-400", bgColor: "bg-purple-400", icon: Atom },
+    { name: "Thermal", key: "thermalGen", color: "text-orange-400", bgColor: "bg-orange-400", icon: Flame },
+    { name: "Wind", key: "windGen", color: "text-cyan-400", bgColor: "bg-cyan-400", icon: Wind },
+    { name: "Solar", key: "solarGen", color: "text-yellow-400", bgColor: "bg-yellow-400", icon: Sun },
+  ];
+  const totalGen = stats.nuclearGen + stats.thermalGen + stats.windGen + stats.solarGen;
 
   return (
     <div className="space-y-4">
@@ -72,35 +58,35 @@ export function EnergyStats({ stats, statsHistory }: EnergyStatsProps) {
 
       <div>
         <div className="flex items-baseline justify-between">
-          <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold mb-2">Generation Mix</div>
+          <div className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Generation Mix</div>
         </div>
-        {showCharts && (
-          <div className="h-20 w-full">
-            <ChartContainer config={energyChartConfig} className="h-full w-full">
-              <AreaChart data={energyChartData} margin={{ top: 5, right: 0, left: 0, bottom: 0 }} >
-                <Area dataKey="nuclear" type="natural" fill="var(--color-nuclear)" fillOpacity={0.4} strokeWidth={0} stackId="a" />
-                <Area dataKey="thermal" type="natural" fill="var(--color-thermal)" fillOpacity={0.4} strokeWidth={0} stackId="a" />
-                <Area dataKey="solar" type="natural" fill="var(--color-solar)" fillOpacity={0.4} strokeWidth={0} stackId="a" />
-                <Area dataKey="wind" type="natural" fill="var(--color-wind)" fillOpacity={0.4} strokeWidth={0} stackId="a" />
-              </AreaChart>
-            </ChartContainer>
-          </div>
-        )}
-        {showCharts && (
-          <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-1 text-[10px] pt-2 text-sidebar-foreground/70">
-            {Object.keys(energyChartConfig)
-              .reverse()
-              .map((key) => {
-                const config = energyChartConfig[key as keyof typeof energyChartConfig];
-                return (
-                  <div key={key} className="flex items-center gap-1.5">
-                    <div className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: config.color }} />
-                    <span>{config.label}</span>
+        <div className="space-y-3 pt-2">
+          {generationTypes.map((type) => {
+            const value = stats[type.key as keyof DashboardStats] as number;
+            const percentage = totalGen > 0 ? (value / totalGen) * 100 : 0;
+            return (
+              <div key={type.key} className="flex items-center gap-3">
+                <type.icon className={`h-4 w-4 ${type.color} flex-shrink-0`} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex justify-between items-baseline text-xs">
+                    <span className="text-foreground/80 truncate">{type.name}</span>
+                    <span className="font-mono font-bold whitespace-nowrap">{value.toFixed(0)} <span className="text-xs text-muted-foreground">MW</span></span>
                   </div>
-                );
-              })}
-          </div>
-        )}
+                  <div className="h-1.5 w-full rounded-full bg-muted mt-1" title={`${percentage.toFixed(1)}%`}>
+                    <div
+                      className={`h-1.5 rounded-full ${type.bgColor}`}
+                      style={{ width: `${percentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+        <div className="flex justify-between items-baseline pt-3 mt-3 border-t border-sidebar-border/50">
+          <span className="font-bold text-sm">Total Generation</span>
+          <span className="font-mono font-bold text-sm">{totalGen.toFixed(0)} MW</span>
+        </div>
       </div>
 
       <SidebarSeparator className="bg-sidebar-border/50" />

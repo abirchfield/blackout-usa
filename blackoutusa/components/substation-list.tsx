@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "@/lib/game/types"
+import { StatusIndicator } from "@/components/ui/status-indicator"
 import { Wind, Sun, Atom, Flame, Plug } from "lucide-react"
 
 interface SubstationsListProps {
@@ -16,65 +17,19 @@ interface SubstationsListProps {
   onSubstationSelect: (sub: Substation) => void;
 }
 
-const getGenIndicatorStyle = (unit: Unit, sub: Substation) => {
-  // Deactivated state: unfilled circle
-  if (unit.Status === STATUS_DIS) {
-    return { className: 'border border-muted-foreground w-2 h-2 rounded-full', style: {} };
-  }
-
-  const pmax_unit = sub.Pmax / sub.Units;
-  const brightness = pmax_unit > 0 ? unit.P / pmax_unit : 0;
-  let colorClass = '';
-  let animationClass = '';
-
-  switch (unit.Status) {
-    case STATUS_IN:
-    case STATUS_STARTUP:
-      colorClass = 'bg-green-500';
-      if (unit.Status === STATUS_STARTUP) animationClass = 'animate-pulse';
-      break;
-    case STATUS_SHUTDOWN:
-      colorClass = 'bg-gray-600';
-      break;
-    case STATUS_TRIP:
-      colorClass = 'bg-red-500';
-      break;
-  }
-
-  const opacity = unit.Status === STATUS_IN ? Math.max(0.2, brightness) : 1;
-  return { className: `${colorClass} ${animationClass} w-2 h-2 rounded-full transition-all`, style: { opacity } };
-};
-
-const getLoadIndicatorStyle = (unit: Unit) => {
-  // Deactivated state: unfilled circle
-  if (unit.Status === STATUS_DIS) {
-    return { className: 'border border-muted-foreground w-2 h-2 rounded-full' };
-  }
-  let colorClass = '';
-  switch (unit.Status) {
-    case STATUS_IN:
-      colorClass = 'bg-green-500';
-      break;
-    case STATUS_TRIP:
-      colorClass = 'bg-red-500';
-      break;
-  }
-  return { className: `${colorClass} w-2 h-2 rounded-full` };
-};
-
 const GenerationTypeIcon = ({ category }: { category: string }) => {
   const iconProps = { className: "w-3.5 h-3.5" };
   switch (category) {
     case CATEGORY_WIND:
-      return <Wind {...iconProps} className="w-3.5 h-3.5 text-blue-500" />;
+      return <Wind {...iconProps} className="w-3.5 h-3.5 text-cyan-400" />;
     case CATEGORY_SOLAR:
-      return <Sun {...iconProps} className="w-3.5 h-3.5 text-yellow-500" />;
+      return <Sun {...iconProps} className="w-3.5 h-3.5 text-yellow-400" />;
     case CATEGORY_NUCLEAR:
-      return <Atom {...iconProps} className="w-3.5 h-3.5 text-pink-500" />;
+      return <Atom {...iconProps} className="w-3.5 h-3.5 text-purple-400" />;
     case CATEGORY_LOAD:
       return <Plug {...iconProps} className="w-3.5 h-3.5 text-gray-500" />;
     default: // Assuming other types are thermal
-      return <Flame {...iconProps} className="w-3.5 h-3.5 text-red-500" />;
+      return <Flame {...iconProps} className="w-3.5 h-3.5 text-orange-400" />;
   }
 };
 
@@ -101,14 +56,23 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                     <TableCell className="py-2 pr-2">
                       <div className="flex items-center gap-1 flex-wrap">
                         {sub.Category === CATEGORY_LOAD 
-                          ? sub.U.map((unit, index) => {
-                              const { className } = getLoadIndicatorStyle(unit);
-                              return <div key={`indicator-${sub.Number}-${index}`} className={className} title={`Circuit #${index + 1}: ${unit.Status}`} />;
-                            })
-                          : sub.U.map((unit, index) => {
-                              const { className, style } = getGenIndicatorStyle(unit, sub);
-                              return <div key={`indicator-${sub.Number}-${index}`} className={className} style={style} title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`} />;
-                            })
+                          ? sub.U.map((unit, index) => (
+                              <StatusIndicator 
+                                key={`indicator-${sub.Number}-${index}`} 
+                                status={unit.Status} 
+                                category={CATEGORY_LOAD} 
+                                className="w-2 h-2"
+                                title={`Circuit #${index + 1}: ${unit.Status}`} />
+                            ))
+                          : sub.U.map((unit, index) => (
+                              <StatusIndicator 
+                                key={`indicator-${sub.Number}-${index}`} 
+                                status={unit.Status}
+                                power={unit.P}
+                                pmax={sub.Pmax / sub.Units}
+                                className="w-2 h-2"
+                                title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`} />
+                            ))
                         }
                       </div>
                     </TableCell>

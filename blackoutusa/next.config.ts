@@ -17,4 +17,4 @@ const nextConfig: NextConfig = {
   // distDir: 'dist',
 };
 
-module.exports = nextConfig;
+export default nextConfig;

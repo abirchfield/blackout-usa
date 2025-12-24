@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { RotateCw, ArrowRight, LogOut } from "lucide-react"
 
 interface QuitModalProps {
   open: boolean;
@@ -29,18 +30,21 @@ export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay,
           <DialogTitle className="text-3xl font-bold">Quit the game?</DialogTitle>
           <DialogDescription className="hidden">Quit options</DialogDescription>
         </DialogHeader>
-        <div className="flex flex-col gap-4 py-4">
-          <Button variant="secondary" className="text-xl py-6 cursor-pointer" onClick={onQuitToStart}>
-            Quit and go back to beginning
+        <div className="flex flex-col gap-3 py-4 text-base">
+          <Button variant="destructive" className="w-full justify-center gap-2 py-6 text-lg" onClick={onQuitToStart}>
+            <LogOut className="h-5 w-5" />
+            <span>Quit to Start</span>
           </Button>
-          <Button variant="secondary" className="text-xl py-6 cursor-pointer" onClick={() => onReplayDay(day)}>
-            Restart this day
+          <Button variant="secondary" className="w-full justify-center gap-2 py-6 text-lg" onClick={() => onReplayDay(day)}>
+            <RotateCw className="h-5 w-5" />
+            <span>Restart This Day</span>
           </Button>
-          <Button variant="secondary" className="text-xl py-6 cursor-pointer" onClick={() => onNextDay(day)}>
-            Skip forward to the next day
+          <Button className="w-full justify-center gap-2 py-6 text-lg" onClick={() => onNextDay(day)}>
+            <span>Skip to Next Day</span>
+            <ArrowRight className="h-5 w-5" />
           </Button>
-          <Button variant="outline" className="text-xl py-6 cursor-pointer" onClick={() => onOpenChange(false)}>
-            Cancel, continue the game
+          <Button variant="outline" className="w-full justify-center gap-2 py-6 text-lg mt-4" onClick={() => onOpenChange(false)}>
+            Cancel
           </Button>
         </div>
       </DialogContent>
