@@ -13,15 +13,28 @@ interface Hint {
 interface HintsListProps {
   hints: Hint[];
   onRemoveHint: (id: number) => void;
+  onDismissAllHints: () => void;
 }
 
-export function HintsList({ hints, onRemoveHint }: HintsListProps) {
+export function HintsList({ hints, onRemoveHint, onDismissAllHints }: HintsListProps) {
   return (
     <div className="-mx-4 border-t">
       {hints.length === 0 ? (
         <div className="p-4 text-center text-muted-foreground">No hints to show</div>
       ) : (
         <div className="flex flex-col">
+          <div className="p-3 border-b">
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={onDismissAllHints}
+              disabled={hints.length === 0}
+              aria-label="Dismiss all hints"
+              className="w-full"
+            >
+              Dismiss All Hints
+            </Button>
+          </div>
           {hints.map((hint) => (
             <div key={hint.id} className="flex items-start gap-3 border-b p-3">
               <Badge variant="secondary" className="mt-0.5 whitespace-nowrap">{hint.time}</Badge>

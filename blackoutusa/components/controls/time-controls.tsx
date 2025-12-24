@@ -41,6 +41,7 @@ export function TimeController({
           onClick={onToggleFastForward}
           title={isFastForward ? "Normal Speed" : "Fast Forward"}
           className="h-8 w-8 cursor-pointer shrink-0"
+          disabled={isPaused}
         >
           <FastForward className={`h-3 w-3 ${isFastForward ? "fill-current" : ""}`} />
         </Button>

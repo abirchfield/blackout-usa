@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Substation, SubstationCategory } from "@/lib/game/types"
+import { Button } from "@/components/ui/button"
 import { GenerationTypeConfig } from "@/lib/game/config"
 import { StatusIndicator } from "@/components/indicators/status-indicator"
 
@@ -43,8 +44,16 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
               .map(sub => {
                 const totalPower = sub.U.reduce((acc, unit) => acc + unit.P, 0);
                 return (
-                  <TableRow key={sub.Number} className="cursor-pointer" onClick={() => onSubstationSelect(sub)}>
-                    <TableCell className="font-medium text-xs py-2 truncate text-foreground">{sub.Name}</TableCell>
+                  <TableRow key={sub.Number}>
+                    <TableCell className="font-medium text-xs py-2 truncate text-foreground">
+                      <Button
+                        variant="link"
+                        onClick={() => onSubstationSelect(sub)}
+                        className="p-0 h-auto text-foreground text-xs font-medium justify-start text-left"
+                      >
+                        {sub.Name}
+                      </Button>
+                    </TableCell>
                     <TableCell className="py-2 pr-2">
                       <div className="flex items-center gap-1 flex-wrap">                        {sub.Category === SubstationCategory.Load 
                           ? sub.U.map((unit, index) => (
@@ -69,6 +78,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                     <TableCell className="text-right text-xs py-2 text-foreground">
                       <div className="flex items-center justify-end gap-1.5">
                         <span>{totalPower.toFixed(0)} MW</span>
+                        <span className="sr-only">{sub.Category}</span>
                         <GenerationTypeIcon category={sub.Category} />
                       </div>
                     </TableCell>

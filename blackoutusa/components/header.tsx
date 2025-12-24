@@ -1,19 +1,18 @@
 "use client"
 
-import { useTheme } from "next-themes"
-import { HelpCircle, LogOut, Sun, Moon } from "lucide-react"
+import { HelpCircle, LogOut, PersonStanding } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AppHeaderProps {
+  onAccessibilityClick: () => void;
   onHelpClick: () => void;
   onQuitClick: () => void;
 }
 
-export function AppHeader({ onHelpClick, onQuitClick }: AppHeaderProps) {
-  const { resolvedTheme, setTheme } = useTheme()
+export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick }: AppHeaderProps) {
 
   return (
-    <header className="bg-background sticky top-0 grid grid-cols-3 items-center border-b p-4 h-16 z-50">
+    <header className="bg-background sticky top-0 grid grid-cols-3 items-center border-b p-4 h-16 z-50" role="banner" aria-label="Main application header">
       <div className="justify-self-start">
         <h2 className="text-2xl font-bold font-share-tech text-foreground">
           Blackout USA
@@ -27,24 +26,28 @@ export function AppHeader({ onHelpClick, onQuitClick }: AppHeaderProps) {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setTheme(resolvedTheme === 'dark' ? 'light' : 'dark')}
-            title="Toggle theme"
+            onClick={onAccessibilityClick}
+            aria-label="Accessibility Settings"
             className="cursor-pointer"
           >
-            <Sun className="h-4 w-4 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
-            <Moon className="absolute h-4 w-4 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
-            <span className="sr-only">Toggle theme</span>
+            <PersonStanding className="h-4 w-4" />
           </Button>
           <Button
             variant="ghost"
             size="icon"
             onClick={onHelpClick}
-            title="Help"
+            aria-label="How To Play"
             className="cursor-pointer"
           >
             <HelpCircle className="h-4 w-4" />
           </Button>
-          <Button variant="ghost" size="icon" onClick={onQuitClick} title="Quit" className="cursor-pointer">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={onQuitClick}
+            aria-label="Quit game"
+            className="cursor-pointer"
+          >
             <LogOut className="h-4 w-4" />
           </Button>
         </div>

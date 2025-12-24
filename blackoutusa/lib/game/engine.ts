@@ -1,8 +1,8 @@
 import { Substation, Branch, GameStatistics, GameState, GameMetrics, InteractionHandler, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, SubstationCategory, Unit } from "./types";
-import { scenario_data } from "./scenario_data";
+import { scenario_data } from "./scenario/scenario_data";
 import { GameDrawer } from "./canvas/drawer";
 import { GameHandler } from "./canvas/handler";
-import { scenarios, IScenario, ResultDetails } from "./scenarios";
+import { scenarios, IScenario, ResultDetails } from "./scenario/scenarios";
 import * as math from "mathjs"; 
 
 // --- Physics Constants ---
@@ -49,18 +49,20 @@ const INITIAL_VIEW_X0 = -105; // Fallback initial X, will be overwritten by draw
 const INITIAL_VIEW_Y0 = 36;   // Fallback initial Y, will be overwritten by drawer
 const INITIAL_SCALE = 50;     // Fallback initial scale, will be overwritten by drawer
 const VIEW_SCALE_ADJUST = 0.25;
-const MAP_BOUNDS_XMAX = -92;  // Map's rightmost longitude
+const MAP_BOUNDS_XMAX = -93;  // Map's rightmost longitude
 const MAP_BOUNDS_XMIN = -107; // Map's leftmost longitude
-const MAP_BOUNDS_YMAX = 37;   // Map's topmost latitude
-const MAP_BOUNDS_YMIN = 25;   // Map's bottommost latitude
+const MAP_BOUNDS_YMAX = 36.5;   // Map's topmost latitude
+const MAP_BOUNDS_YMIN = 25.5;   // Map's bottommost latitude
 const ZOOM_LIMIT_MAX = 500;
 // ZOOM_LIMIT_MIN is now dynamically set by GameDrawer.
 const MAX_UNIT_SETPOINT = 10000;
 
 export class GameEngine {
   private drawer: GameDrawer;
-  private handler: GameHandler;
+  private handler?: GameHandler;
   private currentScenario: IScenario | null = null;
+  private animationFrameId?: number;
+  private isDestroyed = false;
   private isViewInitialized = false;
   public static readonly GAME_DURATION = 600;
   
@@ -83,6 +85,8 @@ export class GameEngine {
     x0: INITIAL_VIEW_X0,     // Fallback, will be overwritten by drawer
     y0: INITIAL_VIEW_Y0,     // Fallback, will be overwritten by drawer
     theme: 'dark',
+    animationsEnabled: true,
+    renderCanvasText: true,
     
     // Input State
     inDrag: false,
@@ -105,6 +109,10 @@ export class GameEngine {
       loadServed: 0, 
       loadUnserved: 0, 
       reserves: 0,
+      reservesWind: 0,
+      reservesSolar: 0,
+      reservesThermal: 0,
+      reservesNuclear: 0,
       windGen: 0,
       solarGen: 0,
       thermalGen: 0,
@@ -125,19 +133,34 @@ export class GameEngine {
     fr_solar: 1,
   };
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, options: { interactive?: boolean } = { interactive: true }) {
     this.drawer = new GameDrawer(canvas);
-    this.handler = new GameHandler(canvas, this.state, () => this.draw());
+    if (options.interactive) {
+      this.handler = new GameHandler(canvas, this.state, () => this.draw());
+    }
     
     this.init();
   }
 
+  public destroy() {
+    this.isDestroyed = true;
+    if (this.animationFrameId) {
+      cancelAnimationFrame(this.animationFrameId);
+    }
+    // Clean up resources used by the handler and drawer.
+    this.handler?.destroy();
+    this.drawer.destroy();
+    this.handler = undefined;
+  }
+
   set onInteract(handler: InteractionHandler | undefined) {
-    this.handler.onInteract = handler;
+    if (this.handler) {
+      this.handler.onInteract = handler;
+    }
   }
 
   get onInteract() {
-    return this.handler.onInteract;
+    return this.handler?.onInteract;
   }
 
   public onAlert?: AlertHandler;
@@ -148,6 +171,14 @@ export class GameEngine {
       this.state.theme = theme;
       this.draw(); // Redraw with the new theme
     }
+  }
+
+  public setAnimationsEnabled(enabled: boolean) {
+    this.state.animationsEnabled = enabled;
+  }
+
+  public setRenderCanvasText(enabled: boolean) {
+    this.state.renderCanvasText = enabled;
   }
 
   private init() {
@@ -212,6 +243,10 @@ export class GameEngine {
       loadServed: 0,
       loadUnserved: 0,
       windGen: 0,
+      reservesWind: 0,
+      reservesSolar: 0,
+      reservesThermal: 0,
+      reservesNuclear: 0,
       solarGen: 0,
       thermalGen: 0,
       nuclearGen: 0,
@@ -323,22 +358,24 @@ export class GameEngine {
     }
   }
 
-  public update(steps = 1): boolean {
+  public update(steps = 1, advanceTime = true): boolean {
     for (let i = 0; i < steps; i++) {
-      if (this.runGameStep()) {
+      if (this.runGameStep(advanceTime)) {
         return true; // Day is over
       }
     }
     return false; // Day is not over
   }
 
-  private runGameStep(): boolean {
+  private runGameStep(advanceTime = true): boolean {
     if (this.state.t >= GameEngine.GAME_DURATION) {
       this.state.Ybus = null;
       return true; // Day finished
     }
 
-    this.state.t += 1;
+    if (advanceTime) {
+      this.state.t += 1;
+    }
 
     this.currentScenario?.update(this.state, this.onAlert, this.onHint);
 
@@ -684,6 +721,10 @@ export class GameEngine {
     this.state.metrics.thermalGen = 0;
     this.state.metrics.nuclearGen = 0;
     this.state.metrics.reserves = 0;
+    this.state.metrics.reservesWind = 0;
+    this.state.metrics.reservesSolar = 0;
+    this.state.metrics.reservesThermal = 0;
+    this.state.metrics.reservesNuclear = 0;
     this.state.metrics.currentFuelCost = 0;
     this.state.metrics.currentOpCost = 0;
     this.state.metrics.currentUnservedCost = 0;
@@ -704,10 +745,22 @@ export class GameEngine {
                     this.state.metrics.currentOpCost += sub.FixedCost;
                     this.state.metrics.currentFuelCost += sub.FuelCost * u.P;
                 }
-                if (u.Status === UnitStatus.IN) {
-                    if (sub.Category === SubstationCategory.Wind) this.state.metrics.reserves += pmax_unit * this.state.fr_wind - u.P;
-                    else if (sub.Category === SubstationCategory.Solar) this.state.metrics.reserves += pmax_unit * this.state.fr_solar - u.P;
-                    else this.state.metrics.reserves += pmax_unit - u.P;
+                if (u.Status === UnitStatus.IN) { // Calculate reserves only for in-service units
+                    let unitReserve = 0;
+                    if (sub.Category === SubstationCategory.Wind) {
+                        unitReserve = (pmax_unit * this.state.fr_wind) - u.P;
+                        this.state.metrics.reservesWind += unitReserve;
+                    } else if (sub.Category === SubstationCategory.Solar) {
+                        unitReserve = (pmax_unit * this.state.fr_solar) - u.P;
+                        this.state.metrics.reservesSolar += unitReserve;
+                    } else if (sub.Category === SubstationCategory.Nuclear) {
+                        unitReserve = pmax_unit - u.P;
+                        this.state.metrics.reservesNuclear += unitReserve;
+                    } else { // Thermal and its sub-categories
+                        unitReserve = pmax_unit - u.P;
+                        this.state.metrics.reservesThermal += unitReserve;
+                    }
+                    this.state.metrics.reserves += unitReserve;
                 }
                 if (sub.Category === SubstationCategory.Wind) this.state.metrics.windGen += u.P;
                 else if (sub.Category === SubstationCategory.Solar) this.state.metrics.solarGen += u.P;
@@ -743,11 +796,11 @@ export class GameEngine {
   }
 
   public draw(isPaused?: boolean, isFastForward?: boolean) {
-    // First, ensure canvas dimensions are up-to-date. This is critical for the initial view calculation.
-    this.drawer.resizeCanvas();
+    // First, ensure canvas dimensions are up-to-date. A resize might trigger a view reset.
+    const wasResized = this.drawer.resizeCanvas();
 
-    // One-time initialization of the view after the canvas is ready.
-    if (!this.isViewInitialized && this.drawer.isCanvasReady()) {
+    // Initialize or re-initialize the view if it's the first draw, or if the canvas was resized.
+    if ((!this.isViewInitialized && this.drawer.isCanvasReady()) || wasResized) {
       this.drawer.setInitialView(this.state);
       this.isViewInitialized = true;
     }

@@ -77,20 +77,6 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
           <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
             <DialogTitle>{sub.Name} Substation</DialogTitle>
             <GenerationTypeIcon category={sub.Category} />
-            <div className="flex items-center gap-2">
-              {sub.U.map((unit, index) =>                 sub.Category === SubstationCategory.Load ? (
-                  <StatusIndicator key={`indicator-${index}`} status={unit.Status} category={SubstationCategory.Load} title={`Circuit #${index + 1}: ${unit.Status}`} />
-                ) : (
-                  <StatusIndicator 
-                    key={`indicator-${index}`}
-                    status={unit.Status}
-                    power={unit.P}
-                    pmax={sub.Pmax / sub.Units}
-                    title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`}
-                  />
-                )
-              )}
-            </div>
           </div>
           <DialogDescription dangerouslySetInnerHTML={{ __html: getSubDescription() }} />
         </DialogHeader>

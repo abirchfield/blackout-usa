@@ -37,14 +37,14 @@ export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: Lo
     }
 
     return (
-      <div className="space-y-1">
-        <p className="font-bold">Circuit #{index + 1}</p>
+      <div>
+        <div className="flex items-baseline gap-2">
+          <p className="font-bold">Circuit #{index + 1}</p>
+          {unit.Status === UnitStatus.TRIP && <p className="text-red-500 text-sm whitespace-nowrap">Cannot be reconnected.</p>}
+        </div>
         <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.className}`}>
           {style.text}
         </span>
-        {unit.Status === UnitStatus.TRIP && (
-          <p className="text-red-500 text-sm">Cannot be reconnected.</p>
-        )}
       </div>
     );
   };
