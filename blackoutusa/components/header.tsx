@@ -1,7 +1,7 @@
 "use client"
 
 import { useTheme } from "next-themes"
-import { HelpCircle, X, Sun, Moon } from "lucide-react"
+import { HelpCircle, LogOut, Sun, Moon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AppHeaderProps {
@@ -45,7 +45,7 @@ export function AppHeader({ onHelpClick, onQuitClick }: AppHeaderProps) {
             <HelpCircle className="h-4 w-4" />
           </Button>
           <Button variant="ghost" size="icon" onClick={onQuitClick} title="Quit" className="cursor-pointer">
-            <X className="h-4 w-4" />
+            <LogOut className="h-4 w-4" />
           </Button>
         </div>
       </div>

@@ -11,36 +11,13 @@ import {
 import { Button } from "@/components/ui/button"
 import { Separator } from "@/components/ui/separator"
 import { Branch, STATUS_IN, STATUS_DIS, STATUS_TRIP } from "@/lib/game/types"
+import { StatusIndicator } from "../ui/status-indicator"
 
 interface CircuitDisplayProps {
   branch: Branch;
   circuitNum: 1 | 2;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
-}
-
-function CircuitIndicator({ status }: { status: string }) {
-  let className = '';
-  let title = '';
-
-  switch (status) {
-    case STATUS_IN:
-      className = 'bg-green-500 w-3 h-3 rounded-full';
-      title = 'In-Service';
-      break;
-    case STATUS_DIS:
-      className = 'border border-muted-foreground w-3 h-3 rounded-full';
-      title = 'Out-of-Service';
-      break;
-    case STATUS_TRIP:
-      className = 'bg-red-500 w-3 h-3 rounded-full';
-      title = 'Tripped';
-      break;
-    default:
-      className = 'bg-gray-500 w-3 h-3 rounded-full';
-      title = 'Unknown Status';
-  }
-  return <div className={`${className} flex-shrink-0`} title={title} />;
 }
 
 function CircuitDisplay({ branch, circuitNum, onCircuitAction, isPaused }: CircuitDisplayProps) {
@@ -78,7 +55,7 @@ function CircuitDisplay({ branch, circuitNum, onCircuitAction, isPaused }: Circu
       <Separator />
       <div className="flex justify-between items-center py-3">
         <div className="flex items-center gap-3">
-          <CircuitIndicator status={status} />
+          <StatusIndicator status={status} />
           <div className="text-sm" dangerouslySetInnerHTML={{ __html: statusText }} />
         </div>
         {buttonText && (

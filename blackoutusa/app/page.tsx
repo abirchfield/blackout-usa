@@ -6,22 +6,23 @@ import { cn } from "@/lib/utils"
 import { scenarios, ResultDetails } from "@/lib/game/scenarios"
 import { GameEngine } from "@/lib/game/engine"
 import { DashboardStats, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
-import { AppHeader } from "@/components/app-header"
+import { AppHeader } from "@/components/header"
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar"
-import { EnergyStats } from "@/components/dash/energy"
-import { RightSidebar } from "@/components/right-sidebar"
+import { EnergyStats } from "@/components/sidebar-left"
+import { RightSidebar } from "@/components/sidebar-right"
 import { SubstationModal } from "@/components/modals/substation-modal"
 import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
 import { HelpModal } from "@/components/modals/help-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
-import { TimeController } from "@/components/header/time-controller"
+import { TimeController } from "@/components/controls/time-controller"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
-import { SubstationsList } from "@/components/dash/substations"
-import { BranchesList } from "@/components/dash/branches"
+import { SubstationsList } from "@/components/substation-list"
+import { BranchesList } from "@/components/branch-list"
 import { SubstationIcon } from "@/components/icons/substation-icon"
 import { LinesIcon } from "@/components/icons/lines-icon"
+import { Wind, Sun, Flame, Atom } from "lucide-react"
 
 const initialDashboardStats: DashboardStats = {
   day: 1,
@@ -64,7 +65,6 @@ export default function Page() {
   const [isFastForward, setIsFastForward] = useState(false)
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
   const [hints, setHints] = useState<Array<{id: number, time: string, message: string}>>([])
-  const [statsHistory, setStatsHistory] = useState<DashboardStats[]>([])
   const [targetDay, setTargetDay] = useState(1)
   const [isDayTransition, setIsDayTransition] = useState(false)
   const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
@@ -161,7 +161,6 @@ export default function Page() {
               // Get latest stats and update React state
               const newStats = engineRef.current.getDashboardStats();
               setDashboardStats(newStats);
-              setStatsHistory(prev => [...prev, newStats]);
 
               if (isDayOver) {
                 setIsDayFinished(true);
@@ -216,14 +215,12 @@ export default function Page() {
 
   const handleHowToPlay = () => {
     setIsWelcomeOpen(false);
-    setStatsHistory([]);
     setIsHelpOpen(true);
     setIsInitialTutorial(true);
   };
 
   const handleStartGame = () => {
     setIsWelcomeOpen(false);
-    setStatsHistory([]);
     setIsDayTransition(true);
     setIsInitialTutorial(false); // This is now the direct path, skipping the tutorial.
   };
@@ -256,7 +253,6 @@ export default function Page() {
   const handleStartDay = () => {
     if (isDayTransition) {
       engineRef.current?.startDay(targetDay);
-      setStatsHistory([]);
       setIsDayTransition(false); // Reset flag
       setIsUserPaused(false); // Start the game
       setDayResultDetails(null);
@@ -316,7 +312,8 @@ export default function Page() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-row flex-1 lg:overflow-hidden">
           <Sidebar collapsible="none" className={cn("group w-full lg:w-96 border-r border-border bg-sidebar lg:!top-16 lg:!h-[calc(100vh-4rem)] h-auto overflow-visible", "order-2 md:order-1 md:col-span-1 lg:order-1")}>
             <SidebarContent className="font-share-tech flex flex-col overflow-y-auto p-4">
-              <EnergyStats stats={dashboardStats} statsHistory={statsHistory} />
+              {/* The EnergyStats component should now contain the generation mix details, replacing the historical plot. */}
+              <EnergyStats stats={dashboardStats} />
             </SidebarContent>
           </Sidebar>
           <main className="order-1 md:order-3 md:col-span-2 lg:order-2 flex-1 flex flex-col relative min-w-0 min-h-[600px] lg:min-h-0 lg:overflow-hidden">

@@ -9,9 +9,28 @@ import {
   DialogDescription,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR } from "@/lib/game/types"
-import { UnitRow } from "@/components/modals/substation-controls/gen-unit"
+import { Substation, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "@/lib/game/types"
+import { GeneratorUnitDetails } from "@/components/controls/gen-controls"
+import { LoadUnitDetails } from "@/components/controls/load-controls"
+import { StatusIndicator } from "@/components/ui/status-indicator"
 import { Button } from "@/components/ui/button"
+import { Wind, Sun, Atom, Flame, Plug } from "lucide-react"
+
+const GenerationTypeIcon = ({ category }: { category: string }) => {
+  const iconProps = { className: "w-6 h-6" };
+  switch (category) {
+    case CATEGORY_WIND:
+      return <Wind {...iconProps} className="w-6 h-6 text-cyan-400" />;
+    case CATEGORY_SOLAR:
+      return <Sun {...iconProps} className="w-6 h-6 text-yellow-400" />;
+    case CATEGORY_NUCLEAR:
+      return <Atom {...iconProps} className="w-6 h-6 text-purple-400" />;
+    case CATEGORY_LOAD:
+      return <Plug {...iconProps} className="w-6 h-6 text-gray-500" />;
+    default: // Assuming other types are thermal
+      return <Flame {...iconProps} className="w-6 h-6 text-orange-400" />;
+  }
+};
 
 // --- Substation Modal Component ---
 interface SubstationModalProps {
@@ -59,90 +78,56 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
     return baseText;
   }
 
-  const getLoadIndicatorStyle = (unit: Unit) => {
-    // Deactivated state: unfilled circle
-    if (unit.Status === STATUS_DIS) {
-      return { className: 'border border-muted-foreground w-3 h-3 rounded-full' };
-    }
-
-    let colorClass = '';
-    switch (unit.Status) {
-      case STATUS_IN:
-        colorClass = 'bg-green-500';
-        break;
-      case STATUS_TRIP:
-        colorClass = 'bg-red-500';
-        break;
-    }
-    return { className: `${colorClass} w-3 h-3 rounded-full` };
-  };
-
-  const getIndicatorStyle = (unit: Unit, sub: Substation) => {
-    // Deactivated state: unfilled circle
-    if (unit.Status === STATUS_DIS) {
-      return { className: 'border border-muted-foreground w-3 h-3 rounded-full', style: {} };
-    }
-
-    const pmax_unit = sub.Pmax / sub.Units;
-    const brightness = pmax_unit > 0 ? unit.P / pmax_unit : 0;
-    let colorClass = '';
-    let animationClass = '';
-
-    switch (unit.Status) {
-      case STATUS_IN:
-      case STATUS_STARTUP:
-        colorClass = 'bg-green-500';
-        if (unit.Status === STATUS_STARTUP) animationClass = 'animate-pulse';
-        break;
-      case STATUS_SHUTDOWN:
-        colorClass = 'bg-gray-600';
-        break;
-      case STATUS_TRIP:
-        colorClass = 'bg-red-500';
-        break;
-    }
-
-    const opacity = unit.Status === STATUS_IN ? Math.max(0.2, brightness) : 1;
-    return { className: `${colorClass} ${animationClass} w-3 h-3 rounded-full transition-all`, style: { opacity } };
-  };
-
   return (
     <Dialog open={!!sub} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className="sm:max-w-3xl">
         <DialogHeader>
-          <DialogTitle>{sub.Name} Substation</DialogTitle>
-          {sub.Category !== CATEGORY_LOAD && (
-            <div className="flex items-center gap-2 pt-2">
-              {sub.U.map((unit, index) => {
-                const { className, style } = getIndicatorStyle(unit, sub);
-                return <div key={`indicator-${index}`} className={className} style={style} title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`} />;
-              })}
+          <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+            <DialogTitle>{sub.Name} Substation</DialogTitle>
+            <GenerationTypeIcon category={sub.Category} />
+            <div className="flex items-center gap-2">
+              {sub.U.map((unit, index) => 
+                sub.Category === CATEGORY_LOAD ? (
+                  <StatusIndicator key={`indicator-${index}`} status={unit.Status} category={CATEGORY_LOAD} title={`Circuit #${index + 1}: ${unit.Status}`} />
+                ) : (
+                  <StatusIndicator 
+                    key={`indicator-${index}`}
+                    status={unit.Status}
+                    power={unit.P}
+                    pmax={sub.Pmax / sub.Units}
+                    title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`}
+                  />
+                )
+              )}
             </div>
-          )}
-          {sub.Category === CATEGORY_LOAD && (
-            <div className="flex items-center gap-2 pt-2">
-              {sub.U.map((unit, index) => {
-                const { className } = getLoadIndicatorStyle(unit);
-                return <div key={`indicator-${index}`} className={className} title={`Circuit #${index + 1}: ${unit.Status}`} />;
-              })}
-            </div>
-          )}
+          </div>
           <DialogDescription dangerouslySetInnerHTML={{ __html: getSubDescription() }} />
         </DialogHeader>
         <div className="max-h-[60vh] overflow-y-auto pr-4">
-          {sub.U.map((unit, index) => (
-            <UnitRow
-              key={index}
-              sub={sub}
-              unit={unit}
-              index={index}
-              onUnitAction={onUnitAction}
-              onSetSetpoint={onSetSetpoint}
-              setpointValue={setpoints[index] ?? 0}
-              onSetpointChange={handleSetpointChange}
-              isPaused={isPaused}
-            />
-          ))}
+          {sub.Category === CATEGORY_LOAD
+            ? sub.U.map((unit, index) => (
+                <LoadUnitDetails
+                  key={index}
+                  sub={sub}
+                  unit={unit}
+                  index={index}
+                  onUnitAction={onUnitAction}
+                  isPaused={isPaused}
+                />
+              ))
+            : sub.U.map((unit, index) => (
+                <GeneratorUnitDetails
+                  key={index}
+                  sub={sub}
+                  unit={unit}
+                  index={index}
+                  onUnitAction={onUnitAction}
+                  onSetSetpoint={onSetSetpoint}
+                  setpointValue={setpoints[index] ?? 0}
+                  onSetpointChange={handleSetpointChange}
+                  isPaused={isPaused}
+                />
+              ))}
         </div>
         <DialogFooter className="mt-4">
           <Button onClick={onClose}>Close</Button>
