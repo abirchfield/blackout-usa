@@ -1,10 +1,10 @@
 "use client";
 
-import { UnitStatus, BranchCircuitStatus, CATEGORY_LOAD, STATUS_IN, STATUS_DIS, STATUS_TRIP, STATUS_STARTUP, STATUS_SHUTDOWN } from "@/lib/game/types";
+import { UnitStatus, BranchStatus, SubstationCategory } from "@/lib/game/types";
 
 interface StatusIndicatorProps {
-  status: UnitStatus | BranchCircuitStatus;
-  category?: string;
+  status: UnitStatus | BranchStatus;
+  category?: SubstationCategory | string; // Allow string for flexibility, but use enum for comparisons
   power?: number;
   pmax?: number;
   className?: string;
@@ -16,17 +16,17 @@ export function StatusIndicator({ status, category, power = 0, pmax = 1, classNa
   let indicatorStyle: React.CSSProperties = {};
   let title = defaultTitle;
 
-  if (category === CATEGORY_LOAD) {
+  if (category === SubstationCategory.Load) {
     switch (status) {
-      case STATUS_IN:
+      case UnitStatus.IN:
         indicatorClassName = 'bg-green-500';
         if (!title) title = 'In-Service';
         break;
-      case STATUS_TRIP:
+      case UnitStatus.TRIP:
         indicatorClassName = 'bg-red-500';
         if (!title) title = 'Tripped';
         break;
-      case STATUS_DIS:
+      case UnitStatus.DIS:
       default:
         indicatorClassName = 'border border-muted-foreground';
         if (!title) title = 'Out-of-Service';
@@ -34,25 +34,25 @@ export function StatusIndicator({ status, category, power = 0, pmax = 1, classNa
     }
   } else { // Generators and Branches
     switch (status) {
-      case STATUS_IN:
+      case UnitStatus.IN:
         indicatorClassName = 'bg-green-500';
         const brightness = pmax > 0 ? power / pmax : 0;
         indicatorStyle.opacity = Math.max(0.2, brightness);
         if (!title) title = `In-Service (${power.toFixed(0)} MW)`;
         break;
-      case STATUS_STARTUP:
+      case UnitStatus.STARTUP:
         indicatorClassName = 'bg-green-500 animate-pulse';
         if (!title) title = 'Starting Up';
         break;
-      case STATUS_SHUTDOWN:
+      case UnitStatus.SHUTDOWN:
         indicatorClassName = 'bg-gray-600';
         if (!title) title = 'Shutting Down';
         break;
-      case STATUS_TRIP:
+      case UnitStatus.TRIP:
         indicatorClassName = 'bg-red-500';
         if (!title) title = 'Tripped';
         break;
-      case STATUS_DIS:
+      case UnitStatus.DIS:
       default:
         indicatorClassName = 'border border-muted-foreground';
         if (!title) title = 'Out-of-Service';

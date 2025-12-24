@@ -8,9 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Substation, Unit, STATUS_IN, STATUS_DIS, STATUS_STARTUP, STATUS_SHUTDOWN, STATUS_TRIP, CATEGORY_LOAD, CATEGORY_WIND, CATEGORY_SOLAR, CATEGORY_NUCLEAR } from "@/lib/game/types"
-import { StatusIndicator } from "@/components/ui/status-indicator"
-import { Wind, Sun, Atom, Flame, Plug } from "lucide-react"
+import { Substation, SubstationCategory } from "@/lib/game/types"
+import { GenerationTypeConfig } from "@/lib/game/config"
+import { StatusIndicator } from "@/components/indicators/status-indicator"
 
 interface SubstationsListProps {
   subs?: Record<string, Substation>;
@@ -18,19 +18,11 @@ interface SubstationsListProps {
 }
 
 const GenerationTypeIcon = ({ category }: { category: string }) => {
-  const iconProps = { className: "w-3.5 h-3.5" };
-  switch (category) {
-    case CATEGORY_WIND:
-      return <Wind {...iconProps} className="w-3.5 h-3.5 text-cyan-400" />;
-    case CATEGORY_SOLAR:
-      return <Sun {...iconProps} className="w-3.5 h-3.5 text-yellow-400" />;
-    case CATEGORY_NUCLEAR:
-      return <Atom {...iconProps} className="w-3.5 h-3.5 text-purple-400" />;
-    case CATEGORY_LOAD:
-      return <Plug {...iconProps} className="w-3.5 h-3.5 text-gray-500" />;
-    default: // Assuming other types are thermal
-      return <Flame {...iconProps} className="w-3.5 h-3.5 text-orange-400" />;
-  }
+  const config = GenerationTypeConfig[category as SubstationCategory] || GenerationTypeConfig[SubstationCategory.Thermal];
+  const Icon = config.icon;
+  return (
+    <Icon className={`w-3.5 h-3.5 ${config.tailwind.text}`} />
+  );
 };
 
 export function SubstationsList({ subs, onSubstationSelect }: SubstationsListProps) {
@@ -54,13 +46,11 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                   <TableRow key={sub.Number} className="cursor-pointer" onClick={() => onSubstationSelect(sub)}>
                     <TableCell className="font-medium text-xs py-2 truncate text-foreground">{sub.Name}</TableCell>
                     <TableCell className="py-2 pr-2">
-                      <div className="flex items-center gap-1 flex-wrap">
-                        {sub.Category === CATEGORY_LOAD 
+                      <div className="flex items-center gap-1 flex-wrap">                        {sub.Category === SubstationCategory.Load 
                           ? sub.U.map((unit, index) => (
                               <StatusIndicator 
                                 key={`indicator-${sub.Number}-${index}`} 
-                                status={unit.Status} 
-                                category={CATEGORY_LOAD} 
+                                status={unit.Status}                                 category={SubstationCategory.Load} 
                                 className="w-2 h-2"
                                 title={`Circuit #${index + 1}: ${unit.Status}`} />
                             ))

@@ -1,4 +1,4 @@
-import { GameState, AlertHandler, HintHandler, Briefing, STATUS_TRIP, STATUS_SHUTDOWN, STATUS_IN, STATUS_DIS } from "./types";
+import { GameState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus } from "./types";
 
 export interface ResultDetails {
     performance: 'record' | 'good' | 'okay' | 'bad';
@@ -114,8 +114,8 @@ class Day2Scenario implements IScenario {
         if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
         
         if (state.t === 90) {
-            state.branches["26"].Status1 = STATUS_TRIP;
-            state.branches["26"].Status2 = STATUS_TRIP;
+            state.branches["26"].Status1 = BranchStatus.TRIP;
+            state.branches["26"].Status2 = BranchStatus.TRIP;
             onAlert?.({ message: `Maintenance requires tripping both Abiline - Ft Worth lines`, critical: false });
             state.Ybus = null;
         }
@@ -188,16 +188,16 @@ class Day3Scenario implements IScenario {
             for (let i = 0; i < tbranches.length; ++i) {
                 if (Math.random() < 0.05) {
                     const br = state.branches[tbranches[i]];
-                    if (br.Status1 === STATUS_TRIP) continue;
-                    br.Status1 = STATUS_TRIP;
-                    br.Status2 = STATUS_TRIP;
+                    if (br.Status1 === BranchStatus.TRIP) continue;
+                    br.Status1 = BranchStatus.TRIP;
+                    br.Status2 = BranchStatus.TRIP;
                     onAlert?.({ message: `${br.sub1?.Name}-${br.sub2?.Name} transmission line trips due to tornado`, critical: true });
                     state.Ybus = null;
                 }
             }
         }
         if (state.t === 30) {
-            state.subs["31"].U[0].Status = STATUS_SHUTDOWN;
+            state.subs["31"].U[0].Status = UnitStatus.SHUTDOWN;
             onAlert?.({ message: `Scheduled shutdown of Wadsworth Unit #1 begins`, critical: false });
         }
     }
@@ -268,7 +268,7 @@ class Day4Scenario implements IScenario {
             if (state.t === outage[0]) {
                 const sub = state.subs[outage[1] as string];
                 const u = sub.U[outage[2] as number];
-                u.Status = STATUS_TRIP;
+                u.Status = UnitStatus.TRIP;
                 onAlert?.({ message: `${sub.Name} unit #${(outage[2] as number) + 1} trips due to cold weather`, critical: true });
             }
         }
@@ -325,41 +325,41 @@ class Day5Scenario implements IScenario {
         state.fr_solar = 1.00;
         
         let i;
-        for (i=0;i<5;++i) state.subs["2"].U[i].Status = STATUS_TRIP; 
-        for (i=0;i<3;++i) state.subs["5"].U[i].Status = STATUS_TRIP; 
-        for (i=0;i<4;++i) state.subs["8"].U[i].Status = STATUS_TRIP; 
-        for (i=0;i<8;++i) state.subs["10"].U[i].Status = STATUS_DIS; 
-        for (i=0;i<4;++i) state.subs["14"].U[i].Status = STATUS_TRIP; 
-        for (i=0;i<8;++i) state.subs["15"].U[i].Status = STATUS_TRIP; 
-        for (i=2;i<5;++i) state.subs["16"].U[i].Status = STATUS_TRIP; 
-        for (i=1;i<4;++i) state.subs["21"].U[i].Status = STATUS_TRIP; 
-        for (i=0;i<4;++i) state.subs["25"].U[i].Status = STATUS_TRIP; 
-        for (i=0;i<2;++i) state.subs["31"].U[i].Status = STATUS_TRIP; 
-        state.branches["5"].Status1 = STATUS_TRIP;
-        state.branches["10"].Status1 = STATUS_TRIP;
-        state.branches["11"].Status1 = STATUS_TRIP;
-        state.branches["15"].Status1 = STATUS_TRIP;
-        state.branches["16"].Status1 = STATUS_TRIP;
-        state.branches["20"].Status1 = STATUS_TRIP;
-        state.branches["21"].Status1 = STATUS_TRIP;
-        state.branches["29"].Status1 = STATUS_TRIP;
-        state.branches["30"].Status1 = STATUS_TRIP;
-        state.branches["31"].Status1 = STATUS_TRIP;
-        state.branches["32"].Status1 = STATUS_TRIP;
-        state.branches["32"].Status2 = STATUS_TRIP;
-        state.branches["33"].Status1 = STATUS_TRIP; 
-        state.branches["35"].Status1 = STATUS_TRIP;
-        state.branches["35"].Status2 = STATUS_TRIP;
-        state.branches["36"].Status1 = STATUS_TRIP; 
-        state.branches["36"].Status2 = STATUS_TRIP;
-        state.branches["43"].Status1 = STATUS_TRIP;
-        state.branches["44"].Status1 = STATUS_TRIP;
-        state.branches["50"].Status1 = STATUS_TRIP;
-        state.branches["59"].Status1 = STATUS_TRIP;
-        state.branches["59"].Status2 = STATUS_TRIP;
-        state.branches["60"].Status1 = STATUS_TRIP;
+        for (i=0;i<5;++i) state.subs["2"].U[i].Status = UnitStatus.TRIP; 
+        for (i=0;i<3;++i) state.subs["5"].U[i].Status = UnitStatus.TRIP; 
+        for (i=0;i<4;++i) state.subs["8"].U[i].Status = UnitStatus.TRIP; 
+        for (i=0;i<8;++i) state.subs["10"].U[i].Status = UnitStatus.DIS; 
+        for (i=0;i<4;++i) state.subs["14"].U[i].Status = UnitStatus.TRIP; 
+        for (i=0;i<8;++i) state.subs["15"].U[i].Status = UnitStatus.TRIP; 
+        for (i=2;i<5;++i) state.subs["16"].U[i].Status = UnitStatus.TRIP; 
+        for (i=1;i<4;++i) state.subs["21"].U[i].Status = UnitStatus.TRIP; 
+        for (i=0;i<4;++i) state.subs["25"].U[i].Status = UnitStatus.TRIP; 
+        for (i=0;i<2;++i) state.subs["31"].U[i].Status = UnitStatus.TRIP; 
+        state.branches["5"].Status1 = BranchStatus.TRIP;
+        state.branches["10"].Status1 = BranchStatus.TRIP;
+        state.branches["11"].Status1 = BranchStatus.TRIP;
+        state.branches["15"].Status1 = BranchStatus.TRIP;
+        state.branches["16"].Status1 = BranchStatus.TRIP;
+        state.branches["20"].Status1 = BranchStatus.TRIP;
+        state.branches["21"].Status1 = BranchStatus.TRIP;
+        state.branches["29"].Status1 = BranchStatus.TRIP;
+        state.branches["30"].Status1 = BranchStatus.TRIP;
+        state.branches["31"].Status1 = BranchStatus.TRIP;
+        state.branches["32"].Status1 = BranchStatus.TRIP;
+        state.branches["32"].Status2 = BranchStatus.TRIP;
+        state.branches["33"].Status1 = BranchStatus.TRIP; 
+        state.branches["35"].Status1 = BranchStatus.TRIP;
+        state.branches["35"].Status2 = BranchStatus.TRIP;
+        state.branches["36"].Status1 = BranchStatus.TRIP; 
+        state.branches["36"].Status2 = BranchStatus.TRIP;
+        state.branches["43"].Status1 = BranchStatus.TRIP;
+        state.branches["44"].Status1 = BranchStatus.TRIP;
+        state.branches["50"].Status1 = BranchStatus.TRIP;
+        state.branches["59"].Status1 = BranchStatus.TRIP;
+        state.branches["59"].Status2 = BranchStatus.TRIP;
+        state.branches["60"].Status1 = BranchStatus.TRIP;
         for (i=0;i<2;++i) state.subs["26"].U[i].P = 290; 
-        for (i=0;i<3;++i) state.subs["19"].U[i].Status = STATUS_IN; 
+        for (i=0;i<3;++i) state.subs["19"].U[i].Status = UnitStatus.IN; 
         
         onHint?.({ message: "Keep checking the coastal substations and lines to see if anything new has become ready for restoration" }, true);
     }
@@ -378,11 +378,11 @@ class Day5Scenario implements IScenario {
             if (state.t === time) {
                 if (typeof target === 'string' && target.startsWith('b')) { // Branch
                     const br = state.branches[id];
-                    if (target === 'b1' && br.Status1 === STATUS_TRIP) br.Status1 = STATUS_DIS;
-                    if (target === 'b2' && br.Status2 === STATUS_TRIP) br.Status2 = STATUS_DIS;
+                    if (target === 'b1' && br.Status1 === BranchStatus.TRIP) br.Status1 = BranchStatus.DIS;
+                    if (target === 'b2' && br.Status2 === BranchStatus.TRIP) br.Status2 = BranchStatus.DIS;
                 } else { // Substation units
                     const sub = state.subs[id];
-                    if (target === 'all') sub.U.forEach(u => { if(u.Status === STATUS_TRIP) u.Status = STATUS_DIS });
+                    if (target === 'all') sub.U.forEach(u => { if(u.Status === UnitStatus.TRIP) u.Status = UnitStatus.DIS });
                     else if (typeof target === 'string' && target.includes('-u-')) {
                         const parts = target.split('-u-');
                         const count = parseInt(parts[1]);
@@ -390,7 +390,7 @@ class Day5Scenario implements IScenario {
                         if (target.includes('-from-')) {
                             startIdx = parseInt(target.split('-from-')[1]);
                         }
-                        for (let i = startIdx; i < (startIdx + count); i++) if(sub.U[i]?.Status === STATUS_TRIP) sub.U[i].Status = STATUS_DIS;
+                        for (let i = startIdx; i < (startIdx + count); i++) if(sub.U[i]?.Status === UnitStatus.TRIP) sub.U[i].Status = UnitStatus.DIS;
                     }
                 }
             }

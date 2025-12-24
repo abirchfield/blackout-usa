@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Branch, STATUS_IN, STATUS_TRIP } from "@/lib/game/types"
+import { Branch, BranchStatus } from "@/lib/game/types"
 
 interface BranchesListProps {
   branches?: Record<string, Branch>;
@@ -19,14 +19,14 @@ const getBranchIndicator = (branch: Branch) => {
   const totalRating = branch.Pmax * branch.Circuits;
   const loading = totalRating > 0 ? (Math.abs(branch.P) / totalRating) * 100 : 0;
 
-  const isTripped = branch.Status1 === STATUS_TRIP || (branch.Circuits === 2 && branch.Status2 === STATUS_TRIP);
+  const isTripped = branch.Status1 === BranchStatus.TRIP || (branch.Circuits === 2 && branch.Status2 === BranchStatus.TRIP);
   if (isTripped) {
     return { className: 'bg-red-500 w-2.5 h-2.5 rounded-full', title: 'Tripped' };
   }
 
   let inServiceCircuits = 0;
-  if (branch.Status1 === STATUS_IN) inServiceCircuits++;
-  if (branch.Circuits === 2 && branch.Status2 === STATUS_IN) inServiceCircuits++;
+  if (branch.Status1 === BranchStatus.IN) inServiceCircuits++;
+  if (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN) inServiceCircuits++;
 
   if (inServiceCircuits === 0) {
     return { className: 'border border-muted-foreground w-2.5 h-2.5 rounded-full', title: 'Out-of-Service' };
@@ -61,8 +61,8 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
                 const indicator = getBranchIndicator(branch);
 
                 let inServiceCircuits = 0;
-                if (branch.Status1 === STATUS_IN) inServiceCircuits++;
-                if (branch.Circuits === 2 && branch.Status2 === STATUS_IN) inServiceCircuits++;
+                if (branch.Status1 === BranchStatus.IN) inServiceCircuits++;
+                if (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN) inServiceCircuits++;
 
                 const barColor = loading > 100 ? 'bg-yellow-500' : 'bg-green-500';
 

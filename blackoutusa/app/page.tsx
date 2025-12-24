@@ -5,7 +5,7 @@ import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
 import { scenarios, ResultDetails } from "@/lib/game/scenarios"
 import { GameEngine } from "@/lib/game/engine"
-import { DashboardStats, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
+import { GameStatistics, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
 import { AppHeader } from "@/components/header"
 import { Sidebar, SidebarContent } from "@/components/ui/sidebar"
 import { EnergyStats } from "@/components/sidebar-left"
@@ -15,7 +15,7 @@ import { BranchModal } from "@/components/modals/branch-modal"
 import { WelcomeModal } from "@/components/modals/welcome-modal"
 import { HelpModal } from "@/components/modals/help-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
-import { TimeController } from "@/components/controls/time-controller"
+import { TimeController } from "@/components/controls/time-controls"
 import { Switch } from "@/components/ui/switch"
 import { Label } from "@/components/ui/label"
 import { SubstationsList } from "@/components/substation-list"
@@ -24,7 +24,7 @@ import { SubstationIcon } from "@/components/icons/substation-icon"
 import { LinesIcon } from "@/components/icons/lines-icon"
 import { Wind, Sun, Flame, Atom } from "lucide-react"
 
-const initialDashboardStats: DashboardStats = {
+const initialGameStatistics: GameStatistics = {
   day: 1,
   timeStr: "1:00 PM",
   timeStep: 0,
@@ -46,6 +46,7 @@ const initialDashboardStats: DashboardStats = {
   totalUnservedCost: 0,
   fr_wind: 1,
   fr_solar: 1,
+  totalMwh: 0
 };
 
 export default function Page() {
@@ -91,10 +92,10 @@ export default function Page() {
   // Engine Integration
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const engineRef = useRef<GameEngine | null>(null)
-  const [dashboardStats, setDashboardStats] = useState<DashboardStats>(initialDashboardStats)
+  const [gameStatistics, setGameStatistics] = useState<GameStatistics>(initialGameStatistics)
 
   // Calculate progress for the header's time controller
-  const timeStep = dashboardStats?.timeStep || 0;
+  const timeStep = gameStatistics?.timeStep || 0;
   const progress = Math.min(100, Math.max(0, (timeStep / GameEngine.GAME_DURATION) * 100));
 
   useEffect(() => {
@@ -106,7 +107,7 @@ export default function Page() {
 
       // Set initial UI state before game starts
       const initialStats = engineRef.current.getDashboardStats();
-      setDashboardStats(initialStats);
+      setGameStatistics(initialStats);
       const initialBriefing = engineRef.current.getBriefingForDay(initialStats.day);
       setCurrentBriefing(initialBriefing);
       setTargetDay(initialStats.day);
@@ -160,7 +161,7 @@ export default function Page() {
 
               // Get latest stats and update React state
               const newStats = engineRef.current.getDashboardStats();
-              setDashboardStats(newStats);
+              setGameStatistics(newStats);
 
               if (isDayOver) {
                 setIsDayFinished(true);
@@ -313,7 +314,7 @@ export default function Page() {
           <Sidebar collapsible="none" className={cn("group w-full lg:w-96 border-r border-border bg-sidebar lg:!top-16 lg:!h-[calc(100vh-4rem)] h-auto overflow-visible", "order-2 md:order-1 md:col-span-1 lg:order-1")}>
             <SidebarContent className="font-share-tech flex flex-col overflow-y-auto p-4">
               {/* The EnergyStats component should now contain the generation mix details, replacing the historical plot. */}
-              <EnergyStats stats={dashboardStats} />
+              <EnergyStats stats={gameStatistics} />
             </SidebarContent>
           </Sidebar>
           <main className="order-1 md:order-3 md:col-span-2 lg:order-2 flex-1 flex flex-col relative min-w-0 min-h-[600px] lg:min-h-0 lg:overflow-hidden">
@@ -321,11 +322,11 @@ export default function Page() {
             <div className="flex items-center gap-2">
               <span className="text-xl font-semibold text-muted-foreground uppercase">Day</span>
               <span className="w-[2ch] text-left text-xl font-semibold text-muted-foreground tabular-nums">
-                {dashboardStats.day || 1}
+                {gameStatistics.day || 1}
               </span>
             </div>
             <div className="h-6 w-px bg-border" />
-            <span className="w-[10ch] text-center text-xl font-bold text-foreground tabular-nums tracking-wider">{dashboardStats.timeStr}</span>
+            <span className="w-[10ch] text-center text-xl font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</span>
             <div className="h-6 w-px bg-border" />
             <div className="w-full max-w-xs sm:w-64">
               <TimeController
@@ -407,8 +408,8 @@ export default function Page() {
             onClose={() => setSelectedSub(null)} 
             onUnitAction={handleUnitAction}
             onSetSetpoint={handleSetSetpoint}
-            frWind={dashboardStats?.fr_wind}
-            frSolar={dashboardStats?.fr_solar}
+            frWind={gameStatistics?.fr_wind}
+            frSolar={gameStatistics?.fr_solar}
             isPaused={isPaused}
           />
           <BranchModal branch={selectedBranch} onClose={() => setSelectedBranch(null)} onCircuitAction={(branchId, circuit) => engineRef.current?.toggleBranchCircuitStatus(branchId, circuit)} isPaused={isPaused} />
@@ -419,7 +420,7 @@ export default function Page() {
               setIsQuitOpen(open);
               // Pause/resume is now handled by the central useEffect
             }}
-            day={dashboardStats?.day || 1}
+            day={gameStatistics?.day || 1}
             onQuitToStart={handleQuitToStart}
             onReplayDay={handleReplayDay}
             onNextDay={handleNextDay}
@@ -427,7 +428,7 @@ export default function Page() {
         </div>
         </main>
         <RightSidebar
-          stats={dashboardStats}
+          stats={gameStatistics}
           briefing={currentBriefing}
           alerts={alerts}
           onRemoveAlert={removeAlert}
