@@ -18,23 +18,24 @@ interface SubstationsListProps {
   onSubstationSelect: (sub: Substation) => void;
 }
 
-const GenerationTypeIcon = ({ category }: { category: string }) => {
+const GenerationTypeIcon = ({ category, ...props }: { category: string } & React.ComponentProps<"svg">) => {
   const config = GenerationTypeConfig[category as SubstationCategory] || GenerationTypeConfig[SubstationCategory.Thermal];
   const Icon = config.icon;
   return (
-    <Icon className={`w-3.5 h-3.5 ${config.tailwind.text}`} />
+    <Icon className={`w-3.5 h-3.5 ${config.tailwind.text}`} {...props} />
   );
 };
 
 export function SubstationsList({ subs, onSubstationSelect }: SubstationsListProps) {
   return (
     <div>
-      <Table className="table-fixed">
+      <Table>
+        <caption className="sr-only">A sortable list of all substations in the grid. Select a substation to view its details.</caption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[45%] text-muted-foreground">Substation</TableHead>
-            <TableHead className="text-muted-foreground">Status</TableHead>
-            <TableHead className="w-[90px] text-right text-muted-foreground">Power</TableHead>
+            <TableHead scope="col" className="w-[40%] min-w-[140px] text-muted-foreground">Substation</TableHead>
+            <TableHead scope="col" className="w-[35%] min-w-[120px] text-muted-foreground">Status</TableHead>
+            <TableHead scope="col" className="w-[25%] min-w-[100px] text-right text-muted-foreground">Power</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -45,7 +46,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                 const totalPower = sub.U.reduce((acc, unit) => acc + unit.P, 0);
                 return (
                   <TableRow key={sub.Number}>
-                    <TableCell className="font-medium text-xs py-2 truncate text-foreground">
+                    <TableHead scope="row" className="font-medium text-xs py-2 truncate pr-4 text-foreground">
                       <Button
                         variant="link"
                         onClick={() => onSubstationSelect(sub)}
@@ -53,33 +54,33 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                       >
                         {sub.Name}
                       </Button>
-                    </TableCell>
+                    </TableHead>
                     <TableCell className="py-2 pr-2">
-                      <div className="flex items-center gap-1 flex-wrap">                        {sub.Category === SubstationCategory.Load 
-                          ? sub.U.map((unit, index) => (
-                              <StatusIndicator 
-                                key={`indicator-${sub.Number}-${index}`} 
-                                status={unit.Status}                                 category={SubstationCategory.Load} 
-                                className="w-2 h-2"
-                                title={`Circuit #${index + 1}: ${unit.Status}`} />
-                            ))
-                          : sub.U.map((unit, index) => (
-                              <StatusIndicator 
-                                key={`indicator-${sub.Number}-${index}`} 
-                                status={unit.Status}
-                                power={unit.P}
-                                pmax={sub.Pmax / sub.Units}
-                                className="w-2 h-2"
-                                title={`Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`} />
-                            ))
-                        }
+                      <div className="flex items-center gap-1 flex-wrap">
+                        {sub.Category === SubstationCategory.Load
+                          ? sub.U.map((unit, index) => {
+                            const title = `Circuit #${index + 1}: ${unit.Status}`;
+                            return (
+                              <span key={`indicator-${sub.Number}-${index}`} role="img" aria-label={title}>
+                                <StatusIndicator status={unit.Status} category={SubstationCategory.Load} className="w-2.5 h-2.5" title={title} />
+                              </span>
+                            );
+                          })
+                          : sub.U.map((unit, index) => {
+                            const title = `Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`;
+                            return (
+                              <span key={`indicator-${sub.Number}-${index}`} role="img" aria-label={title}>
+                                <StatusIndicator status={unit.Status} power={unit.P} pmax={sub.Pmax / sub.Units} className="w-2.5 h-2.5" title={title} />
+                              </span>
+                            );
+                          })}
                       </div>
                     </TableCell>
-                    <TableCell className="text-right text-xs py-2 text-foreground">
+                    <TableCell className="text-right text-xs py-2 text-foreground whitespace-nowrap">
                       <div className="flex items-center justify-end gap-1.5">
                         <span>{totalPower.toFixed(0)} MW</span>
                         <span className="sr-only">{sub.Category}</span>
-                        <GenerationTypeIcon category={sub.Category} />
+                        <GenerationTypeIcon category={sub.Category} aria-hidden="true" />
                       </div>
                     </TableCell>
                   </TableRow>

@@ -23,11 +23,10 @@ export function TimeController({
         <Button
           variant="ghost"
           size="icon"
-          onClick={onTogglePause}
-          title={isPaused ? "Resume" : "Pause"}
-          className="h-8 w-8 cursor-pointer shrink-0"
+          onClick={onTogglePause}          aria-label={isPaused ? "Resume" : "Pause"}
+          className="h-6 w-6 cursor-pointer shrink-0"
         >
-          {isPaused ? <Play className="h-3 w-3 fill-current" /> : <Pause className="h-3 w-3 fill-current" />}
+          {isPaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
         </Button>
         <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden" title={`Day Progress: ${progress.toFixed(0)}%`}>
           <div 
@@ -38,12 +37,11 @@ export function TimeController({
         <Button
           variant={isFastForward ? "secondary" : "ghost"}
           size="icon"
-          onClick={onToggleFastForward}
-          title={isFastForward ? "Normal Speed" : "Fast Forward"}
-          className="h-8 w-8 cursor-pointer shrink-0"
+          onClick={onToggleFastForward}          aria-label={isFastForward ? "Normal Speed" : "Fast Forward"}
+          className="h-6 w-6 cursor-pointer shrink-0"
           disabled={isPaused}
         >
-          <FastForward className={`h-3 w-3 ${isFastForward ? "fill-current" : ""}`} />
+          <FastForward className={`h-4 w-4 ${isFastForward ? "fill-current" : ""}`} />
         </Button>
       </div>
   )

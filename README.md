@@ -12,16 +12,12 @@ For more information, see [https://birchfield.engr.tamu.edu/blackout-usa/](https
 This material is based upon work supported in part by the National Science Foundation under Award No. 2442131. Any opinions, findings and conclusions or recommendations expressed in this material
 are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
 
-# TODO (React Transition)
+# Notes for React-Based Blackout USA
 
-## Crucial TODO
-- Update a few images in the How-To modal
-- Implement Key-Bindings (They are configurable right now)
-- Tab order on list format is not consistant
-- ensure all alt-texts and aria-labels
-
-## Less Crucial TODO
-- After the last day, it goes back to day 1.
+## Reminders
 - In lightmode, it is hard to see the setpoint control for the units
-- When disabling animations, change styling of lines
-- skip to next day only works if the current day has started
+
+
+## Future Features
+- After the last day, it goes back to day 1. Make a 'you finished' page.
+- Forcast of load conditions would be cool as a hint, with feedback so you can see how scheduling startups impacts future

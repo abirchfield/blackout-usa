@@ -9,6 +9,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Branch, BranchStatus } from "@/lib/game/types"
+import { Button } from "@/components/ui/button"
 
 interface BranchesListProps {
   branches?: Record<string, Branch>;
@@ -34,21 +35,22 @@ const getBranchIndicator = (branch: Branch) => {
 
   // If in service, check for overload
   if (loading > 100) {
-    return { className: 'bg-yellow-500 w-2.5 h-2.5 rounded-full', title: `Overloaded: ${loading.toFixed(0)}%` };
+    return { className: 'bg-[var(--color-warning)] w-2.5 h-2.5 rounded-full', title: `Overloaded: ${loading.toFixed(0)}%` };
   }
 
   // If in service and not overloaded
-  return { className: 'bg-green-500 w-2.5 h-2.5 rounded-full', title: `In-Service: ${loading.toFixed(0)}%` };
+  return { className: 'bg-[var(--color-status-in)] w-2.5 h-2.5 rounded-full', title: `In-Service: ${loading.toFixed(0)}%` };
 };
 
 export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
   return (
     <div>
       <Table>
+        <caption className="sr-only">A sortable list of all transmission lines in the grid. Select a line to view its details.</caption>
         <TableHeader>
           <TableRow>
-            <TableHead className="w-[200px] text-muted-foreground">Line</TableHead>
-            <TableHead className="text-right text-muted-foreground">State</TableHead>
+            <TableHead scope="col" className="w-[60%] min-w-[180px] text-muted-foreground">Line</TableHead>
+            <TableHead scope="col" className="w-[40%] min-w-[140px] text-right text-muted-foreground">State</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -64,20 +66,36 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
                 if (branch.Status1 === BranchStatus.IN) inServiceCircuits++;
                 if (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN) inServiceCircuits++;
 
-                const barColor = loading > 100 ? 'bg-yellow-500' : 'bg-green-500';
+                const barColor = loading > 100 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-status-in)]';
 
                 return (
-                  <TableRow key={branch.Number} className="cursor-pointer" onClick={() => onBranchSelect(branch)}>
-                    <TableCell className="font-medium text-xs py-2 truncate pr-4 text-foreground">{branch.sub1?.Name} - {branch.sub2?.Name}</TableCell>
+                  <TableRow key={branch.Number}>
+                    <TableHead scope="row" className="font-medium text-xs py-2 truncate pr-4 text-foreground">
+                      <Button
+                        variant="link"
+                        onClick={() => onBranchSelect(branch)}
+                        className="p-0 h-auto text-foreground text-xs font-medium justify-start text-left"
+                      >
+                        {branch.sub1?.Name} - {branch.sub2?.Name}
+                      </Button>
+                    </TableHead>
                     <TableCell className="py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <div className={indicator.className} title={indicator.title} />
+                        <div role="img" aria-label={indicator.title} className={indicator.className} title={indicator.title} />
                         {inServiceCircuits > 0 && (
                            <>
-                            <div className="h-1.5 w-10 rounded-full bg-muted" title={`Loading: ${loading.toFixed(0)}%`}>
+                            <div
+                              role="progressbar"
+                              aria-valuenow={loading}
+                              aria-valuemin={0}
+                              aria-valuemax={100}
+                              aria-label={`Line loading: ${loading.toFixed(0)}%`}
+                              title={`Loading: ${loading.toFixed(0)}%`}
+                              className="h-1.5 w-16 rounded-full bg-muted"
+                            >
                               <div className={`h-1.5 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(100, loading)}%` }} />
                             </div>
-                            <span className="text-xs font-mono w-8 text-right text-foreground">{loading.toFixed(0)}%</span>
+                            <span className="text-xs font-mono w-8 text-right text-foreground" aria-hidden="true">{loading.toFixed(0)}%</span>
                            </>
                         )}
                       </div>

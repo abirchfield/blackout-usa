@@ -7,7 +7,8 @@ import { Button } from "@/components/ui/button";
 import { GameEngine } from "@/lib/game/engine";
 import { AccessibilityModal } from "@/components/modals/accessibility-modal";
 import { KeyBindings, defaultKeyBindings } from "@/lib/game/key-bindings";
-import { PersonStanding } from "lucide-react";
+import { defaultAppSettings } from "@/lib/game/config"; 
+import { PersonStanding, ExternalLink } from "lucide-react";
 
 // In a static export (`next export`), links to pages need to point to the
 // generated .html file to work on simple static servers without URL rewriting.
@@ -20,9 +21,15 @@ export default function WelcomePage() {
   const engineRef = useRef<GameEngine | null>(null);
   const { resolvedTheme } = useTheme();
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
+
+  const [viewMode, setViewMode] = useState<'visual' | 'tabular'>(defaultAppSettings.viewMode);
+  const [animationsEnabled, setAnimationsEnabled] = useState(defaultAppSettings.animationsEnabled);
   const [renderCanvasText, setRenderCanvasText] = useState(false); // Default to false for home page
   const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultKeyBindings);
+  const [showDetailsInSidebar, setShowDetailsInSidebar] = useState(defaultAppSettings.showDetailsInSidebar);
+  const [zoomSensitivity, setZoomSensitivity] = useState(defaultAppSettings.zoomSensitivity);
+  const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base');
+  const [isHighContrast, setIsHighContrast] = useState(defaultAppSettings.isHighContrast);
 
   const gameUrl = isStaticExport ? './game.html' : '/game';
   const tutorialUrl = isStaticExport ? './game.html?tutorial=true' : '/game?tutorial=true';
@@ -64,6 +71,26 @@ export default function WelcomePage() {
       };
     }
   }, [resolvedTheme, keyBindings]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    if (isHighContrast) {
+      root.classList.add('high-contrast');
+    } else {
+      root.classList.remove('high-contrast');
+    }
+  }, [isHighContrast]);
+
+  useEffect(() => {
+    const root = document.documentElement;
+    const sizeMap: Record<string, string> = {
+      sm: '14px',
+      base: '16px',
+      lg: '18px',
+      xl: '20px',
+    };
+    root.style.fontSize = sizeMap[fontSize] || '16px';
+  }, [fontSize]);
 
   useEffect(() => {
     if (engineRef.current) {
@@ -111,12 +138,15 @@ export default function WelcomePage() {
             Birchfield at Texas A&M University.{" "}
             <a
               href="https://birchfield.engr.tamu.edu"
-              className="underline hover:text-primary"
+              className="underline hover:text-primary inline-flex items-center gap-1"
               target="_blank"
               rel="noopener noreferrer"
             >
-              More Information.
+              More Information
+              <ExternalLink className="h-3 w-3" aria-hidden="true" />
+              <span className="sr-only">(opens in a new tab)</span>
             </a>
+            .
           </p>
         </div>
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -139,12 +169,22 @@ export default function WelcomePage() {
       <AccessibilityModal
         open={isAccessibilityOpen}
         onOpenChange={setIsAccessibilityOpen}
+        viewMode={viewMode}
+        onViewModeChange={setViewMode}
         animationsEnabled={animationsEnabled}
         onAnimationsEnabledChange={setAnimationsEnabled}
         renderCanvasText={renderCanvasText}
         onRenderCanvasTextChange={setRenderCanvasText}
         keyBindings={keyBindings}
         onKeyBindingsChange={setKeyBindings}
+        showDetailsInSidebar={showDetailsInSidebar}
+        onShowDetailsInSidebarChange={setShowDetailsInSidebar}
+        zoomSensitivity={zoomSensitivity}
+        onZoomSensitivityChange={setZoomSensitivity}
+        fontSize={fontSize}
+        onFontSizeChange={setFontSize}
+        isHighContrast={isHighContrast}
+        onIsHighContrastChange={setIsHighContrast}
       />
     </main>
   );

@@ -1,52 +1,9 @@
 import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "../types";
-import { AppColors, GenerationTypeConfig } from "../config";
-
-// --- Constants ---
-
-// --- Animation ---
-// The total length of the dash pattern for power flow. This is the modulus for the animation cycle.
-// It MUST match the sum of the values in POWER_FLOW_DASH_... arrays (e.g., 4 + 28 = 32).
-const POWER_FLOW_PATTERN_LENGTH = 32;
-const MIN_POWER_FOR_ANIMATION = 10;
-// Controls how many pixels the animation moves per frame. Can be a decimal.
-// Slower < 1 < Faster.
-const ANIMATION_SPEED_FACTOR = 0.5;
-
-// --- Drawing Styles ---
-const BORDER_LINE_WIDTH = 2;
-const BRANCH_RADIUS_NORMAL = 2.0;
-const BRANCH_RADIUS_HOVER = 4.0;
-const SUBSTATION_RADIUS_NORMAL = 10;
-const SUBSTATION_RADIUS_HOVER = 13;
-const SUBSTATION_BORDER_WIDTH = 3;
-const GENERATOR_OUTLINE_WIDTH = 1;
-const GENERATOR_OUTER_RADIUS_FACTOR = 1.2;
-const SECOND_CIRCUIT_OFFSET = 5;
-const POWER_FLOW_LINE_WIDTH_FACTOR = 1.5;
-
-// --- Line Dashes ---
-const DISCONNECTED_LINE_DASH = [5, 5];
-// The background dash creates the "gap" for the moving dot. Sum must be POWER_FLOW_PATTERN_LENGTH.
-const POWER_FLOW_DASH_BACKGROUND = [6, 26];
-// The foreground dash IS the moving dot. Sum must be POWER_FLOW_PATTERN_LENGTH.
-const POWER_FLOW_DASH_FOREGROUND = [4, 28];
+import { AppColors, DrawingConfig, GenerationTypeConfig, ViewConfig } from "../config";
 
 // --- Math ---
 const TWO_PI = Math.PI * 2;
 const PIE_CHART_START_ANGLE = -Math.PI / 2; // Start at 12 o'clock
-
-// --- Overload Thresholds ---
-const BRANCH_OVERLOAD_NORMAL_THRESHOLD = 1.0;
-const BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW = 1.2;
-const BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL = 1.5;
-
-// --- Fonts & Labels ---
-const FONT_NORMAL = "15px Arial";
-const FONT_HOVER = "20px Arial";
-const LABEL_OFFSET_X = 15;
-const LABEL_OFFSET_Y = 5;
-const LABEL_OUTLINE_WIDTH = 3;
-const LABEL_FADE_END_MULTIPLIER = 2.0; // Labels are fully visible at 2x minimum zoom.
 
 export class GameDrawer {
   private ctx: CanvasRenderingContext2D;
@@ -56,6 +13,9 @@ export class GameDrawer {
   private state!: GameState;
   private primaryColor!: string;
   private secondaryColor!: string;
+  private isHoverAnimationActive: boolean = false;
+  private hover_anim_cycle_state: number = 0;
+  private chartColors: Record<string, string> = {};
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -90,7 +50,7 @@ export class GameDrawer {
     this.applyViewBounds();
 
     this.drawBorders();
-    this.drawAllBranches();
+    this.drawAllBranches(isPaused);
     this.drawAllSubstations();
     this.drawHoverLabel();
 
@@ -106,10 +66,29 @@ export class GameDrawer {
   private setupFrame(state: GameState, isPaused: boolean, isFastForward: boolean) {
     this.state = state;
     this.setThemeColors();
-    // Update animation state for power flow dots
-    if (!isPaused && this.state.animationsEnabled) {
-      const speedFactor = isFastForward ? ANIMATION_SPEED_FACTOR * 3 : ANIMATION_SPEED_FACTOR;
-      this.state.anim_cycle_state = (this.state.anim_cycle_state + speedFactor) % POWER_FLOW_PATTERN_LENGTH;
+
+    if (this.state.animationsEnabled) {
+      if (!isPaused) { // Game is running, update the main animation state
+        const speedFactor = isFastForward ? DrawingConfig.ANIMATION_SPEED_FACTOR * 3 : DrawingConfig.ANIMATION_SPEED_FACTOR;
+        this.state.anim_cycle_state = (this.state.anim_cycle_state + speedFactor) % DrawingConfig.POWER_FLOW_PATTERN_LENGTH;
+        // Deactivate hover animation when game is running.
+        this.isHoverAnimationActive = false;
+      } else { // Game is paused
+        if (this.state.hoverBranch) { // ...and a branch is being hovered
+          if (!this.isHoverAnimationActive) {
+            // First frame of a hover-while-paused: sync the hover animation
+            // to the main frozen animation state to prevent a visual jump.
+            this.hover_anim_cycle_state = this.state.anim_cycle_state;
+            this.isHoverAnimationActive = true;
+          }
+          // Increment the separate hover animation state. The main state remains frozen.
+          const speedFactor = DrawingConfig.ANIMATION_SPEED_FACTOR;
+          this.hover_anim_cycle_state = (this.hover_anim_cycle_state + speedFactor) % DrawingConfig.POWER_FLOW_PATTERN_LENGTH;
+        } else {
+          // No branch is hovered, so deactivate the hover animation.
+          this.isHoverAnimationActive = false;
+        }
+      }
     }
   }
 
@@ -119,6 +98,13 @@ export class GameDrawer {
     const bodyStyles = window.getComputedStyle(document.body);
     this.primaryColor = bodyStyles.color;
     this.secondaryColor = bodyStyles.backgroundColor;
+
+    this.chartColors = {
+      'chart-1': bodyStyles.getPropertyValue('--chart-1').trim(),
+      'chart-2': bodyStyles.getPropertyValue('--chart-2').trim(),
+      'chart-3': bodyStyles.getPropertyValue('--chart-3').trim(),
+      'chart-4': bodyStyles.getPropertyValue('--chart-4').trim(),
+    };
   }
 
   public resizeCanvas(): boolean {
@@ -250,9 +236,9 @@ export class GameDrawer {
     this.ctx.strokeStyle = options.style;
     this.ctx.lineWidth = options.width;
     this.ctx.setLineDash(options.dash ?? []);
-    if (options.dashOffset !== undefined) {
-        this.ctx.lineDashOffset = options.dashOffset;
-    }
+    // Always set the dash offset. If it's not provided for an animated line,
+    // it should be reset to 0 to prevent animation state from leaking to static dashed lines.
+    this.ctx.lineDashOffset = options.dashOffset ?? 0;
     this.ctx.stroke();
   }
 
@@ -282,7 +268,7 @@ export class GameDrawer {
   private drawOutlinedText(text: string, x: number, y: number, font: string, fillStyle: string, outlineStyle: string) {
     this.ctx.font = font;
     this.ctx.strokeStyle = outlineStyle;
-    this.ctx.lineWidth = LABEL_OUTLINE_WIDTH;
+    this.ctx.lineWidth = DrawingConfig.LABEL_OUTLINE_WIDTH;
     this.ctx.fillStyle = fillStyle;
 
     this.ctx.strokeText(text, x, y);
@@ -295,7 +281,7 @@ export class GameDrawer {
     if (!this.state.borders || this.state.borders.length === 0) return;
 
     this.ctx.strokeStyle = this.primaryColor;
-    this.ctx.lineWidth = BORDER_LINE_WIDTH;
+    this.ctx.lineWidth = DrawingConfig.BORDER_LINE_WIDTH;
     this.ctx.beginPath();
     
     const startPos = this.getScreenPos(this.state.borders[0][0], this.state.borders[0][1]);
@@ -308,99 +294,151 @@ export class GameDrawer {
     this.ctx.stroke();
   }
 
-  private drawAllBranches() {
+  private drawAllBranches(isPaused: boolean) {
     for (const key in this.state.branches) {
       const branch = this.state.branches[key];
       if (!branch.sub1 || !branch.sub2) continue;
-
-      const radius = (branch === this.state.hoverBranch) ? BRANCH_RADIUS_HOVER : BRANCH_RADIUS_NORMAL;
-
-      // Swap substations based on power flow direction for animation
-      const [s1, s2] = branch.P < 0 ? [branch.sub2, branch.sub1] : [branch.sub1, branch.sub2];
-      this.drawBranchCircuit(branch, branch.Status1, s1, s2, radius);
-
+      const isHover = branch === this.state.hoverBranch;
+      const radius = this.getDynamicBranchRadius(isHover);
+      // Use consistent substation order (sub1 -> sub2) to prevent "jumping" of double circuits.
+      const s1 = branch.sub1;
+      const s2 = branch.sub2;
+      const powerFlowsForward = branch.P >= 0; // True if power flows from sub1 to sub2
+      // The original implementation drew the first circuit on the center line,
+      // and the second one offset. This is asymmetric.
+      // A better approach is to offset both from the center for a cleaner look.
       if (branch.Circuits === 2) {
-        this.drawBranchCircuit(branch, branch.Status2, s1, s2, radius, true);
+        this.drawBranchCircuit(branch, branch.Status1, s1, s2, radius, powerFlowsForward, -1, isHover, isPaused);
+        this.drawBranchCircuit(branch, branch.Status2, s1, s2, radius, powerFlowsForward, 1, isHover, isPaused);
+      } else {
+        // For single circuits, draw a single centered line (offsetMultiplier = 0).
+        this.drawBranchCircuit(branch, branch.Status1, s1, s2, radius, powerFlowsForward, 0, isHover, isPaused);
       }
     }
     this.ctx.setLineDash([]); // Reset line dash after drawing all branches
   }
 
-  private drawBranchCircuit(branch: Branch, status: string, s1: Substation, s2: Substation, radius: number, isSecondCircuit = false) {
-    const p1 = this.getScreenPos(s1.Longitude, s1.Latitude);
-    const p2 = this.getScreenPos(s2.Longitude, s2.Latitude);
+  private getDynamicSubstationRadius(isHover: boolean): number {
+    const baseRadius = isHover ? ViewConfig.BASE_SUBSTATION_RADIUS_HOVER : ViewConfig.BASE_SUBSTATION_RADIUS_NORMAL;
+    const maxRadius = isHover ? ViewConfig.MAX_SUBSTATION_RADIUS_HOVER : ViewConfig.MAX_SUBSTATION_RADIUS;
+    
+    // Scale radius based on zoom, relative to a reference scale.
+    // ViewConfig.INITIAL_SCALE is a good baseline where the baseRadius should apply.
+    const scaleFactor = Math.sqrt(this.state.scaleX / ViewConfig.INITIAL_SCALE);
+    
+    const radius = baseRadius * scaleFactor;
+    
+    return Math.max(ViewConfig.MIN_SUBSTATION_RADIUS, Math.min(radius, maxRadius));
+  }
 
-    this.ctx.beginPath();
+  private getDynamicBranchRadius(isHover: boolean): number {
+    const baseRadius = isHover ? DrawingConfig.BRANCH_RADIUS_HOVER : DrawingConfig.BRANCH_RADIUS_NORMAL;
+    const maxRadius = isHover ? DrawingConfig.BRANCH_RADIUS_HOVER_MAX : DrawingConfig.BRANCH_RADIUS_MAX;
+    
+    // Scale radius based on zoom, relative to a reference scale.
+    // ViewConfig.INITIAL_SCALE is a good baseline where the baseRadius should apply.
+    const scaleFactor = Math.sqrt(this.state.scaleX / ViewConfig.INITIAL_SCALE);
+    
+    const radius = baseRadius * scaleFactor;
+    
+    return Math.max(DrawingConfig.BRANCH_RADIUS_MIN, Math.min(radius, maxRadius));
+  }
 
-    if (isSecondCircuit) {
-        const dx = p2.x - p1.x;
-        const dy = p2.y - p1.y;
+  private drawBranchCircuit(branch: Branch, status: string, s1: Substation, s2: Substation, radius: number, powerFlowsForward: boolean, offsetMultiplier: number, isHover: boolean, isPaused: boolean) {
+    const p1_base = this.getScreenPos(s1.Longitude, s1.Latitude);
+    const p2_base = this.getScreenPos(s2.Longitude, s2.Latitude);
+
+    let p1 = p1_base;
+    let p2 = p2_base;
+
+    if (offsetMultiplier !== 0) {
+        const dx = p2_base.x - p1_base.x;
+        const dy = p2_base.y - p1_base.y;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist > 0) {
-            // Calculate a perpendicular vector in screen space
-            const offsetX = -dy / dist * SECOND_CIRCUIT_OFFSET;
-            const offsetY = dx / dist * SECOND_CIRCUIT_OFFSET;
-
-            this.ctx.moveTo(p1.x, p1.y);
-            this.ctx.lineTo(p1.x + offsetX, p1.y + offsetY);
-            this.ctx.lineTo(p2.x + offsetX, p2.y + offsetY);
-            this.ctx.lineTo(p2.x, p2.y);
-        } else {
-            this.ctx.moveTo(p1.x, p1.y);
-            this.ctx.lineTo(p2.x, p2.y);
+            // Calculate a perpendicular vector in screen space.
+            // The offset is now dynamic and proportional to the line's radius.
+            // This ensures the gap between circuits scales correctly with zoom.
+            // The radius is already larger on hover. Using an additional larger offset factor
+            // for hover state resulted in an excessive gap. By using a single factor,
+            // the gap remains proportional to the line width, which still increases on hover.
+            const offsetFactor = DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR;
+            const totalOffset = radius * offsetFactor;
+            // The offset is halved because we are offsetting two lines from the center.
+            const offset = (totalOffset / 2) * offsetMultiplier;
+            const offsetX = -dy / dist * offset;
+            const offsetY = dx / dist * offset;
+            p1 = { x: p1_base.x + offsetX, y: p1_base.y + offsetY };
+            p2 = { x: p2_base.x + offsetX, y: p2_base.y + offsetY };
         }
-    } else {
-        this.ctx.moveTo(p1.x, p1.y);
-        this.ctx.lineTo(p2.x, p2.y);
     }
+
+    this.ctx.beginPath();
+    this.ctx.moveTo(p1.x, p1.y);
+    this.ctx.lineTo(p2.x, p2.y);
 
     switch (status) {
         case BranchStatus.IN:
-            this.strokePath({ style: this.getBranchOverloadColor(branch), width: radius });
-            if (Math.abs(branch.P) > MIN_POWER_FOR_ANIMATION) {
-                if (this.state.animationsEnabled) {
-                    this.drawAnimatedPowerFlow(radius);
-                } else {
-                    // Draw a static line to indicate power flow when animations are off
-                    this.strokePath({ style: AppColors.POWER_FLOW, width: radius * POWER_FLOW_LINE_WIDTH_FACTOR });
-                }
+            const hasPowerFlow = Math.abs(branch.P) > DrawingConfig.MIN_POWER_FOR_ANIMATION;
+            const baseColor = this.getBranchOverloadColor(branch);
+            const lineWidth = radius;
+            
+            this.strokePath({ style: baseColor, width: lineWidth });
+
+            if (hasPowerFlow && this.state.animationsEnabled) {
+                const useHoverAnimation = isPaused && isHover;
+                this.drawPowerFlowDots(radius, powerFlowsForward, useHoverAnimation);
             }
             break;
         case BranchStatus.DIS:
             // Draw solid line then dashed on top for disconnected appearance
             this.strokePath({ style: this.primaryColor, width: radius });
-            this.strokePath({ style: this.secondaryColor, width: radius * POWER_FLOW_LINE_WIDTH_FACTOR, dash: DISCONNECTED_LINE_DASH });
+            this.strokePath({ style: this.secondaryColor, width: radius * DrawingConfig.POWER_FLOW_LINE_WIDTH_FACTOR, dash: DrawingConfig.DISCONNECTED_LINE_DASH });
             break;
         case BranchStatus.TRIP:
-            this.strokePath({ style: AppColors.TRIPPED, width: radius, dash: DISCONNECTED_LINE_DASH });
+            this.strokePath({ style: AppColors.TRIPPED, width: radius, dash: DrawingConfig.DISCONNECTED_LINE_DASH });
             break;
     }
   }
 
-  private drawAnimatedPowerFlow(radius: number) {
-    const baseOffset = this.state.anim_cycle_state;
-    const lineWidth = radius * POWER_FLOW_LINE_WIDTH_FACTOR;
+  private drawPowerFlowDots(radius: number, flowsForward: boolean, useHoverAnimation: boolean) {
+    let baseOffset: number;
+    if (useHoverAnimation) {
+      // This branch is being hovered while paused. Use the dedicated hover animation state.
+      baseOffset = this.hover_anim_cycle_state;
+    } else {
+      // This branch is either being animated because the game is running,
+      // or it's frozen because the game is paused and it's not being hovered.
+      // In both cases, the correct value is the main animation state.
+      baseOffset = this.state.anim_cycle_state;
+    }
 
+    // If power flows backward (relative to sub1->sub2), we reverse the animation/position
+    // by subtracting the offset from the total pattern length.
+    const finalOffset = flowsForward ? baseOffset : DrawingConfig.POWER_FLOW_PATTERN_LENGTH - baseOffset;
+
+    const lineWidth = radius * DrawingConfig.POWER_FLOW_LINE_WIDTH_FACTOR;
     // Background dash to create a gap for the colored dot
-    this.strokePath({ style: this.secondaryColor, width: lineWidth, dash: POWER_FLOW_DASH_BACKGROUND, dashOffset: baseOffset + 1 });
+    this.strokePath({ style: this.secondaryColor, width: lineWidth, dash: DrawingConfig.POWER_FLOW_DASH_BACKGROUND, dashOffset: finalOffset + 1 });
     
     // Foreground colored dot
-    this.strokePath({ style: AppColors.POWER_FLOW, width: lineWidth, dash: POWER_FLOW_DASH_FOREGROUND, dashOffset: baseOffset });
+    this.strokePath({ style: AppColors.POWER_FLOW, width: lineWidth, dash: DrawingConfig.POWER_FLOW_DASH_FOREGROUND, dashOffset: finalOffset });
   }
 
   private drawAllSubstations() {
     // Calculate label opacity based on zoom level. Labels fade in as the user zooms in
     // from the minimum zoom level.
     const zoomForFadeStart = this.state.scale_min;
-    const zoomForFadeEnd = this.state.scale_min * LABEL_FADE_END_MULTIPLIER;
+    const zoomForFadeEnd = this.state.scale_min * DrawingConfig.LABEL_FADE_END_MULTIPLIER;
     let labelOpacity = (this.state.scaleX - zoomForFadeStart) / (zoomForFadeEnd - zoomForFadeStart);
     labelOpacity = Math.max(0, Math.min(1, labelOpacity)); // Clamp between 0 and 1
 
     for (const key in this.state.subs) {
       const sub = this.state.subs[key];
       const { x: cx, y: cy } = this.getScreenPos(sub.Longitude, sub.Latitude);
-      const radius = (sub === this.state.hoverSub) ? SUBSTATION_RADIUS_HOVER : SUBSTATION_RADIUS_NORMAL;
+      const isHover = sub === this.state.hoverSub;
+      const radius = this.getDynamicSubstationRadius(isHover);
 
       if (sub.Category === SubstationCategory.Load) {
         this.drawLoadSubstation(sub, cx, cy, radius);
@@ -411,8 +449,8 @@ export class GameDrawer {
       if (this.state.renderCanvasText && labelOpacity > 0) {
         this.ctx.save();
         this.ctx.globalAlpha = labelOpacity;
-        const font = sub === this.state.hoverSub ? FONT_HOVER : FONT_NORMAL;
-        this.drawOutlinedText(sub.Name, cx + LABEL_OFFSET_X, cy + LABEL_OFFSET_Y, font, this.primaryColor, this.secondaryColor);
+        const font = isHover ? DrawingConfig.FONT_HOVER : DrawingConfig.FONT_NORMAL;
+        this.drawOutlinedText(sub.Name, cx + DrawingConfig.LABEL_OFFSET_X, cy + DrawingConfig.LABEL_OFFSET_Y, font, this.primaryColor, this.secondaryColor);
         this.ctx.restore();
       }
     }
@@ -436,7 +474,7 @@ export class GameDrawer {
     }
 
     // Border
-    this.drawCircle(cx, cy, r, { stroke: displayColor, lineWidth: SUBSTATION_BORDER_WIDTH });
+    this.drawCircle(cx, cy, r, { stroke: displayColor, lineWidth: DrawingConfig.SUBSTATION_BORDER_WIDTH });
   }
 
   private drawGeneratorSubstation(sub: Substation, cx: number, cy: number, r: number) {
@@ -450,10 +488,10 @@ export class GameDrawer {
     const borderColor = displayColor;
     
     // Draw outer colored circle with border
-    this.drawCircle(cx, cy, r * GENERATOR_OUTER_RADIUS_FACTOR, {
+    this.drawCircle(cx, cy, r * DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR, {
         fill: displayColor,
         stroke: borderColor,
-        lineWidth: GENERATOR_OUTLINE_WIDTH
+        lineWidth: DrawingConfig.GENERATOR_OUTLINE_WIDTH
     });
 
     // Draw inner background circle
@@ -466,7 +504,7 @@ export class GameDrawer {
     }
     
     // Draw inner circle border
-    this.drawCircle(cx, cy, r, { stroke: borderColor, lineWidth: GENERATOR_OUTLINE_WIDTH });
+    this.drawCircle(cx, cy, r, { stroke: borderColor, lineWidth: DrawingConfig.GENERATOR_OUTLINE_WIDTH });
   }
 
   private drawHoverLabel() {
@@ -478,49 +516,71 @@ export class GameDrawer {
     const Lat = 0.5 * (branch.sub1.Latitude + branch.sub2.Latitude);
     const Lon = 0.5 * (branch.sub1.Longitude + branch.sub2.Longitude);
     const pos = this.getScreenPos(Lon, Lat);
-    const cx = pos.x + LABEL_OFFSET_X;
-    const cy = pos.y + LABEL_OFFSET_Y;
+    const cx = pos.x + DrawingConfig.LABEL_OFFSET_X;
+    const cy = pos.y + DrawingConfig.LABEL_OFFSET_Y;
 
     let text = `${Math.abs(branch.P).toFixed(0)} MW`;
     let color = this.primaryColor;
 
-    const isTripped = branch.Status1 === BranchStatus.TRIP || branch.Status2 === BranchStatus.TRIP;
-    const isDisconnected = branch.Status1 === BranchStatus.DIS && (branch.Circuits === 1 || branch.Status2 === BranchStatus.DIS);
-    const overloadRatio = Math.abs(branch.P) / (branch.Circuits * branch.Pmax);
-    const isCriticallyOverloaded = overloadRatio > BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL;
-    const isOverloaded = overloadRatio > BRANCH_OVERLOAD_NORMAL_THRESHOLD;
+    const isAnyTripped = branch.Status1 === BranchStatus.TRIP || (branch.Circuits === 2 && branch.Status2 === BranchStatus.TRIP);
+    const areAllDisconnected = branch.Status1 === BranchStatus.DIS && (branch.Circuits === 1 || branch.Status2 === BranchStatus.DIS);
 
-    if (isTripped) {
-      text = "TRIPPED - cannot reclose";
+    const activeCircuits = this.countActiveCircuits(branch);
+    const capacity = activeCircuits * branch.Pmax;
+    const overloadRatio = capacity > 0 ? Math.abs(branch.P) / capacity : Infinity;
+
+    const isCriticallyOverloaded = overloadRatio > DrawingConfig.BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL;
+    const isOverloaded = overloadRatio > DrawingConfig.BRANCH_OVERLOAD_NORMAL_THRESHOLD;
+
+    if (isAnyTripped) {
+      text = "Tripped";
       color = AppColors.TRIPPED;
-    } else if (isDisconnected) {
-      text = "Line out of service";
+    } else if (areAllDisconnected) {
+      text = "Out of Service";
     } else if (isCriticallyOverloaded) {
       color = AppColors.OVERLOAD_CRITICAL;
-      text += " (CRITICALLY OVERLOADED)";
+      text += " (Crtically Overloaded)";
     } else if (isOverloaded) {
       color = AppColors.OVERLOAD_NORMAL;
-      text += " (overloaded)";
+      text += " (Overloaded)";
     }
     
-    this.drawOutlinedText(text, cx, cy, FONT_HOVER, color, this.secondaryColor);
+    this.drawOutlinedText(text, cx, cy, DrawingConfig.FONT_HOVER, color, this.secondaryColor);
   }
 
   // --- Private State & Logic Helpers ---
 
+  private countActiveCircuits(branch: Branch): number {
+    if (branch.Circuits === 1) {
+      return branch.Status1 === BranchStatus.IN ? 1 : 0;
+    }
+    // branch.Circuits === 2
+    let active = 0;
+    if (branch.Status1 === BranchStatus.IN) active++;
+    if (branch.Status2 === BranchStatus.IN) active++;
+    return active;
+  }
+
   private getBranchOverloadColor(branch: Branch): string {
-    const overloadRatio = Math.abs(branch.P) / (branch.Circuits * branch.Pmax);
-    if (overloadRatio > BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW) {
+    const activeCircuits = this.countActiveCircuits(branch);
+    if (activeCircuits === 0) return this.primaryColor; // No flow, no overload color
+    const overloadRatio = Math.abs(branch.P) / (activeCircuits * branch.Pmax);
+    if (overloadRatio > DrawingConfig.BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW) {
         return AppColors.OVERLOAD_CRITICAL;
     }
-    if (overloadRatio > BRANCH_OVERLOAD_NORMAL_THRESHOLD) {
+    if (overloadRatio > DrawingConfig.BRANCH_OVERLOAD_NORMAL_THRESHOLD) {
         return AppColors.OVERLOAD_NORMAL;
     }
     return this.primaryColor;
   }
 
   private getGeneratorColor(category: string): string {
-    return GenerationTypeConfig[category as SubstationCategory]?.color || GenerationTypeConfig[SubstationCategory.Thermal].color;
+    const config = GenerationTypeConfig[category as SubstationCategory];
+    if (config?.chartVar && this.chartColors[config.chartVar]) {
+      return this.chartColors[config.chartVar];
+    }
+    // Fallback to the hardcoded color from config if CSS var is not found
+    return config?.color || GenerationTypeConfig[SubstationCategory.Thermal].color;
   }
 
   private getSubstationPower(sub: Substation): number {

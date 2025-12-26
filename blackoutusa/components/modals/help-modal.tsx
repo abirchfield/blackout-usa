@@ -1,6 +1,5 @@
 "use client";
 
-import Image from "next/image";
 import { useState, useEffect } from "react";
 import {
   Dialog,
@@ -10,12 +9,16 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { GeneratorUnitDetails } from "@/components/controls/unit-controls";
+import { Button } from "@/components/ui/button";
+import { StatusIndicator } from "@/components/indicators/status-indicator";
+import { GeneratorUnitsTable } from "@/components/tables/unit-table";
 import { Substation, UnitStatus, SubstationCategory } from "@/lib/game/types";
+import { GenerationTypeConfig, LoadTypeConfig } from "@/lib/game/config";
 import { TimeController } from "@/components/controls/time-controls";
-import { GameEngine } from "@/lib/game/engine";
-import { PersonStanding } from "lucide-react";
+import { GameEngine } from "@/lib/game/engine"; 
+import { PersonStanding, Timer, Bell, Lightbulb } from "lucide-react";
+import { cn } from "@/lib/utils";
+import { Badge } from "@/components/ui/badge";
 
 interface HelpModalProps {
   open: boolean;
@@ -26,8 +29,8 @@ interface HelpModalProps {
 // For optimal performance and to avoid layout shift, please replace them with the
 // actual dimensions of your image files. The paths also assume your 'Figs'
 // directory is in the 'public' folder.
-
-const mockSub: Substation = {
+ 
+const mockSubBase: Substation = {
   Name: "Help Substation",
   Number: "0",
   Latitude: 0,
@@ -41,6 +44,21 @@ const mockSub: Substation = {
   StartTime: 60,
   Ramp: 5,
   U: []
+};
+ 
+const mockSubInService: Substation = {
+  ...mockSubBase,
+  U: [{ Status: UnitStatus.IN, P: 65, Pset: 65, P0: 65, Status0: UnitStatus.IN, StatusCount: 0 }]
+};
+ 
+const mockSubOutOfService: Substation = {
+  ...mockSubBase,
+  U: [{ Status: UnitStatus.DIS, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 0 }]
+};
+ 
+const mockSubStartup: Substation = {
+  ...mockSubBase,
+  U: [{ Status: UnitStatus.STARTUP, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 30 }]
 };
 
 export function HelpModal({ open, onOpenChange }: HelpModalProps) {
@@ -78,15 +96,122 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
     });
   };
 
+  const LoadExample = ({ inService }: { inService: boolean }) => {
+    const radius = 24;
+    const center = 28;
+    const strokeWidth = 3;
+
+    // Path for a 75% pie slice to represent a connected load
+    const x = center + radius * Math.cos(-Math.PI / 2);
+    const y = center + radius * Math.sin(-Math.PI / 2);
+    const x2 = center + radius * Math.cos(Math.PI);
+    const y2 = center + radius * Math.sin(Math.PI);
+    const piePath = `M${center},${center} L${x},${y} A${radius},${radius} 0 1,1 ${x2},${y2} Z`;
+
+    return (
+      <div role="group" aria-label={inService ? "In-service load" : "Out-of-service load"} className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center w-48 h-32">
+        <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+          <circle cx={center} cy={center} r={radius} fill="var(--background)" />
+          {inService && <path d={piePath} fill="var(--foreground)" />}
+          <circle cx={center} cy={center} r={radius} fill="none" stroke="var(--foreground)" strokeWidth={strokeWidth} />
+        </svg>
+        <p className="mt-2 text-sm">{inService ? "In-service load" : "Out-of-service load"}</p>
+      </div>
+    );
+  };
+
+  const GeneratorExample = ({ category, p, pmax, capacityLabel }: { category: SubstationCategory, p: number, pmax: number, capacityLabel: string }) => {
+    const outerRadius = 24;
+    const innerRadius = outerRadius / 1.2; // from DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR
+    const center = 28;
+    const strokeWidth = 1;
+    const genConfig = GenerationTypeConfig[category];
+    const genColor = genConfig.color;
+    
+    const ratio = Math.max(0, Math.min(1, p / pmax));
+    const endAngle = -Math.PI / 2 + (Math.PI * 2 * ratio);
+    const isFullCircle = ratio >= 1;
+
+    const x = center + innerRadius * Math.cos(-Math.PI / 2);
+    const y = center + innerRadius * Math.sin(-Math.PI / 2);
+    const x2 = center + innerRadius * Math.cos(endAngle);
+    const y2 = center + innerRadius * Math.sin(endAngle);
+    const largeArcFlag = ratio > 0.5 ? 1 : 0;
+
+    const piePath = `M${center},${center} L${x},${y} A${innerRadius},${innerRadius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
+
+    return (
+      <div role="group" aria-label={`${genConfig.name} generator at ${capacityLabel}`} className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center w-48 h-32">
+        <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
+          <circle cx={center} cy={center} r={outerRadius} fill={genColor} stroke={genColor} strokeWidth={strokeWidth} />
+          <circle cx={center} cy={center} r={innerRadius} fill="var(--background)" />
+          {ratio > 0 && (
+            isFullCircle
+              ? <circle cx={center} cy={center} r={innerRadius} fill={genColor} />
+              : <path d={piePath} fill={genColor} />
+          )}
+          <circle cx={center} cy={center} r={innerRadius} fill="none" stroke={genColor} strokeWidth={strokeWidth} />
+        </svg>
+        <div className="mt-2 text-sm flex items-center justify-center gap-2 whitespace-nowrap">
+          <span className="font-bold">{genConfig.name}</span>
+          <Badge variant="secondary">{capacityLabel}</Badge>
+        </div>
+      </div>
+    );
+  };
+
+  const LineExample = ({ colorClass, dashed, outOfService, label }: { colorClass: string, dashed?: boolean, outOfService?: boolean, label: string }) => (
+    <div role="group" aria-label={`Example of a ${label} transmission line`} className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center w-48 h-32">
+      <div className="w-24 h-12 flex items-center justify-center">
+        <svg width="100%" height="6" viewBox="0 0 100 6" className="overflow-visible">
+          {outOfService ? (
+            <>
+              {/* Base solid line */}
+              <line x1="0" y1="3" x2="100" y2="3" stroke="var(--foreground)" strokeWidth="4" />
+              {/* Dashed line of background color on top */}
+              <line x1="0" y1="3" x2="100" y2="3" stroke="var(--background)" strokeWidth="5" strokeDasharray="5, 5" />
+            </>
+          ) : (
+            <line x1="0" y1="3" x2="100" y2="3" className={colorClass} strokeWidth="4" strokeDasharray={dashed ? "8, 4" : "none"} />
+          )}
+        </svg>
+      </div>
+      <p className="mt-2 text-sm">{label}</p>
+    </div>
+  );
+
+  const LegendRow = ({ icon: Icon, name, description, colorClass }: { icon: React.ElementType, name: string, description: string, colorClass: string }) => (
+    <div className="flex items-start gap-4 p-2">
+        <div className="flex-shrink-0 rounded-md h-10 w-10 flex items-center justify-center bg-muted" aria-hidden="true">
+            <Icon className={cn("h-6 w-6", colorClass)} />
+        </div>
+        <div>
+            <div className="font-bold">{name}</div>
+            <div className="text-sm text-muted-foreground">{description}</div>
+        </div>
+    </div>
+  );
+
+  const FrequencyDisplay = ({ freq, label }: { freq: number, label: string }) => {
+    const colorClass = freq < 59.7 || freq > 60.3 ? "text-destructive" : freq < 59.85 || freq > 60.15 ? "text-[var(--color-warning)]" : "text-foreground";
+    return (
+        <div className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center" role="figure" aria-label={`Frequency: ${freq.toFixed(2)} Hz. Status: ${label}.`}>
+            <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Frequency</div>
+            <div className={cn("text-2xl font-bold", colorClass)}>{freq.toFixed(2)} Hz</div>
+            <p className="mt-1 text-sm text-muted-foreground">{label}</p>
+        </div>
+    );
+  };
+
   const helpPages = [
     {
       title: "Objective & Alerts",
       content: (
         <>
           <h4 className="text-2xl font-bold mb-2">My Objective</h4>
-          <p>Your objective is to finish the shift with the lowest possible total cost. The highest cost component is unserved load -- so avoiding a blackout and keeping all customers online should keep your costs pretty low! For additional challenge, consider prioritizing cheaper generators and not having unnecessary generators online to bring the average cost of power down.</p>
+          <p>Your objective is to finish the shift with the lowest possible total cost. The highest cost component is unserved load, so avoiding a blackout and keeping all customers online should keep your costs low. For an additional challenge, consider prioritizing cheaper generators and not having unnecessary generators online to bring the average cost of power down.</p>
           <h4 className="text-2xl font-bold mt-6 mb-2">What should I do?</h4>
-          <p>Click on the &quot;View all Alerts&quot; button in the top right to bring up the list of alerts. This list includes hints and notifications to help you find your priorities for managing the grid. You can delete any alert by clicking &quot;OK&quot; on the alerts window. The most recent alert will be displayed at the top of the screen.</p>
+          <p>Click on the Alerts button (<Bell className="inline-block h-5 w-5" aria-hidden="true"/>) in the header to bring up the list of alerts. Similarly, the Hints button (<Lightbulb className="inline-block h-5 w-5" aria-hidden="true"/>) provides suggestions and guidance. These lists will help you find your priorities for managing the grid. You can dismiss any item by clicking &quot;OK&quot; on its respective window.</p>
         </>
       )
     },
@@ -97,25 +222,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           <h4 className="text-2xl font-bold mb-2">The Map</h4>
           <p>Navigate the Texas electric grid by clicking and dragging to move around. Zoom in and out with the scroll wheel.</p>
           <h4 className="text-2xl font-bold mt-6 mb-2">Keyboard Shortcuts</h4>
-          <p>For easier access, you can use keyboard shortcuts for most common actions. You can view and customize these in the Accessibility Settings (<PersonStanding className="inline-block h-5 w-5" />). Default shortcuts include:</p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2 mt-4 text-base">
-            <ul className="list-disc list-inside space-y-2">
-              <li><span className="font-bold">W, A, S, D:</span> Pan the map.</li>
-              <li><span className="font-bold">Page Up / Down:</span> Zoom in and out.</li>
-              <li><span className="font-bold">Spacebar:</span> Pause or resume time.</li>
-              <li><span className="font-bold">F:</span> Toggle fast-forward.</li>
-              <li><span className="font-bold">Tab / `:</span> Cycle through map elements.</li>
-              <li><span className="font-bold">Enter:</span> Open details for selected element.</li>
-            </ul>
-            <ul className="list-disc list-inside space-y-2">
-              <li><span className="font-bold">C:</span> Center view on selected element.</li>
-              <li><span className="font-bold">T:</span> Cycle through sidebar tabs.</li>
-              <li><span className="font-bold">E:</span> Emergency load shed.</li>
-              <li><span className="font-bold">R:</span> Ramp all generation up.</li>
-              <li><span className="font-bold">L:</span> Disconnect most loaded line.</li>
-              <li><span className="font-bold">K:</span> Disconnect smallest load.</li>
-            </ul>
-          </div>
+          <p>For easier access, you can use keyboard shortcuts for most common actions. You can view and customize these in the Accessibility Settings menu, accessible via the <PersonStanding className="inline-block h-5 w-5" aria-hidden="true" /> icon in the header.</p>
         </>
       )
     },
@@ -124,12 +231,12 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       content: (
         <>
           <h4 className="text-2xl font-bold mb-2">Loads</h4>
-          <p>Square substations represent electric customers: homes and businesses that use electric power. These are also called electrical &quot;loads&quot;. In the game they are marked with solid squares if they are &quot;connected,&quot; meaning the customers have electricity, and empty squares if they are &quot;disconnected,&quot; if the customers are in blackout.</p>
-          <div className="flex gap-4 my-4 flex-wrap justify-center">
-            <div className="text-center"><Image src="Figs/Load1.PNG" alt="Diagram of an in-service load substation represented by a solid filled square, indicating that electricity is being delivered to customers." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>In-service load</p></div>
-            <div className="text-center"><Image src="Figs/Load2.PNG" alt="Diagram of an out-of-service load substation represented by an empty square outline, indicating that customers are currently in a blackout." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>Out-of-service load</p></div>
+          <p>Circle substations represent electric customers: homes and businesses that use electric power. These are also called electrical &quot;loads&quot;. In the game, their fill level represents how much power they are consuming. An empty circle is disconnected (in a blackout), while a partially or fully filled circle is connected and receiving power.</p>
+          <div className="flex gap-4 my-4 flex-wrap justify-center" aria-label="Examples of load substation states">
+            <LoadExample inService={true} />
+            <LoadExample inService={false} />
           </div>
-          <p>Click on one of the square load substations to bring up more information. Each substation contains multiple customer circuits. As the electric grid operator, you can switch loads in or out of service. Normally you want all loads in service. There is a cost of $1000/MW/hr for unserved load.</p>
+          <p>Click on one of the load substations to bring up more information. Each substation contains multiple customer circuits. As the electric grid operator, you can switch loads in or out of service. Normally you want all loads in service. There is a cost of $1000/MW/hr for unserved load.</p>
         </>
       )
     },
@@ -139,9 +246,9 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
         <>
           <h4 className="text-2xl font-bold mb-2">Generators</h4>
           <p>Circle substations represent electric generators, the source of electric power. In the game the circles are colored based on the fuel type. The shading of the generator also represents how much power it is producing: an empty circle is not generating any power, while a full one is producing at its maximum capacity.</p>
-          <div className="flex gap-4 my-4 flex-wrap justify-center">
-            <div className="text-center"><Image src="Figs/Gen1.PNG" alt="Icon of a solar power plant shown as a circle completely filled with color, representing operation at maximum generation capacity." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>Solar plant (full capacity)</p></div>
-            <div className="text-center"><Image src="Figs/Gen2.PNG" alt="Icon of a thermal power plant shown as a circle half-filled with color, representing operation at 50% of its maximum generation capacity." width={248} height={118} className="border border-white mx-auto max-w-full h-auto w-auto" /><p>Thermal plant (50% capacity)</p></div>
+          <div className="flex gap-4 my-4 flex-wrap justify-center" aria-label="Examples of generator states">
+            <GeneratorExample category={SubstationCategory.Solar} p={100} pmax={100} capacityLabel="100% capacity" />
+            <GeneratorExample category={SubstationCategory.Thermal} p={50} pmax={100} capacityLabel="50% capacity" />
           </div>
           <p>Click on one of the circle generator substations to bring up more information. Each substation contains multiple generating units. As the electric grid operator, you have different decisions depending on the status of the unit.</p>
         </>
@@ -152,40 +259,34 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       content: (
         <>
           <h4 className="text-2xl font-bold mb-2">Generator Controls</h4>
-          <div className="my-4 border border-white/20 rounded-lg px-4 pb-4 bg-background/50">
-            <GeneratorUnitDetails
-              sub={mockSub}
-              unit={{ Status: UnitStatus.IN, P: 65, Pset: 65, P0: 65, Status0: UnitStatus.IN, StatusCount: 0 }}
-              index={0}
+          <div className="my-4 border border-white/20 rounded-lg overflow-x-auto bg-background/50">
+            <GeneratorUnitsTable
+              sub={mockSubInService}
               onUnitAction={() => {}}
               onSetSetpoint={() => {}}
-              setpointValue={65}
+              setpoints={{ 0: 65 }}
               onSetpointChange={() => {}}
               isPaused={true}
             />
           </div>
           <p>In-service generators are currently producing power. This information shows how much power it is producing, which will always be between the Min and Max. If desired, an in-service unit can be shut down.</p>
-          <div className="my-4 border border-white/20 rounded-lg px-4 pb-4 bg-background/50">
-            <GeneratorUnitDetails
-              sub={mockSub}
-              unit={{ Status: UnitStatus.DIS, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 0 }}
-              index={0}
+          <div className="my-4 border border-white/20 rounded-lg overflow-x-auto bg-background/50">
+            <GeneratorUnitsTable
+              sub={mockSubOutOfService}
               onUnitAction={() => {}}
               onSetSetpoint={() => {}}
-              setpointValue={20}
+              setpoints={{ 0: 20 }}
               onSetpointChange={() => {}}
               isPaused={true}
             />
           </div>
           <p>Out of service generators do not add any cost to the system operation. They can be started up if more generation capability is needed. Once start-up begins, the operating cost comes into effect.</p>
-          <div className="my-4 border border-white/20 rounded-lg px-4 pb-4 bg-background/50">
-            <GeneratorUnitDetails
-              sub={mockSub}
-              unit={{ Status: UnitStatus.STARTUP, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 30 }}
-              index={0}
+          <div className="my-4 border border-white/20 rounded-lg overflow-x-auto bg-background/50">
+            <GeneratorUnitsTable
+              sub={mockSubStartup}
               onUnitAction={() => {}}
               onSetSetpoint={() => {}}
-              setpointValue={20}
+              setpoints={{ 0: 20 }}
               onSetpointChange={() => {}}
               isPaused={true}
             />
@@ -195,16 +296,45 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       )
     },
     {
+      title: "Icon Legend",
+      content: (
+        <>
+          <h4 className="text-2xl font-bold mb-4">Energy Categories</h4>
+          <div className="space-y-8">
+            <div>
+              <h5 className="text-xl font-semibold mb-3 border-b pb-2">Generator Types</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                <LegendRow icon={GenerationTypeConfig[SubstationCategory.Nuclear].icon} name="Nuclear" description="High-capacity, slow-ramping baseload power." colorClass={GenerationTypeConfig[SubstationCategory.Nuclear].tailwind.text} />
+                <LegendRow icon={GenerationTypeConfig[SubstationCategory.Thermal].icon} name="Thermal" description="Fossil-fuel plants like natural gas and coal." colorClass={GenerationTypeConfig[SubstationCategory.Thermal].tailwind.text} />
+                <LegendRow icon={GenerationTypeConfig[SubstationCategory.Wind].icon} name="Wind" description="Variable renewable energy, dependent on wind speed." colorClass={GenerationTypeConfig[SubstationCategory.Wind].tailwind.text} />
+                <LegendRow icon={GenerationTypeConfig[SubstationCategory.Solar].icon} name="Solar" description="Variable renewable energy, dependent on sunlight." colorClass={GenerationTypeConfig[SubstationCategory.Solar].tailwind.text} />
+              </div>
+            </div>
+            <div>
+              <h5 className="text-xl font-semibold mb-3 border-b pb-2">Load Customer Types</h5>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-2">
+                {Object.values(LoadTypeConfig).map(config => (
+                  <LegendRow key={config.name} icon={config.icon} name={config.name} description={config.description} colorClass={config.tailwind.text} />
+                ))}
+              </div>
+            </div>
+          </div>
+        </>
+      )
+    },
+    {
       title: "Transmission Lines",
       content: (
         <>
           <h4 className="text-2xl font-bold mb-2">Transmission Lines</h4>
-          <p>Substations (circles and squares) are connected to each other by transmission lines. The animated dots on the line represent the direction the power is flowing. Click on one of the lines to bring up more information.</p>
-          <p className="mt-2">If a line is overloaded, it will turn yellow. If it becomes very overloaded, it will turn orange. If a line remains orange, it is at risk of tripping due to overload. Tripped lines (red dash) cannot be reclosed.</p>
-          <div className="flex gap-4 my-4 flex-wrap justify-center">
-            <Image src="Figs/Line-2.PNG" alt="Map view of a transmission line colored yellow, which signifies that the line is carrying more power than its normal rating." width={248} height={118} className="border border-white max-w-full h-auto w-auto" />
-            <Image src="Figs/Line-3.PNG" alt="Map view of a transmission line colored orange, signifying a critical overload that puts the line at high risk of automatically tripping offline." width={248} height={118} className="border border-white max-w-full h-auto w-auto" />
-            <Image src="Figs/Line-4.PNG" alt="Map view of a transmission line shown as a red dashed line, indicating that the line has tripped due to an overload and is no longer carrying power." width={248} height={118} className="border border-white max-w-full h-auto w-auto" />
+          <p>Substations (the circles) are connected to each other by transmission lines. The animated dots on the line represent the direction the power is flowing. Click on one of the lines to bring up more information.</p>
+          <p className="mt-2">If a line is overloaded, it will turn yellow. If it becomes very overloaded, it will turn orange. If a line remains orange, it is at risk of tripping due to overload. Tripped lines (red dashed) cannot be reclosed.</p>
+          <div className="flex gap-4 my-4 flex-wrap justify-center" aria-label="Examples of transmission line states">
+            <LineExample colorClass="stroke-foreground" label="In-Service" />
+            <LineExample colorClass="stroke-foreground" outOfService label="Out-of-Service" />
+            <LineExample colorClass="stroke-[var(--color-warning)]" label="Overloaded" />
+            <LineExample colorClass="stroke-[var(--color-warning)]" label="Critically Overloaded" />
+            <LineExample colorClass="stroke-destructive" dashed label="Tripped" />
           </div>
           <p>Keep in mind that when a line is removed from service or tripped, the power previously flowing on it will have to find a new path through other lines. If those other lines become overloaded, this can cause cascading outages.</p>
         </>
@@ -232,7 +362,11 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
             </div>
           </div>
           <p>Below the clock is the grid frequency. This is the most important number for avoiding a blackout! Keep it as close to 60 Hz as possible. If it turns orange, you are getting close to risk of tripping. If it turns red, you will start to see generators, loads, and lines trip offline and a blackout is likely not far off.</p>
-          <div className="my-4"><Image src="Figs/Freq.png" alt="The grid frequency monitor, showing the current system frequency in Hertz. Maintaining this near 60 Hertz is critical for grid stability." width={248} height={118} className="border border-white max-w-full h-auto w-auto" /></div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 my-4" aria-label="Examples of grid frequency states">
+            <FrequencyDisplay freq={60.00} label="Stable" />
+            <FrequencyDisplay freq={59.80} label="Warning" />
+            <FrequencyDisplay freq={59.65} label="Danger" />
+          </div>
         </>
       )
     }
