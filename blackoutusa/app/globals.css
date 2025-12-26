@@ -74,11 +74,12 @@
   --color-load-2: oklch(0.7 0.18 283); /* indigo-400 */
   --color-load-3: oklch(0.7 0.03 265); /* slate-400 */
   --color-load-4: oklch(0.78 0.18 150); /* emerald-400 */
-  --color-warning: oklch(0.7 0.22 45); /* orange-500 */
+  --color-warning: oklch(0.62 0.13 85); /* yellow-700, for light mode contrast */
+  --color-overload-critical: oklch(0.7 0.22 45); /* orange-500 */
   /* Status Colors */
   --color-status-in: oklch(0.75 0.2 145); /* green-400 */
   --color-status-dis: oklch(0.7 0 0); /* gray-400 */
-  --color-status-startup: oklch(0.85 0.2 85); /* yellow-400 */
+  --color-status-startup: oklch(0.62 0.13 85); /* yellow-700, for light mode contrast */
   --color-status-trip: oklch(0.7 0.25 25); /* red-500 */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
@@ -119,10 +120,11 @@
   --color-load-2: oklch(0.7 0.18 283); /* indigo-400 */
   --color-load-3: oklch(0.7 0.03 265); /* slate-400 */
   --color-load-4: oklch(0.78 0.18 150); /* emerald-400 */
-  --color-warning: oklch(0.7 0.22 45); /* orange-500 */
+  --color-warning: oklch(0.85 0.2 85);   /* yellow-400 */
+  --color-overload-critical: oklch(0.7 0.22 45); /* orange-500 */
   --color-status-in: oklch(0.75 0.2 145); /* green-400 */
   --color-status-dis: oklch(0.7 0 0); /* gray-400 */
-  --color-status-startup: oklch(0.85 0.2 85); /* yellow-400 */
+  --color-status-startup: oklch(0.85 0.2 85);   /* yellow-400 */
   --color-status-trip: oklch(0.7 0.25 25); /* red-500 */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
@@ -143,7 +145,7 @@
   --popover-foreground: oklch(0 0 0);
   --primary: oklch(0 0 0);
   --primary-foreground: oklch(1 0 0);
-  --secondary: oklch(1 0 0);
+  --secondary: transparent;
   --secondary-foreground: oklch(0 0 0);
   --muted: oklch(1 0 0);
   --muted-foreground: oklch(0 0 0);
@@ -163,10 +165,11 @@
   --color-load-2: oklch(0.8 0.25 150); /* Green */
   --color-load-3: oklch(0.7 0.25 50);  /* Yellow */
   --color-load-4: oklch(0.7 0.25 300); /* Magenta */
-  --color-warning: oklch(0.7 0.25 50); /* Yellow */
+  --color-warning: oklch(0.5 0.15 80); /* Dark Yellow/Brown */
+  --color-overload-critical: oklch(0.6 0.3 15);   /* Red */
   --color-status-in: oklch(0.8 0.25 150); /* Green */
   --color-status-dis: oklch(0 0 0); /* Black */
-  --color-status-startup: oklch(0.7 0.25 50); /* Yellow */
+  --color-status-startup: oklch(0.5 0.15 80); /* Dark Yellow/Brown */
   --color-status-trip: oklch(0.6 0.3 15); /* Red */
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0 0 0);
@@ -187,7 +190,7 @@
   --popover-foreground: oklch(1 0 0);
   --primary: oklch(1 0 0);
   --primary-foreground: oklch(0 0 0);
-  --secondary: oklch(0 0 0);
+  --secondary: transparent;
   --secondary-foreground: oklch(1 0 0);
   --muted: oklch(0 0 0);
   --muted-foreground: oklch(1 0 0);
@@ -201,10 +204,11 @@
   --color-load-2: oklch(0.8 0.25 150); /* Green */
   --color-load-3: oklch(0.7 0.25 50);  /* Yellow */
   --color-load-4: oklch(0.7 0.25 300); /* Magenta */
-  --color-warning: oklch(0.9 0.2 30); /* Bright Yellow-Red */
+  --color-warning: oklch(0.95 0.2 85); /* Bright Yellow */
+  --color-overload-critical: oklch(0.9 0.2 30); /* Bright Yellow-Red */
   --color-status-in: oklch(0.8 0.25 150); /* Green */
   --color-status-dis: oklch(1 0 0); /* White */
-  --color-status-startup: oklch(0.9 0.2 30); /* Bright Yellow-Red */
+  --color-status-startup: oklch(0.95 0.2 85); /* Bright Yellow */
   --color-status-trip: oklch(0.9 0.2 30); /* Bright Yellow-Red */
   --sidebar: oklch(0 0 0);
   --sidebar-foreground: oklch(1 0 0);

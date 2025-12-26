@@ -18,9 +18,10 @@ interface AppHeaderProps {
   hintsCount: number;
   controlsDisabled?: boolean;
   isBlackout?: boolean;
+  isHighContrast?: boolean;
 }
 
-export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPaused, isFastForward, onTogglePause, onToggleFastForward, onAlertsClick, onHintsClick, alertsCount, hintsCount, controlsDisabled, isBlackout }: AppHeaderProps) {
+export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPaused, isFastForward, onTogglePause, onToggleFastForward, onAlertsClick, onHintsClick, alertsCount, hintsCount, controlsDisabled, isBlackout, isHighContrast }: AppHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   return (
@@ -36,7 +37,7 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
             <Button variant="ghost" size="icon" onClick={onTogglePause} aria-label={isPaused ? "Resume game" : "Pause game"} disabled={controlsDisabled}>
               {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
             </Button>
-            <Button variant={isFastForward ? "secondary" : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
+            <Button variant={isFastForward ? (isHighContrast ? "outline" : "secondary") : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
               <FastForward className={`h-5 w-5 ${isFastForward ? "fill-current" : ""}`} />
             </Button>
             <Button variant="ghost" size="icon" onClick={onAlertsClick} className="relative" aria-label={`View alerts, ${alertsCount} new notifications`} disabled={controlsDisabled}>
@@ -67,7 +68,7 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
           <Button variant="ghost" size="icon" onClick={onTogglePause} aria-label={isPaused ? "Resume game" : "Pause game"} disabled={controlsDisabled}>
             {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
           </Button>
-          <Button variant={isFastForward ? "secondary" : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
+          <Button variant={isFastForward ? (isHighContrast ? "outline" : "secondary") : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
             <FastForward className={`h-5 w-5 ${isFastForward ? "fill-current" : ""}`} />
           </Button>
         </div>

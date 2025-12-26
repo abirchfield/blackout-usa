@@ -17,9 +17,10 @@ interface QuitModalProps {
   onQuitToStart: () => void;
   onReplayDay: (currentDay: number) => void;
   onNextDay: (currentDay: number) => void;
+  isHighContrast?: boolean;
 }
 
-export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay, onNextDay }: QuitModalProps) {
+export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay, onNextDay, isHighContrast }: QuitModalProps) {
   return ( <Dialog open={open} onOpenChange={onOpenChange}> <DialogContent className="sm:max-w-[600px] font-share-tech">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold">Quit the game?</DialogTitle>
@@ -30,7 +31,7 @@ export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay,
             <LogOut className="h-5 w-5" aria-hidden="true" />
             <span>Quit to Start</span>
           </Button>
-          <Button variant="secondary" className="w-full justify-center gap-2 py-4 text-base" onClick={() => onReplayDay(day)}>
+          <Button variant={isHighContrast ? "outline" : "secondary"} className="w-full justify-center gap-2 py-4 text-base" onClick={() => onReplayDay(day)}>
             <RotateCw className="h-5 w-5" aria-hidden="true" />
             <span>Restart This Day</span>
           </Button>

@@ -15,7 +15,7 @@
 
 # next.js
 /.next/
-/out/
+# /out/ we want this just so we don't have to build it 
 
 # production
 /build

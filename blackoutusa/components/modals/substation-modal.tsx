@@ -33,9 +33,10 @@ interface SubstationModalContentProps {
   frWind?: number;
   frSolar?: number;
   isPaused?: boolean;
+  isHighContrast?: boolean;
 }
 
-export function SubstationModalContent({ sub, onUnitAction, onSetSetpoint, frWind, frSolar, isPaused }: SubstationModalContentProps) {
+export function SubstationModalContent({ sub, onUnitAction, onSetSetpoint, frWind, frSolar, isPaused, isHighContrast }: SubstationModalContentProps) {
   const [setpoints, setSetpoints] = useState<Record<number, number>>({});
 
   useEffect(() => {
@@ -92,7 +93,7 @@ export function SubstationModalContent({ sub, onUnitAction, onSetSetpoint, frWin
       <div className="text-sm text-muted-foreground mb-4">{getSubDescription()}</div>
       {sub.Category === SubstationCategory.Load
         ? <LoadUnitsTable sub={sub} onUnitAction={onUnitAction} isPaused={isPaused} stickyHeader={true} />
-        : <GeneratorUnitsTable sub={sub} onUnitAction={onUnitAction} onSetSetpoint={onSetSetpoint} setpoints={setpoints} onSetpointChange={handleSetpointChange} isPaused={isPaused} stickyHeader={true} />
+        : <GeneratorUnitsTable sub={sub} onUnitAction={onUnitAction} onSetSetpoint={onSetSetpoint} setpoints={setpoints} onSetpointChange={handleSetpointChange} isPaused={isPaused} isHighContrast={isHighContrast} stickyHeader={true} />
       }
     </>
   );
@@ -135,9 +136,10 @@ interface SubstationModalProps {
   frWind?: number;
   frSolar?: number;
   isPaused?: boolean;
+  isHighContrast?: boolean;
 }
 
-export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frWind, frSolar, isPaused }: SubstationModalProps) {
+export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frWind, frSolar, isPaused, isHighContrast }: SubstationModalProps) {
   if (!sub) return null;
 
   return (
@@ -158,6 +160,7 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
             frWind={frWind}
             frSolar={frSolar}
             isPaused={isPaused}
+            isHighContrast={isHighContrast}
           />
         </div>
       </DialogContent>

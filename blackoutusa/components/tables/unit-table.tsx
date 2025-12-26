@@ -45,6 +45,7 @@ interface GeneratorUnitDetailsProps {
   setpointValue: number;
   onSetpointChange: (index: number, value: number) => void;
   isPaused?: boolean;
+  isHighContrast?: boolean;
   columnConfig?: ColumnConfig;
 }
 
@@ -57,6 +58,7 @@ export function GeneratorUnitDetails({
   setpointValue,
   onSetpointChange,
   isPaused,
+  isHighContrast,
   columnConfig: rawColumnConfig,
 }: GeneratorUnitDetailsProps) {
   const pmax_unit = sub.Pmax / sub.Units;
@@ -122,7 +124,7 @@ export function GeneratorUnitDetails({
             {startupTimeHours} hr
           </time>
         );
-        actionButtonElement = <Button variant="secondary" size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Start Up Unit ${index + 1}`}><Power className="h-5 w-5" aria-hidden="true" /></Button>;
+        actionButtonElement = <Button variant={isHighContrast ? "outline" : "secondary"} size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Start Up Unit ${index + 1}`}><Power className="h-5 w-5" aria-hidden="true" /></Button>;
         break;
       case UnitStatus.STARTUP:
         controlElement = <PowerSlider {...sliderProps} disabled={true} />;
@@ -194,6 +196,7 @@ interface GeneratorUnitsTableProps {
   setpoints: Record<number, number>;
   onSetpointChange: (index: number, value: number) => void;
   isPaused?: boolean;
+  isHighContrast?: boolean;
   stickyHeader?: boolean;
   columnConfig?: ColumnConfig;
 }
@@ -205,6 +208,7 @@ export function GeneratorUnitsTable({
   setpoints,
   onSetpointChange,
   isPaused,
+  isHighContrast,
   stickyHeader = false,
   columnConfig: rawColumnConfig,
 }: GeneratorUnitsTableProps) {
@@ -234,6 +238,7 @@ export function GeneratorUnitsTable({
             setpointValue={setpoints[index] ?? 0}
             onSetpointChange={onSetpointChange}
             isPaused={isPaused}
+            isHighContrast={isHighContrast}
             columnConfig={columnConfig}
           />
         ))}
