@@ -15,6 +15,8 @@ export class GameDrawer {
   private secondaryColor!: string;
   private isHoverAnimationActive: boolean = false;
   private hover_anim_cycle_state: number = 0;
+  private colorWarning!: string;
+  private colorOverloadCritical!: string;
   private chartColors: Record<string, string> = {};
 
   constructor(canvas: HTMLCanvasElement) {
@@ -98,6 +100,8 @@ export class GameDrawer {
     const bodyStyles = window.getComputedStyle(document.body);
     this.primaryColor = bodyStyles.color;
     this.secondaryColor = bodyStyles.backgroundColor;
+    this.colorWarning = bodyStyles.getPropertyValue('--color-warning').trim();
+    this.colorOverloadCritical = bodyStyles.getPropertyValue('--color-overload-critical').trim();
 
     this.chartColors = {
       'chart-1': bodyStyles.getPropertyValue('--chart-1').trim(),
@@ -522,10 +526,10 @@ export class GameDrawer {
     let text = `${Math.abs(branch.P).toFixed(0)} MW`;
     let color = this.primaryColor;
 
-    const isAnyTripped = branch.Status1 === BranchStatus.TRIP || (branch.Circuits === 2 && branch.Status2 === BranchStatus.TRIP);
-    const areAllDisconnected = branch.Status1 === BranchStatus.DIS && (branch.Circuits === 1 || branch.Status2 === BranchStatus.DIS);
-
     const activeCircuits = this.countActiveCircuits(branch);
+    const isAnyTripped = (branch.Status1 === BranchStatus.TRIP || (branch.Circuits === 2 && branch.Status2 === BranchStatus.TRIP));
+    const areAllDisconnected = activeCircuits === 0 && !isAnyTripped;
+
     const capacity = activeCircuits * branch.Pmax;
     const overloadRatio = capacity > 0 ? Math.abs(branch.P) / capacity : Infinity;
 
@@ -538,10 +542,10 @@ export class GameDrawer {
     } else if (areAllDisconnected) {
       text = "Out of Service";
     } else if (isCriticallyOverloaded) {
-      color = AppColors.OVERLOAD_CRITICAL;
+      color = this.colorOverloadCritical;
       text += " (Crtically Overloaded)";
     } else if (isOverloaded) {
-      color = AppColors.OVERLOAD_NORMAL;
+      color = this.colorWarning;
       text += " (Overloaded)";
     }
     
@@ -566,10 +570,10 @@ export class GameDrawer {
     if (activeCircuits === 0) return this.primaryColor; // No flow, no overload color
     const overloadRatio = Math.abs(branch.P) / (activeCircuits * branch.Pmax);
     if (overloadRatio > DrawingConfig.BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW) {
-        return AppColors.OVERLOAD_CRITICAL;
+        return this.colorOverloadCritical;
     }
     if (overloadRatio > DrawingConfig.BRANCH_OVERLOAD_NORMAL_THRESHOLD) {
-        return AppColors.OVERLOAD_NORMAL;
+        return this.colorWarning;
     }
     return this.primaryColor;
   }

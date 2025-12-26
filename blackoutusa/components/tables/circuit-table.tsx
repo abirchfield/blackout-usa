@@ -10,9 +10,10 @@ interface CircuitRecordProps {
   circuitNum: 1 | 2;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
+  isHighContrast?: boolean;
 }
 
-function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused }: CircuitRecordProps) {
+function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighContrast }: CircuitRecordProps) {
   const status = circuitNum === 1 ? branch.Status1 : branch.Status2;
 
   const inServiceCircuits = (branch.Status1 === BranchStatus.IN ? 1 : 0) + (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN ? 1 : 0);
@@ -74,7 +75,7 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused }: Circui
       <TableCell>
         {buttonText && (
           <Button
-            variant={status === BranchStatus.IN ? "destructive" : "secondary"}
+            variant={status === BranchStatus.IN ? "destructive" : (isHighContrast ? "outline" : "secondary")}
             size="sm"
             onClick={() => onCircuitAction(branch.Number, circuitNum)}
             disabled={buttonDisabled || isPaused}
@@ -89,9 +90,10 @@ interface CircuitTableProps {
   branch: Branch;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
+  isHighContrast?: boolean;
 }
 
-export function CircuitTable({ branch, onCircuitAction, isPaused }: CircuitTableProps) {
+export function CircuitTable({ branch, onCircuitAction, isPaused, isHighContrast }: CircuitTableProps) {
   return (
     <Table className="w-full table-fixed">
       <caption className="sr-only">Details for each circuit in the transmission line.</caption>
@@ -106,9 +108,9 @@ export function CircuitTable({ branch, onCircuitAction, isPaused }: CircuitTable
         </TableRow>
       </TableHeader>
       <TableBody>
-        <CircuitRecord branch={branch} circuitNum={1} onCircuitAction={onCircuitAction} isPaused={isPaused} />
+        <CircuitRecord branch={branch} circuitNum={1} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} />
         {branch.Circuits === 2 && (
-          <CircuitRecord branch={branch} circuitNum={2} onCircuitAction={onCircuitAction} isPaused={isPaused} />
+          <CircuitRecord branch={branch} circuitNum={2} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} />
         )}
       </TableBody>
     </Table>

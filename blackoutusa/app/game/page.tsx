@@ -443,7 +443,7 @@ function GamePageContent() {
                           <Button onClick={handleStartDay} className="w-full">Start Day {targetDay}</Button>
                         ) : isDayFinished && (
                           <div className="grid grid-cols-2 gap-2">
-                            <Button onClick={() => handleReplayDay(gameStatistics.day)} variant="secondary" className="flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm">
+                            <Button onClick={() => handleReplayDay(gameStatistics.day)} variant={isHighContrast ? "outline" : "secondary"} className="flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm">
                               <RotateCw className="h-4 w-4" />
                               <span>Replay Today</span>
                             </Button>
@@ -493,6 +493,7 @@ function GamePageContent() {
                             frWind={gameStatistics?.fr_wind}
                             frSolar={gameStatistics?.fr_solar}
                             isPaused={isPaused}
+                            isHighContrast={isHighContrast}
                           />
                         ) : selectedBranch ? (
                           <BranchDetailView
@@ -500,6 +501,7 @@ function GamePageContent() {
                             onClose={handleCloseDetails}
                             onCircuitAction={(branchId, circuit) => dispatch({ type: 'TOGGLE_BRANCH', branchId, circuitNum: circuit })}
                             isPaused={isPaused}
+                            isHighContrast={isHighContrast} // Assuming BranchDetailView will accept this
                           />
                         ) : (
                           <Empty className="py-12">
@@ -591,6 +593,7 @@ function GamePageContent() {
         hintsCount={hints.length}
         controlsDisabled={isDayTransition}
         isBlackout={isBlackout}
+        isHighContrast={isHighContrast}
       />
       {/* Responsive Resizable Layout with Max Width Constraint */}
       <div className="flex-1 w-full max-w-[1920px] mx-auto border-x border-border flex flex-col overflow-hidden">
@@ -655,8 +658,15 @@ function GamePageContent() {
             frWind={gameStatistics?.fr_wind}
             frSolar={gameStatistics?.fr_solar}
             isPaused={isPaused}
+            isHighContrast={isHighContrast}
           />
-          <BranchModal branch={selectedBranch} onClose={handleCloseDetails} onCircuitAction={(branchId, circuit) => dispatch({ type: 'TOGGLE_BRANCH', branchId, circuitNum: circuit })} isPaused={isPaused} />
+          <BranchModal 
+            branch={selectedBranch} 
+            onClose={handleCloseDetails} 
+            onCircuitAction={(branchId, circuit) => dispatch({ type: 'TOGGLE_BRANCH', branchId, circuitNum: circuit })} 
+            isPaused={isPaused} 
+            isHighContrast={isHighContrast}
+          />
         </>
       )}
       <QuitModal
@@ -666,6 +676,7 @@ function GamePageContent() {
         onQuitToStart={handleQuitToStart}
         onReplayDay={handleReplayDay}
         onNextDay={handleNextDay}
+        isHighContrast={isHighContrast}
       />
       <Dialog open={isAlertsModalOpen} onOpenChange={(open) => handleModalOpenChange(setIsAlertsModalOpen, open)}>
         <DialogContent>

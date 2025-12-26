@@ -22,7 +22,7 @@ const getBranchIndicator = (branch: Branch) => {
 
   const isTripped = branch.Status1 === BranchStatus.TRIP || (branch.Circuits === 2 && branch.Status2 === BranchStatus.TRIP);
   if (isTripped) {
-    return { className: 'bg-red-500 w-2.5 h-2.5 rounded-full', title: 'Tripped' };
+    return { className: 'bg-destructive w-2.5 h-2.5 rounded-full', title: 'Tripped' };
   }
 
   let inServiceCircuits = 0;

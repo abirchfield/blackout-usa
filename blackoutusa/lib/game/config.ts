@@ -221,8 +221,6 @@ export const defaultAppSettings: AppSettings = {
 // Centralized colors for UI and Canvas elements
 export const AppColors = {
   TRIPPED: "#ef4444", // red-500
-  OVERLOAD_CRITICAL: "#f97316", // orange-500
-  OVERLOAD_NORMAL: "#eab308", // yellow-500
   POWER_FLOW: "#84cc16", // lime-500
   DEBUG: "#22d3ee", // cyan-400
 };

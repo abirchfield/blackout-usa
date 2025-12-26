@@ -78,21 +78,25 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   const toyTimeStr = `${h}:${m < 10 ? "0" + m : m} PM`;
 
   const handleToggleToyPause = () => {
-    setToyIsPaused(prev => {
-      if (prev) { // if paused, now play
-        setToyIsFastForward(false); // unpausing resets fast-forward
-        return false;
+    setToyIsPaused(prevIsPaused => {
+      const nextIsPaused = !prevIsPaused;
+      // If the user is pausing the game, we should always turn off fast-forward
+      // to ensure resuming starts at normal speed.
+      if (nextIsPaused) {
+        setToyIsFastForward(false);
       }
-      return true; // if playing, now pause
+      return nextIsPaused;
     });
   };
 
   const handleToggleToyFastForward = () => {
     setToyIsFastForward(prev => {
-      if (!prev) { // if not FF, now FF
+      if (prev) {
+        return false; // Go back to normal
+      } else {
         setToyIsPaused(false); // FF implies playing
+        return true;
       }
-      return !prev;
     });
   };
 
@@ -121,13 +125,22 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   };
 
   const GeneratorExample = ({ category, p, pmax, capacityLabel }: { category: SubstationCategory, p: number, pmax: number, capacityLabel: string }) => {
+    const [resolvedColor, setResolvedColor] = useState("");
     const outerRadius = 24;
     const innerRadius = outerRadius / 1.2; // from DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR
     const center = 28;
     const strokeWidth = 1;
     const genConfig = GenerationTypeConfig[category];
-    const genColor = genConfig.color;
     
+    useEffect(() => {
+      // This effect runs on the client side to resolve the CSS variable for the generator color.
+      // This ensures that the color respects the current theme (light, dark, high-contrast).
+      const colorVar = getComputedStyle(document.documentElement).getPropertyValue(`--${genConfig.chartVar}`).trim();
+      setResolvedColor(colorVar || genConfig.color); // Fallback to hardcoded color if var not found
+    }, [genConfig.chartVar, genConfig.color]);
+
+    const genColor = resolvedColor || genConfig.color; // Use resolved color, with initial fallback
+
     const ratio = Math.max(0, Math.min(1, p / pmax));
     const endAngle = -Math.PI / 2 + (Math.PI * 2 * ratio);
     const isFullCircle = ratio >= 1;
@@ -333,7 +346,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
             <LineExample colorClass="stroke-foreground" label="In-Service" />
             <LineExample colorClass="stroke-foreground" outOfService label="Out-of-Service" />
             <LineExample colorClass="stroke-[var(--color-warning)]" label="Overloaded" />
-            <LineExample colorClass="stroke-[var(--color-warning)]" label="Critically Overloaded" />
+            <LineExample colorClass="stroke-[var(--color-overload-critical)]" label="Critically Overloaded" />
             <LineExample colorClass="stroke-destructive" dashed label="Tripped" />
           </div>
           <p>Keep in mind that when a line is removed from service or tripped, the power previously flowing on it will have to find a new path through other lines. If those other lines become overloaded, this can cause cascading outages.</p>

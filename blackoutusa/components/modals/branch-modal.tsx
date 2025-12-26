@@ -17,10 +17,11 @@ interface BranchModalContentProps {
   branch: Branch;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
+  isHighContrast?: boolean;
   showTitle?: boolean; // Used to hide title when content is embedded in another component
 }
 
-export function BranchModalContent({ branch, onCircuitAction, isPaused, showTitle = true }: BranchModalContentProps) {
+export function BranchModalContent({ branch, onCircuitAction, isPaused, isHighContrast, showTitle = true }: BranchModalContentProps) {
   const fromSub = branch.sub1?.Name || branch.FromSub;
   const toSub = branch.sub2?.Name || branch.ToSub;
 
@@ -34,7 +35,7 @@ export function BranchModalContent({ branch, onCircuitAction, isPaused, showTitl
           </p>
         </div>
       )}
-      <CircuitTable branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} />
+      <CircuitTable branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} />
     </>
   );
 }
@@ -45,9 +46,10 @@ interface BranchDetailViewProps {
   onClose: () => void;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
+  isHighContrast?: boolean;
 }
 
-export function BranchDetailView({ branch, onClose, onCircuitAction, isPaused }: BranchDetailViewProps) {
+export function BranchDetailView({ branch, onClose, onCircuitAction, isPaused, isHighContrast }: BranchDetailViewProps) {
   const fromSub = branch.sub1?.Name || branch.FromSub;
   const toSub = branch.sub2?.Name || branch.ToSub;
 
@@ -66,7 +68,7 @@ export function BranchDetailView({ branch, onClose, onCircuitAction, isPaused }:
         Total Flow: {Math.abs(branch.P).toFixed(0)} MW ({branch.P >= 0 ? `${fromSub} to ${toSub}` : `${toSub} to ${fromSub}`})
       </p>
       <div className="overflow-y-auto flex-1 min-w-0">
-        <BranchModalContent branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} showTitle={false} />
+        <BranchModalContent branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} showTitle={false} />
       </div>
     </>
   );
@@ -78,9 +80,10 @@ interface BranchModalProps {
   onClose: () => void;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
+  isHighContrast?: boolean;
 }
 
-export function BranchModal({ branch, onClose, onCircuitAction, isPaused }: BranchModalProps) {
+export function BranchModal({ branch, onClose, onCircuitAction, isPaused, isHighContrast }: BranchModalProps) {
   if (!branch) return null;
 
   return (
@@ -97,6 +100,7 @@ export function BranchModal({ branch, onClose, onCircuitAction, isPaused }: Bran
             branch={branch}
             onCircuitAction={onCircuitAction}
             isPaused={isPaused}
+            isHighContrast={isHighContrast}
           />
         </div>
       </DialogContent>
