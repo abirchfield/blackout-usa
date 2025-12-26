@@ -64,11 +64,22 @@
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  /* Original Theme Colors */
+  --chart-1: oklch(0.78 0.17 303); /* purple-400 */
+  --chart-2: oklch(0.75 0.19 50);  /* orange-400 */
+  --chart-3: oklch(0.83 0.15 229); /* cyan-400 */
+  --chart-4: oklch(0.85 0.2 85);   /* yellow-400 */
+  --chart-5: oklch(0.73 0.14 258); /* blue-400 */
+  --color-load-1: oklch(0.73 0.14 258); /* blue-400 */
+  --color-load-2: oklch(0.7 0.18 283); /* indigo-400 */
+  --color-load-3: oklch(0.7 0.03 265); /* slate-400 */
+  --color-load-4: oklch(0.78 0.18 150); /* emerald-400 */
+  --color-warning: oklch(0.7 0.22 45); /* orange-500 */
+  /* Status Colors */
+  --color-status-in: oklch(0.75 0.2 145); /* green-400 */
+  --color-status-dis: oklch(0.7 0 0); /* gray-400 */
+  --color-status-startup: oklch(0.85 0.2 85); /* yellow-400 */
+  --color-status-trip: oklch(0.7 0.25 25); /* red-500 */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -98,11 +109,21 @@
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  /* Chart colors remain distinct in dark mode */
+  --chart-1: oklch(0.78 0.17 303); /* purple-400 */
+  --chart-2: oklch(0.75 0.19 50);  /* orange-400 */
+  --chart-3: oklch(0.83 0.15 229); /* cyan-400 */
+  --chart-4: oklch(0.85 0.2 85);   /* yellow-400 */
+  --chart-5: oklch(0.73 0.14 258); /* blue-400 */
+  --color-load-1: oklch(0.73 0.14 258); /* blue-400 */
+  --color-load-2: oklch(0.7 0.18 283); /* indigo-400 */
+  --color-load-3: oklch(0.7 0.03 265); /* slate-400 */
+  --color-load-4: oklch(0.78 0.18 150); /* emerald-400 */
+  --color-warning: oklch(0.7 0.22 45); /* orange-500 */
+  --color-status-in: oklch(0.75 0.2 145); /* green-400 */
+  --color-status-dis: oklch(0.7 0 0); /* gray-400 */
+  --color-status-startup: oklch(0.85 0.2 85); /* yellow-400 */
+  --color-status-trip: oklch(0.7 0.25 25); /* red-500 */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -113,21 +134,104 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+.high-contrast {
+  --background: oklch(1 0 0);
+  --foreground: oklch(0 0 0);
+  --card: oklch(1 0 0);
+  --card-foreground: oklch(0 0 0);
+  --popover: oklch(1 0 0);
+  --popover-foreground: oklch(0 0 0);
+  --primary: oklch(0 0 0);
+  --primary-foreground: oklch(1 0 0);
+  --secondary: oklch(1 0 0);
+  --secondary-foreground: oklch(0 0 0);
+  --muted: oklch(1 0 0);
+  --muted-foreground: oklch(0 0 0);
+  --accent: oklch(1 0 0);
+  --accent-foreground: oklch(0 0 0);
+  --destructive: oklch(0.6 0.3 15); /* Bright Red */
+  --border: oklch(0 0 0);
+  --input: oklch(0 0 0);
+  --ring: oklch(0 0 0);
+  /* High-contrast, distinct chart colors */
+  --chart-1: oklch(0.5 0.25 260); /* Blue */
+  --chart-2: oklch(0.8 0.25 150); /* Green */
+  --chart-3: oklch(0.7 0.25 50);  /* Yellow */
+  --chart-4: oklch(0.6 0.3 15);   /* Red */
+  --chart-5: oklch(0.7 0.25 300); /* Magenta */
+  --color-load-1: oklch(0.5 0.25 260); /* Blue */
+  --color-load-2: oklch(0.8 0.25 150); /* Green */
+  --color-load-3: oklch(0.7 0.25 50);  /* Yellow */
+  --color-load-4: oklch(0.7 0.25 300); /* Magenta */
+  --color-warning: oklch(0.7 0.25 50); /* Yellow */
+  --color-status-in: oklch(0.8 0.25 150); /* Green */
+  --color-status-dis: oklch(0 0 0); /* Black */
+  --color-status-startup: oklch(0.7 0.25 50); /* Yellow */
+  --color-status-trip: oklch(0.6 0.3 15); /* Red */
+  --sidebar: oklch(1 0 0);
+  --sidebar-foreground: oklch(0 0 0);
+  --sidebar-primary: oklch(0 0 0);
+  --sidebar-primary-foreground: oklch(1 0 0);
+  --sidebar-accent: oklch(1 0 0);
+  --sidebar-accent-foreground: oklch(0 0 0);
+  --sidebar-border: oklch(0 0 0);
+  --sidebar-ring: oklch(0 0 0);
+}
+
+.dark.high-contrast {
+  --background: oklch(0 0 0);
+  --foreground: oklch(1 0 0);
+  --card: oklch(0 0 0);
+  --card-foreground: oklch(1 0 0);
+  --popover: oklch(0 0 0);
+  --popover-foreground: oklch(1 0 0);
+  --primary: oklch(1 0 0);
+  --primary-foreground: oklch(0 0 0);
+  --secondary: oklch(0 0 0);
+  --secondary-foreground: oklch(1 0 0);
+  --muted: oklch(0 0 0);
+  --muted-foreground: oklch(1 0 0);
+  --accent: oklch(0 0 0);
+  --accent-foreground: oklch(1 0 0);
+  --destructive: oklch(0.9 0.2 30); /* Bright Yellow-Red */
+  --border: oklch(1 0 0);
+  --input: oklch(1 0 0);
+  --ring: oklch(1 0 0);
+  --color-load-1: oklch(0.5 0.25 260); /* Blue */
+  --color-load-2: oklch(0.8 0.25 150); /* Green */
+  --color-load-3: oklch(0.7 0.25 50);  /* Yellow */
+  --color-load-4: oklch(0.7 0.25 300); /* Magenta */
+  --color-warning: oklch(0.9 0.2 30); /* Bright Yellow-Red */
+  --color-status-in: oklch(0.8 0.25 150); /* Green */
+  --color-status-dis: oklch(1 0 0); /* White */
+  --color-status-startup: oklch(0.9 0.2 30); /* Bright Yellow-Red */
+  --color-status-trip: oklch(0.9 0.2 30); /* Bright Yellow-Red */
+  --sidebar: oklch(0 0 0);
+  --sidebar-foreground: oklch(1 0 0);
+  --sidebar-primary: oklch(1 0 0);
+  --sidebar-primary-foreground: oklch(0 0 0);
+  --sidebar-accent: oklch(0 0 0);
+  --sidebar-accent-foreground: oklch(1 0 0);
+  --sidebar-border: oklch(1 0 0);
+  --sidebar-ring: oklch(1 0 0);
+}
+
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
     /* For Firefox */
     scrollbar-width: thin;
     scrollbar-color: var(--border) transparent;
   }
   body {
     @apply bg-background text-foreground;
+    overscroll-behavior: none;
+  }
+  /* Custom high-contrast focus indicator for accessibility */
+  *:focus-visible {
+    @apply outline-2 outline-offset-2 outline-blue-500;
   }
 
-  /* Custom slider thumb color for visibility in both modes */
-  [role="slider"] {
-    @apply border-2 border-background bg-primary;
-  }
 }
 
 /* Custom Scrollbar Styles */
@@ -158,361 +262,53 @@
   font-family: var(--font-share-tech), sans-serif;
 }
 
-.game-wrapper {
-  font-family: var(--font-share-tech), sans-serif;
-  color: #f0f0f0;
-  font-size: 24px;
-  box-sizing: border-box;
-  width: 100%;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: stretch;
+/* Custom slider thumb style for the PowerSlider component. */
+/* This is needed to make the thumb visible when its range is made transparent. */
+/* This selector is more specific to override the default component styles. */
+.power-slider-wrapper [role="slider"] {
+  @apply border-2 border-background bg-foreground;
 }
 
-.game-wrapper * {
-  box-sizing: border-box;
+/* Custom slider track style for the PowerSlider component. */
+/* This adds a border to make the track visible in all themes, especially high-contrast. */
+.power-slider-wrapper [data-radix-slider-track] {
+  @apply border border-border;
 }
 
-.game-wrapper button {
-  font-family: var(--font-share-tech), sans-serif;
+/* --- High Contrast Tab Styles --- */
+/* These are not in a layer, so they are appended to the stylesheet,
+   giving them precedence over default component utility classes. */
+
+/* Style the tab list and inactive tabs for high contrast */
+.high-contrast [role="tablist"] {
+  /* Remove default container styling to style triggers directly */
+  @apply bg-transparent p-0;
 }
 
-.header-row {
-  flex-shrink: 0;
-  border-bottom: 1px solid;
+.high-contrast [role="tab"] {
+  /* Add a border to each tab to make it look like a button */
+  @apply border border-foreground rounded-none;
 }
 
-.header-content {
-  height: 100%;
-  display: flex;
-  justify-content: space-between;
-  flex-wrap: wrap;
-  align-items: center;
+/* Active tab has inverted colors. */
+.high-contrast [role="tab"][data-state="active"] {
+  @apply bg-foreground text-background;
 }
 
-.head-main-text {
-  font-size: 45px;
-  overflow: hidden;
-  padding: 20px;
-  height: 80px;
+.high-contrast [role="tab"]:not(:last-child) {
+  /* Collapse left border with the previous tab's right border */
+  @apply ml-[-1px];
 }
 
-.head-clock {
-  font-size: 24px;
-  padding: 20px;
+.high-contrast [role="tab"]:first-child {
+  @apply rounded-l-md;
 }
 
-.head-button-group {
-  position: absolute;
-  right: 0%;
-  display: flex;
-  justify-content: space-between;
-  margin: 1.5em 1.5em 0 0;
-  background: transparent;
-  align-items: center;
-  list-style: none;
+.high-contrast [role="tab"]:last-child {
+  @apply rounded-r-md;
 }
 
-.head-button-group li {
-  display: inline-block;
-  padding: .2em;
-}
-
-.head-button, .foot-button {
-  padding: .1em .5em;
-  height: 2em;
-  width: 2em;
-  color: black;
-  background-color: #f0f0f0;
-  border: 1px solid #888;
-  cursor: pointer;
-}
-
-.alert-button {
-  width: auto;
-  color: black;
-  background-color: #f0f0f0;
-  border: 1px solid #888;
-  cursor: pointer;
-}
-
-.main-section {
-  display: flex;
-  min-height: 100px;
-  flex-grow: 1;
-  flex-basis: 0;
-  position: relative;
-}
-
-.main-canvas {
-  background-color: black;
-  width: 100%;
-  height: 100%;
-}
-
-#setpoint-input {
-  background-color: cyan;
-  color: black;
-  padding: 5px;
-  margin: 20px;
-}
-
-#unit-modal {
-  width: auto;
-  height: auto;
-  min-height: 200px;
-}
-
-#unit-modal .modal-body {
-  width: auto;
-  height: auto;
-}
-
-#unit-modal button {
-  min-width: 100px;
-  margin: 10px;
-  color: black;
-  background-color: #f0f0f0;
-}
-
-.canvas-box {
-  width: 0px;
-  height: 100%;
-  flex-grow: 1;
-  border: solid lightgreen;
-  border-width: 3px;
-}
-
-.footer-row {
-  min-height: 60px;
-  flex-shrink: 0;
-  z-index: 5;
-  background-color: black;
-}
-
-.footer-content {
-  height: 100%;
-  display: flex;
-  justify-content: space-between;
-  flex-direction: column;
-}
-
-.foot-line {
-  padding: .5em;
-  width: 100%;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.modal {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%) scale(0);
-  transition: 200ms ease-in-out;
-  background-color: black;
-  border-radius: 30px;
-  border: 1px solid white;
-  z-index: 10;
-  width: 95%;
-  max-width: 800px;
-  min-height: 70%;
-  max-height: 95%;
-  overflow: hidden;
-}
-
-.modal-narrow {
-  max-width: 600px;
-}
-
-.modal.active {
-  transform: translate(-50%, -50%) scale(1);
-}
-
-.modal-header {
-  padding: 10px 20px;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid white;
-}
-
-.modal-header .title {
-  font-size: 48px;
-  font-weight: bold;
-}
-
-.modal-header .close-button {
-  cursor: pointer;
-  border: none;
-  outline: none;
-  background: none;
-  font-size: 3rem;
-  font-weight: bold;
-  color: white;
-}
-
-.modal-body {
-  padding: 20px 20px;
-  width: 100%;
-  height: 80vh;
-  overflow-y: scroll;
-}
-
-.instruction-box {
-  max-width: 800px;
-  margin-left: auto;
-  margin-right: auto;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.instruction-box hr {
-  width: 100%;
-}
-
-.modal-section-header {
-  font-size: 48px;
-  padding: 20px 0px;
-}
-
-.modal-content {
-  font-size: 20px;
-}
-
-.modal-par-header {
-  font-size: 32px;
-  padding: 32px 0px 0px 0px;
-  border-width: 1px;
-  font-weight: bolder;
-}
-
-.modal-text-button {
-  padding: 0 20px;
-  min-width: 200px;
-  min-height: 40px;
-  font-size: 30px;
-  margin: 20px 40px;
-  color: black;
-  background-color: #f0f0f0;
-  cursor: pointer;
-}
-
-.sub-btn1, .sub-btn2, .branch-ckt1-btn, .branch-ckt2-btn {
-  font-size: 20px;
-  margin: 8px 0;
-  padding: 3px 10px;
-  width: auto;
-  min-width: auto;
-  min-height: auto;
-  color: black;
-  background-color: #f0f0f0;
-  cursor: pointer;
-}
-
-#overlay {
-  position: fixed;
-  opacity: 0;
-  transition: 200ms ease-in-out;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, .7);
-  pointer-events: none;
-  z-index: 7;
-}
-
-#overlay.active {
-  opacity: 1;
-  pointer-events: all;
-}
-
-.modal-quit {
-  max-width: 800px;
-  min-height: 20%;
-  height: auto;
-}
-
-.modal-quit-body {
-  min-height: 20%;
-  height: auto;
-}
-
-.alerts-row {
-  display: flex;
-  flex-direction: row;
-  justify-content: stretch;
-  align-items: center;
-  border-bottom: 1px solid;
-  padding: 10px 0;
-}
-
-.alert-time {
-  width: 90px;
-  flex-basis: 90px;
-  flex-shrink: 0;
-}
-
-.alert-message {
-  min-width: 20em;
-  flex-grow: 1;
-}
-
-.alert-critical {
-  width: 8em;
-  color: red;
-  flex-basis: 8em;
-}
-
-.alert-action {
-  width: 4em;
-  padding: 2px 2px;
-  flex-basis: 4em;
-}
-
-.alert-remove-button {
-  width: 4em;
-  flex-basis: 4em;
-  color: black;
-  background-color: #f0f0f0;
-  cursor: pointer;
-}
-
-.unit-box {
-  display: flex;
-}
-
-.unit-box-rcol {
-  width: 50%;
-  display: flex;
-  flex-direction: column;
-  align-items: start;
-  justify-content: center;
-}
-
-.unit-box-lcol {
-  width: 50%;
-}
-
-#welcome-modal {
-  min-height: auto;
-  height: auto;
-}
-
-#welcome-modal .modal-body {
-  min-height: auto;
-  height: auto;
-}
-
-#scenario-instructions img {
-  border: 1px white solid;
-  max-width: 100%;
-}
-
-#scenario-description {
-  margin: 0;
+/* Add a visible hover state for ghost/outline buttons and select items in high-contrast mode. */
+.high-contrast .hover\:bg-accent:hover {
+  @apply outline outline-1 outline-offset-[-1px] outline-foreground;
 }

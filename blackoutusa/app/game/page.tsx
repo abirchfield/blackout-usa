@@ -1,62 +1,56 @@
 "use client";
 
-import { useState, useEffect, useRef, Suspense } from "react"
+import { useState, useEffect, useRef, Suspense, useCallback } from "react"
+import { RotateCw, ArrowRight } from "lucide-react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
-import { scenarios, ResultDetails } from "@/lib/game/scenario/scenarios"
-import { GameEngine } from "@/lib/game/engine";
-import { GameStatistics, Substation, Branch, Alert, Hint, Briefing } from "@/lib/game/types"
+import { scenarios } from "@/lib/game/scenario/scenarios"
+import { Substation, Branch, Briefing, ResultDetails } from "@/lib/game/types"
+import { useGameEngine } from "@/lib/hooks/use-game-engine"
+import { useGameInput } from "@/lib/hooks/use-game-input"
 import { AppHeader } from "@/components/header"
-import { Sidebar, SidebarContent } from "@/components/ui/sidebar"
-import { EnergyStats } from "@/components/sidebar/left-sidebar"
-import { RightSidebar } from "@/components/sidebar/right-sidebar"
-import { SubstationModal } from "@/components/modals/substation-modal"
-import { BranchModal } from "@/components/modals/branch-modal"
+import { SidebarContent } from "@/components/ui/sidebar"
+import { Button } from "@/components/ui/button"
+import {
+  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
+} from "@/components/ui/dialog"
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs"
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@/components/ui/resizable"
+import { GenerationDashboard, LoadDashboard, KeyStats, EnergyDashboard } from "@/components/sidebar/energy-stats"
+import { SubstationModal, SubstationDetailView } from "@/components/modals/substation-modal"
+import { BranchModal, BranchDetailView } from "@/components/modals/branch-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
 import { AccessibilityModal } from "@/components/modals/accessibility-modal"
-import { SubstationsList } from "@/components/lists/substation-list"
-import { BranchesList } from "@/components/lists/branch-list"
+import { SubstationsList } from "@/components/tables/substation-table"
+import { BranchesList } from "@/components/tables/branch-table"
 import { SubstationIcon } from "@/components/icons/substation-icon"
 import { LinesIcon } from "@/components/icons/lines-icon"
 import { HelpModal } from "@/components/modals/help-modal"
-import { KeyBindings, defaultKeyBindings } from "@/lib/game/key-bindings"
+import { AlertsList } from "@/components/modals/alerts-modal"
+import { HintsList } from "@/components/modals/hints-modal"
+import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from "@/components/ui/empty"
+import { KeyBindings } from "@/lib/game/key-bindings"
+import { DayResults } from "@/components/sidebar/day-results"
+import { defaultAppSettings } from "@/lib/game/config"
 
 const isStaticExport = process.env.NODE_ENV === 'production';
-
-const initialGameStatistics: GameStatistics = {
-  day: 1,
-  timeStr: "1:00 PM",
-  timeStep: 0,
-  frequency: 60.0,
-  loadServed: 0,
-  loadUnserved: 0,
-  reserves: 0,
-  reservesWind: 0,
-  reservesSolar: 0,
-  reservesThermal: 0,
-  reservesNuclear: 0,
-  windGen: 0,
-  solarGen: 0,
-  thermalGen: 0,
-  nuclearGen: 0,
-  avgCost: 0,
-  totalCost: 0,
-  currentOpCost: 0,
-  currentFuelCost: 0,
-  currentUnservedCost: 0,
-  totalOpCost: 0,
-  totalFuelCost: 0,
-  totalUnservedCost: 0,
-  fr_wind: 1,
-  fr_solar: 1,
-  totalMwh: 0
-};
 
 function GamePageContent() {
   // Modal States
   const [isQuitOpen, setIsQuitOpen] = useState(false)
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false)
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false)
+  const [isHintsModalOpen, setIsHintsModalOpen] = useState(false)
   const [selectedSub, setSelectedSub] = useState<Substation | null>(null)
   const [selectedBranch, setSelectedBranch] = useState<Branch | null>(null)
   const [currentBriefing, setCurrentBriefing] = useState<Briefing | null>(null)
@@ -68,17 +62,23 @@ function GamePageContent() {
   const [isUserPaused, setIsUserPaused] = useState(true) // For user-initiated pause/play
   const [isDayFinished, setIsDayFinished] = useState(false)
   const [isFastForward, setIsFastForward] = useState(false)
-  const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([])
-  const [hints, setHints] = useState<Array<{id: number, time: string, message: string}>>([])
-  const [targetDay, setTargetDay] = useState(1)
-  const [completedDays, setCompletedDays] = useState<Set<number>>(new Set());
+  const [targetDay, setTargetDay] = useState(1);
+  const [, setCompletedDays] = useState<Set<number>>(new Set());
   const [dayResultDetails, setDayResultDetails] = useState<ResultDetails | null>(null);
-  const [rightSidebarTab, setRightSidebarTab] = useState('brief');
-  const [viewMode, setViewMode] = useState<'visual' | 'tabular'>('visual');
-  const [animationsEnabled, setAnimationsEnabled] = useState(true);
-  const [renderCanvasText, setRenderCanvasText] = useState(true);
-  const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultKeyBindings);
+  const [, setRightSidebarTab] = useState('alerts');
+  const [viewMode, setViewMode] = useState<'visual' | 'tabular'>(defaultAppSettings.viewMode);
+  const [animationsEnabled, setAnimationsEnabled] = useState(defaultAppSettings.animationsEnabled);
+  const [renderCanvasText, setRenderCanvasText] = useState(defaultAppSettings.renderCanvasText);
+  const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultAppSettings.keyBindings);
+  const [showDetailsInSidebar, setShowDetailsInSidebar] = useState(defaultAppSettings.showDetailsInSidebar);
+  const [zoomSensitivity, setZoomSensitivity] = useState(defaultAppSettings.zoomSensitivity);
+  const [, setActiveDetailSection] = useState<string[]>([]);
+  const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base');
+  const [dashboardTab, setDashboardTab] = useState<'briefing' | 'generation' | 'load' | 'energy'>('briefing');
+  const [isMobile, setIsMobile] = useState(false);
+  const [isHighContrast, setIsHighContrast] = useState(defaultAppSettings.isHighContrast);
 
+  const lastFocusedElementRef = useRef<HTMLElement | null>(null);
   // Accessibility States
   const [announcement, setAnnouncement] = useState("");
   const [lastAnnouncedAlertId, setLastAnnouncedAlertId] = useState<number | null>(null);
@@ -86,27 +86,29 @@ function GamePageContent() {
   // Theme
   const { resolvedTheme } = useTheme()
   
-  // Refs for loop access
-  const isPausedRef = useRef(isPaused)
-  const isFastForwardRef = useRef(isFastForward)
+  const togglePause = useCallback(() => {
+    setIsUserPaused(prevIsUserPaused => {
+      const nextIsUserPaused = !prevIsUserPaused;
+      // If the user is pausing the game, we should always turn off fast-forward
+      // to ensure resuming starts at normal speed.
+      if (nextIsUserPaused) {
+        setIsFastForward(false);
+      }
+      return nextIsUserPaused;
+    });
+  }, [setIsUserPaused, setIsFastForward]);
 
-  // Sync refs with state
-  useEffect(() => {
-    isPausedRef.current = isPaused
-  }, [isPaused])
+  const toggleFastForward = useCallback(() => {
+    setIsFastForward(prevIsFastForward => {
+      if (prevIsFastForward) {
+        return false; // Go back to normal
+      } else {
+        setIsUserPaused(false); // Signal user's intent to play
+        return true;
+      }
+    });
+  }, [setIsFastForward, setIsUserPaused]);
 
-  useEffect(() => {
-    isFastForwardRef.current = isFastForward
-  }, [isFastForward])
-
-  // Engine Integration
-  const canvasRef = useRef<HTMLCanvasElement>(null)
-  const engineRef = useRef<GameEngine | null>(null)
-  const [gameStatistics, setGameStatistics] = useState<GameStatistics>(initialGameStatistics)
-
-  // Calculate progress for the header's time controller
-  const timeStep = gameStatistics?.timeStep || 0;
-  const progress = Math.min(100, Math.max(0, (timeStep / GameEngine.GAME_DURATION) * 100));
 
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -121,138 +123,176 @@ function GamePageContent() {
   }, [showTutorial]);
 
   useEffect(() => {
-    // Initialize Engine
-    if (canvasRef.current && !engineRef.current) {
-      engineRef.current = new GameEngine(canvasRef.current);
-      engineRef.current.setKeyBindings(keyBindings);
-      const initialDay = 1;
-      engineRef.current.startDay(initialDay); // Load scenario for day 1
-      engineRef.current.update(1, false); // Run one simulation step without advancing time to calculate initial metrics
-
-      // Set initial UI state before game starts
-      const initialStats = engineRef.current.getDashboardStats();
-      setGameStatistics(initialStats);
-      setCurrentBriefing(engineRef.current.getBriefingForDay(initialDay));
-      setTargetDay(initialStats.day);
-
-      // --- Connect Engine to React UI ---
-      engineRef.current.onInteract = (type, data) => {
-        if (type === 'sub') {
-          setSelectedSub(data as Substation);
-        } else if (type === 'branch') {
-          setSelectedBranch(data as Branch);
-        }
-      };
-
-      engineRef.current.onAlert = (alert: Alert, reset?: boolean) => {
-        const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
-        setAlerts(prevAlerts => {
-          // The new ID is the highest existing ID + 1, or 0 if resetting.
-          const nextId = (reset || prevAlerts.length === 0) ? 0 : (prevAlerts[0].id + 1);
-          const newAlert = { id: nextId, time: timeStr, ...alert };
-          if (reset) {
-            return [newAlert];
-          }
-          return [newAlert, ...prevAlerts];
-        });
-      };
-
-      engineRef.current.onHint = (hint: Hint, reset?: boolean) => {
-        const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
-        setHints(prevHints => {
-          const nextId = (reset || prevHints.length === 0) ? 0 : (prevHints[0].id + 1);
-          const newHint = { id: nextId, time: timeStr, ...hint };
-          if (reset) {
-            return [newHint];
-          }
-          return [newHint, ...prevHints];
-        });
-      };
-      
-      // Start Animation Loop
-      let animationFrameId: number;
-      let lastGameStepTime = 0;
-      
-      const loop = (timestamp: number) => {
-        if (engineRef.current) {
-          // Update Logic
-          if (!isPausedRef.current) {
-            const gameSpeed = isFastForwardRef.current ? 50 : 500; // ms per game minute
-            if (timestamp - lastGameStepTime > gameSpeed) {
-              const isDayOver = engineRef.current.update(1);
-              lastGameStepTime = timestamp;
-
-              // Get latest stats and update React state
-              const newStats = engineRef.current.getDashboardStats();
-              setGameStatistics(newStats);
-
-              if (isDayOver) {
-                setIsDayFinished(true);
-                setCompletedDays(prev => new Set(prev).add(newStats.day));
-                setRightSidebarTab('brief');
-                const results = engineRef.current?.getResultsForDay(newStats.day, newStats.totalCost);
-                setDayResultDetails(results || null);
-              }
-            }
-          }
-          
-          // Draw
-          engineRef.current.draw(isPausedRef.current, isFastForwardRef.current);
-          
-        }
-        animationFrameId = requestAnimationFrame(loop);
-      };
-      
-      animationFrameId = requestAnimationFrame(loop);
-      
-      return () => {
-        cancelAnimationFrame(animationFrameId);
-        engineRef.current?.destroy();
-        engineRef.current = null;
-      }
-    }
-  }, [keyBindings])
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
-    if (engineRef.current && resolvedTheme) {
-      engineRef.current.setTheme(resolvedTheme as 'light' | 'dark');
+    const root = document.documentElement;
+    if (isHighContrast) {
+      root.classList.add('high-contrast');
+    } else {
+      root.classList.remove('high-contrast');
     }
-  }, [resolvedTheme]);
+  }, [isHighContrast]);
 
+  useEffect(() => {
+    const root = document.documentElement;
+    const sizeMap: Record<string, string> = {
+      sm: '14px',
+      base: '16px',
+      lg: '18px',
+      xl: '20px',
+    };
+    root.style.fontSize = sizeMap[fontSize] || '16px';
+  }, [fontSize]);
+
+  // Adjust dashboard tab when the sidebar layout changes
+  useEffect(() => {
+    if (!showDetailsInSidebar && (dashboardTab === 'generation' || dashboardTab === 'load')) {
+      setDashboardTab('energy');
+      setAnnouncement("Dashboard view changed to Grid Health.");
+    } else if (showDetailsInSidebar && dashboardTab === 'energy') {
+      // Default to 'generation' when expanding the view
+      setDashboardTab('generation');
+      setAnnouncement("Dashboard view changed to Generation.");
+    }
+  }, [showDetailsInSidebar, dashboardTab]);
+
+  const openModal = (setter: (isOpen: boolean) => void) => {
+    lastFocusedElementRef.current = document.activeElement as HTMLElement;
+    setter(true);
+  };
+
+  const handleModalOpenChange = (setter: (isOpen: boolean) => void, open: boolean) => {
+    setter(open);
+    if (!open) {
+      lastFocusedElementRef.current?.focus();
+    }
+  };
+
+  const handleSubstationSelect = useCallback((sub: Substation) => {
+    if (!selectedSub) { // Only save focus if we are opening a new view
+      lastFocusedElementRef.current = document.activeElement as HTMLElement;
+    }
+    setSelectedSub(sub);
+    setSelectedBranch(null);
+    if (showDetailsInSidebar) {
+      setActiveDetailSection([sub.Number]);
+      setAnnouncement(`Showing details for ${sub.Name} substation.`);
+    } else {
+      setAnnouncement(`Opened modal for ${sub.Name} substation.`);
+    }
+  }, [showDetailsInSidebar, selectedSub]);
+
+  const handleBranchSelect = useCallback((branch: Branch) => {
+    if (!selectedBranch) { // Only save focus if we are opening a new view
+      lastFocusedElementRef.current = document.activeElement as HTMLElement;
+    }
+    setSelectedBranch(branch);
+    setSelectedSub(null);
+    if (showDetailsInSidebar) {
+      setActiveDetailSection([branch.Number]);
+      setAnnouncement(`Showing details for line from ${branch.sub1?.Name} to ${branch.sub2?.Name}.`);
+    } else {
+      setAnnouncement(`Opened modal for line from ${branch.sub1?.Name} to ${branch.sub2?.Name}.`);
+    }
+  }, [showDetailsInSidebar, selectedBranch]);
+
+  const handleDayComplete = useCallback((day: number, results: ResultDetails | null) => {
+    setIsDayFinished(true);
+    setCompletedDays(prev => new Set(prev).add(day));
+    setDashboardTab('briefing');
+    setDayResultDetails(results);
+    setAnnouncement(`Day ${day} complete. Switched to Briefing tab.`);
+  }, []);
+
+  // --- Use Game Engine Hook ---
+  const {
+    canvasRef,
+    engineRef,
+    stats: gameStatistics,
+    alerts,
+    hints,
+    setAlerts,
+    setHints,
+    dispatch,
+    startDay,
+    getBriefing
+  } = useGameEngine({
+    theme: resolvedTheme,
+    keyBindings,
+    animationsEnabled,
+    renderCanvasText,
+    zoomSensitivity,
+    isPaused,
+    isFastForward,
+    onInteract: (type, data) => {
+      if (type === 'sub') handleSubstationSelect(data as Substation);
+      else if (type === 'branch') handleBranchSelect(data as Branch);
+    },
+    onDayComplete: handleDayComplete
+  });
+
+  const isBlackout = gameStatistics.blackout || false;
+
+  // Initial Briefing Load
+  useEffect(() => {
+    if (gameStatistics.timeStep === 0 && gameStatistics.day === 1 && !currentBriefing) {
+      setCurrentBriefing(getBriefing(1));
+    }
+  }, [gameStatistics.day, gameStatistics.timeStep, getBriefing, currentBriefing]);
+
+  // Wire up keybinding controls that need engine access
   useEffect(() => {
     if (engineRef.current) {
-      engineRef.current.setAnimationsEnabled(animationsEnabled);
+      engineRef.current.setOnTogglePause(togglePause);
+      engineRef.current.setOnToggleFastForward(toggleFastForward);
     }
-  }, [animationsEnabled]);
-
-  useEffect(() => {
-    if (engineRef.current) {
-      engineRef.current.setRenderCanvasText(renderCanvasText);
-    }
-  }, [renderCanvasText]);
-
-  useEffect(() => {
-    if (engineRef.current) {
-      engineRef.current.setKeyBindings(keyBindings);
-    }
-  }, [keyBindings]);
+  }, [engineRef, togglePause, toggleFastForward]);
 
   // This effect ensures that the initial view of the canvas is drawn correctly,
   // especially after a client-side navigation where layout calculations might be delayed.
   useEffect(() => {
     if (engineRef.current) {
       // Force a draw call to initialize the view if it hasn't been already.
-      engineRef.current.draw(isPausedRef.current, isFastForwardRef.current);
+      engineRef.current.draw(isPaused, isFastForward);
     }
-  }, [isDayTransition]); // Triggering on isDayTransition ensures this runs after initial setup.
+  }, [engineRef, isDayTransition, isPaused, isFastForward]); // Triggering on isDayTransition ensures this runs after initial setup.
 
-  // Announce new critical alerts for screen readers
+  // --- Input Handling ---
+  // We use a ref to track if input is blocked to avoid re-binding the event listener
+  // every time a modal opens or closes.
+  const isInputBlockedRef = useRef(false);
+  useEffect(() => {
+    isInputBlockedRef.current = 
+      isAccessibilityOpen ||
+      isQuitOpen ||
+      isAlertsModalOpen ||
+      isHintsModalOpen ||
+      isHelpOpen ||
+      (!showDetailsInSidebar && (!!selectedSub || !!selectedBranch));
+  }, [isAccessibilityOpen, isQuitOpen, isAlertsModalOpen, isHintsModalOpen, isHelpOpen, showDetailsInSidebar, selectedSub, selectedBranch]);
+
+  useGameInput({
+    engineRef,
+    keyBindings,
+    isInputBlockedRef,
+    selectedSub,
+    selectedBranch,
+    isBlackout
+  });
+
+  // Announce new alerts for screen readers
   useEffect(() => {
     if (alerts.length > 0) {
         const latestAlert = alerts[0];
-        // Announce only new, critical alerts to avoid spamming the user
-        if (latestAlert.id !== lastAnnouncedAlertId && latestAlert.critical) {
-            setAnnouncement(`Alert: ${latestAlert.message}`);
+        // Announce any new alert to avoid missing important information.
+        if (latestAlert.id !== lastAnnouncedAlertId) {
+            const prefix = latestAlert.critical ? "Critical Alert:" : "Alert:";
+            setAnnouncement(`${prefix} ${latestAlert.message}`);
             setLastAnnouncedAlertId(latestAlert.id);
         }
     }
@@ -265,16 +305,18 @@ function GamePageContent() {
     const gameShouldBePaused =
       isAccessibilityOpen ||
       isQuitOpen ||
+      isAlertsModalOpen ||
+      isHintsModalOpen ||
       isDayTransition ||
       isDayFinished ||
       isUserPaused ||
       isHelpOpen;
     setIsPaused(gameShouldBePaused);
-  }, [isAccessibilityOpen, isQuitOpen, isDayTransition, isDayFinished, isUserPaused, isHelpOpen]);
+  }, [isAccessibilityOpen, isQuitOpen, isDayTransition, isDayFinished, isUserPaused, isHelpOpen, isAlertsModalOpen, isHintsModalOpen]);
 
   const showBriefingForDay = (dayToShow: number) => {
     setTargetDay(dayToShow);
-    const briefing = engineRef.current?.getBriefingForDay(dayToShow);
+    const briefing = getBriefing(dayToShow);
     setCurrentBriefing(briefing || null);
     setIsDayTransition(true);
     setRightSidebarTab('brief');
@@ -296,42 +338,23 @@ function GamePageContent() {
     setHints([]);
   }
 
-  const togglePause = () => {
-    const nextIsUserPaused = !isUserPaused;
-    setIsUserPaused(nextIsUserPaused);
-
-    // If the user is pausing the game, we should always turn off fast-forward
-    // to ensure resuming starts at normal speed.
-    if (nextIsUserPaused) {
-      setIsFastForward(false);
-    }
-  }
-
-  const toggleFastForward = () => {
-    if (isFastForward) {
-      setIsFastForward(false) // Go back to normal
-    } else {
-      setIsFastForward(true);
-      setIsUserPaused(false); // Signal user's intent to play
-    }
-  }
-
   const handleStartDay = () => {
     if (isDayTransition) {
-      engineRef.current?.startDay(targetDay);
+      startDay(targetDay);
       setIsDayTransition(false);
+      setIsFastForward(false);
       setIsUserPaused(false); // Explicitly set user intent to "play" when the day starts.
       setDayResultDetails(null);
     }
   }
 
   const handleUnitAction = (subId: string, unitIndex: number) => {
-    engineRef.current?.toggleUnitStatus(subId, unitIndex);
+    dispatch({ type: 'TOGGLE_UNIT', subId, unitIndex });
     setSelectedSub(engineRef.current?.state.subs[subId] || null); // Refresh modal data
   }
 
   const handleSetSetpoint = (subId: string, unitIndex: number, newSetpoint: number) => {
-    engineRef.current?.setUnitSetpoint(subId, unitIndex, newSetpoint);
+    dispatch({ type: 'SET_SETPOINT', subId, unitIndex, value: newSetpoint });
     // Refresh the modal data to reflect the change immediately in the "Pset" value,
     // though the input field itself maintains its own state.
     setSelectedSub(engineRef.current?.state.subs[subId] || null);
@@ -360,148 +383,317 @@ function GamePageContent() {
     router.push(homeUrl);
   }
 
-  const handleSubstationSelect = (sub: Substation) => {
-    setSelectedSub(sub);
-  }
+  const handleCloseDetails = () => {
+    setSelectedSub(null);
+    setSelectedBranch(null);
+    setActiveDetailSection([]);
+    lastFocusedElementRef.current?.focus();
+  };
 
-  const handleBranchSelect = (branch: Branch) => {
-    setSelectedBranch(branch);
-  }
+  const totalGeneration = gameStatistics.windGen + gameStatistics.solarGen + gameStatistics.thermalGen + gameStatistics.nuclearGen;
+
+  // Define the panels as variables to reuse them in different layouts
+  const SidebarPanel = (
+    <ResizablePanel 
+      defaultSize={isMobile ? 40 : 40} 
+      minSize={25} 
+      key="sidebar-panel"
+      className={cn(isMobile ? "border-t-4 border-border" : "")}
+      role="complementary"
+      aria-label="Game Sidebar"
+    >
+          <div className={cn("group w-full h-full bg-sidebar")}>
+            <ResizablePanelGroup direction="vertical" className="flex h-full">
+              <ResizablePanel defaultSize={showDetailsInSidebar ? 50 : 100} minSize={25} className="!overflow-y-auto">
+                <SidebarContent className="font-share-tech flex flex-col p-4 h-full">
+                  <KeyStats
+                    stats={gameStatistics}
+                    totalGeneration={totalGeneration}
+                    aria-label="Game information dashboard"
+                  />
+                  <Tabs value={dashboardTab} onValueChange={(value) => setDashboardTab(value as 'briefing' | 'generation' | 'load' | 'energy')} className="w-full flex-1 flex flex-col min-h-0">
+                    <TabsList className={cn("grid w-full", !showDetailsInSidebar ? "grid-cols-2" : "grid-cols-3")}>
+                      <TabsTrigger value="briefing" className="cursor-pointer">Briefing</TabsTrigger>
+                      {!showDetailsInSidebar ? (
+                        <TabsTrigger value="energy" className="cursor-pointer">Grid Health</TabsTrigger>
+                      ) : (
+                        <>
+                          <TabsTrigger value="generation" className="cursor-pointer">Generation</TabsTrigger>
+                          <TabsTrigger value="load" className="cursor-pointer">Load</TabsTrigger>
+                        </>
+                      )}
+                    </TabsList>
+                    <TabsContent value="briefing" className="mt-4 flex-1 flex flex-col min-h-0">
+                      <div className="flex-1 overflow-y-auto pr-2 -mr-2 space-y-4">
+                        {isDayFinished && dayResultDetails ? (
+                          <DayResults stats={gameStatistics} day={gameStatistics.day} resultDetails={dayResultDetails} />
+                        ) : currentBriefing ? (
+                          <div className="space-y-3">
+                            <h4 className="font-bold leading-none">Day {targetDay} Briefing</h4>
+                            <div className="bg-muted/20 p-3 rounded-lg border border-border text-sm">
+                              {currentBriefing.isList ? (
+                                <ul className="list-disc pl-4 space-y-1.5">{currentBriefing.points.map((point, index) => <li key={index}>{point}</li>)}</ul>
+                              ) : (<p>{currentBriefing.points[0]}</p>)}
+                            </div>
+                          </div>
+                        ) : ( !isDayTransition && <div className="p-4 text-center text-muted-foreground">Day {gameStatistics.day}</div> )}
+                      </div>
+                      <div className="mt-auto pt-4">
+                        {isDayTransition ? (
+                          <Button onClick={handleStartDay} className="w-full">Start Day {targetDay}</Button>
+                        ) : isDayFinished && (
+                          <div className="grid grid-cols-2 gap-2">
+                            <Button onClick={() => handleReplayDay(gameStatistics.day)} variant="secondary" className="flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm">
+                              <RotateCw className="h-4 w-4" />
+                              <span>Replay Today</span>
+                            </Button>
+                            <Button onClick={() => handleNextDay(gameStatistics.day)} className="flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm">
+                              <span>Next Day</span>
+                              <ArrowRight className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                      </div>
+                    </TabsContent>
+                    {!showDetailsInSidebar ? (
+                      <TabsContent value="energy" className="mt-4 flex-1 flex flex-col min-h-0">
+                        <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+                          <EnergyDashboard stats={gameStatistics} />
+                        </div>
+                      </TabsContent>
+                    ) : (
+                      <>
+                        <TabsContent value="generation" className="mt-4 flex-1 flex flex-col min-h-0">
+                          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+                            <GenerationDashboard stats={gameStatistics} />
+                          </div>
+                        </TabsContent>
+                        <TabsContent value="load" className="mt-4 flex-1 flex flex-col min-h-0">
+                          <div className="flex-1 overflow-y-auto pr-2 -mr-2">
+                            <LoadDashboard stats={gameStatistics} />
+                          </div>
+                        </TabsContent>
+                      </>
+                    )}
+                  </Tabs>
+                </SidebarContent>
+              </ResizablePanel>
+              {showDetailsInSidebar && (
+                <>
+                  <ResizableHandle withHandle />
+                  <ResizablePanel defaultSize={50} minSize={20}>
+                    <SidebarContent className="font-share-tech flex flex-col p-4 h-full">
+                      <div className="flex flex-col h-full">
+                        {selectedSub ? (
+                          <SubstationDetailView
+                            sub={selectedSub}
+                            onClose={handleCloseDetails}
+                            onUnitAction={handleUnitAction}
+                            onSetSetpoint={handleSetSetpoint}
+                            frWind={gameStatistics?.fr_wind}
+                            frSolar={gameStatistics?.fr_solar}
+                            isPaused={isPaused}
+                          />
+                        ) : selectedBranch ? (
+                          <BranchDetailView
+                            branch={selectedBranch}
+                            onClose={handleCloseDetails}
+                            onCircuitAction={(branchId, circuit) => dispatch({ type: 'TOGGLE_BRANCH', branchId, circuitNum: circuit })}
+                            isPaused={isPaused}
+                          />
+                        ) : (
+                          <Empty className="py-12">
+                            <EmptyMedia variant="default">
+                              <div className="flex items-center justify-center gap-4 text-muted-foreground" aria-hidden="true">
+                                <SubstationIcon className="size-12" />
+                                <LinesIcon className="size-12" />
+                              </div>
+                            </EmptyMedia>
+                            <EmptyHeader>
+                              <EmptyTitle>Nothing Selected</EmptyTitle>
+                              <EmptyDescription>Select an element on the map to see its details.</EmptyDescription>
+                            </EmptyHeader>
+                          </Empty>
+                        )}
+                      </div>
+                    </SidebarContent>
+                  </ResizablePanel>
+                </>
+              )}
+            </ResizablePanelGroup>
+          </div>
+    </ResizablePanel>
+  );
+
+  const MainPanel = (
+    <ResizablePanel defaultSize={isMobile ? 60 : 60} minSize={30} key="main-panel">
+          <main className="h-full flex flex-col" aria-label="Main game area">
+            <div className="font-share-tech relative flex-1 w-full h-full flex flex-col">
+              {viewMode === 'visual' && (
+                <div role="timer" aria-labelledby="vis-day-label vis-day-value vis-time-value" className="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md border border-border/50 shadow-sm flex items-center gap-4">
+                  <div className="flex items-center gap-2">
+                    <span id="vis-day-label" className="text-lg font-semibold text-muted-foreground uppercase">Day</span>
+                    <span id="vis-day-value" className="text-lg font-semibold text-muted-foreground tabular-nums">{gameStatistics.day || 1}</span>
+                  </div>
+                  <time id="vis-time-value" dateTime={`D${gameStatistics.day}T${gameStatistics.timeStr.replace(/ /g, '')}`} className="text-lg font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</time>
+                </div>
+              )}
+              <canvas
+                ref={canvasRef}
+                tabIndex={0}
+                aria-label="Interactive Texas electrical grid map"
+                role="application"
+                className={`h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary ${viewMode !== 'visual' ? 'hidden' : ''}`}
+              ></canvas>
+              {viewMode === 'tabular' && (
+                <div className="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-share-tech">
+                  <div className="flex-1 border-b md:border-b-0 md:border-r p-4 flex flex-col min-h-0">
+                    <div className="flex justify-between items-baseline mb-4">
+                      <h2 className="text-xl font-bold uppercase text-muted-foreground flex items-center gap-2"><SubstationIcon className="h-5 w-5" aria-hidden="true" />Substations</h2>
+                      <div className="flex items-center gap-4" role="timer" aria-labelledby="tab-day-label tab-day-value tab-time-value">
+                        <div className="flex items-center gap-2">
+                          <span id="tab-day-label" className="text-base font-semibold text-muted-foreground uppercase">Day</span>
+                          <span id="tab-day-value" className="text-base font-semibold text-muted-foreground tabular-nums">{gameStatistics.day || 1}</span>
+                        </div>
+                        <time id="tab-time-value" dateTime={`D${gameStatistics.day}T${gameStatistics.timeStr.replace(/ /g, '')}`} className="text-base font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</time>
+                      </div>
+                    </div>
+                    <div className="flex-1 overflow-y-auto -mr-4 pr-4">
+                      <SubstationsList subs={engineRef.current?.state?.subs || {}} onSubstationSelect={handleSubstationSelect} />
+                    </div>
+                  </div>
+                  <div className="flex-1 p-4 flex flex-col min-h-0">
+                    <h2 className="text-xl font-bold mb-4 uppercase text-muted-foreground flex items-center gap-2"><LinesIcon className="h-7 w-7" aria-hidden="true" />Transmission Lines</h2>
+                    <div className="flex-1 overflow-y-auto -mr-4 pr-4">
+                      <BranchesList branches={engineRef.current?.state?.branches || {}} onBranchSelect={handleBranchSelect} />
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </main>
+    </ResizablePanel>
+  );
 
   return (
-    <div className="flex flex-col min-h-screen lg:h-screen w-full lg:overflow-hidden">
+    <div className="flex flex-col h-screen w-full overflow-hidden bg-background">
       <AppHeader
-        onAccessibilityClick={() => {
-          setIsAccessibilityOpen(true);
-        }}
-        onHelpClick={() => {
-          setIsHelpOpen(true);
-        }}
-        onQuitClick={() => {
-          setIsQuitOpen(true);
+        onAccessibilityClick={() => openModal(setIsAccessibilityOpen)}
+        onHelpClick={() => openModal(setIsHelpOpen)}
+        onQuitClick={() => openModal(setIsQuitOpen)}
+        isPaused={isPaused}
+        isFastForward={isFastForward}
+        onTogglePause={togglePause}
+        onToggleFastForward={toggleFastForward}
+        onAlertsClick={() => openModal(setIsAlertsModalOpen)}
+        onHintsClick={() => openModal(setIsHintsModalOpen)}
+        alertsCount={alerts.length}
+        hintsCount={hints.length}
+        controlsDisabled={isDayTransition}
+        isBlackout={isBlackout}
+      />
+      {/* Responsive Resizable Layout with Max Width Constraint */}
+      <div className="flex-1 w-full max-w-[1920px] mx-auto border-x border-border flex flex-col overflow-hidden">
+      <ResizablePanelGroup direction={isMobile ? "vertical" : "horizontal"} className="flex flex-1 w-full h-full">
+        {isMobile ? (
+          <>
+            {MainPanel}
+            <ResizableHandle withHandle />
+            {SidebarPanel}
+          </>
+        ) : (
+          <>
+            {SidebarPanel}
+            <ResizableHandle withHandle />
+            {MainPanel}
+          </>
+        )}
+      </ResizablePanelGroup>
+      </div>
+
+      {/* Modals are now outside the layout flow to avoid duplication */}
+      <HelpModal
+        open={isHelpOpen}
+        onOpenChange={(open: boolean) => {
+          handleModalOpenChange(setIsHelpOpen, open);
+          if (!open && isInitialTutorial) { // After tutorial, show briefing
+            setIsDayTransition(true);
+            setIsInitialTutorial(false);
+          }
         }}
       />
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:flex lg:flex-row flex-1 lg:overflow-hidden">
-          <Sidebar collapsible="none" className={cn("group w-full lg:w-96 border-r border-border bg-sidebar lg:!top-16 lg:!h-[calc(100vh-4rem)] h-auto overflow-visible", "order-2 md:order-1 lg:order-2")} aria-label="Energy Statistics">
-            <SidebarContent className="font-share-tech flex flex-col overflow-y-auto p-4">
-              {/* The EnergyStats component should now contain the generation mix details, replacing the historical plot. */}
-              <EnergyStats stats={gameStatistics} />
-            </SidebarContent>
-          </Sidebar>
-          <main className="order-1 md:order-3 md:col-span-2 lg:order-3 flex-1 flex flex-col relative min-w-0 min-h-[600px] lg:min-h-0 lg:overflow-hidden" aria-label="Main game area">
-        <div className="game-wrapper relative flex-1 w-full min-h-[400px]">
-          <canvas
-            ref={canvasRef}
-            tabIndex={0}
-            aria-label="Interactive Texas electrical grid map"
-            role="application"
-            className={`h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary ${viewMode !== 'visual' ? 'hidden' : ''}`}
-          ></canvas>
-
-          {viewMode === 'tabular' && (
-            <div className="absolute inset-0 flex flex-row overflow-hidden bg-background text-foreground">
-              <div className="flex-1 overflow-y-auto border-r p-4">
-                <h2 className="text-xl font-bold mb-4 font-share-tech uppercase text-muted-foreground flex items-center gap-2">
-                  <SubstationIcon className="h-5 w-5" />
-                  Substations
-                </h2>
-                <SubstationsList 
-                  subs={engineRef.current?.state.subs} 
-                  onSubstationSelect={handleSubstationSelect} 
-                />
-              </div>
-              <div className="flex-1 overflow-y-auto p-4">
-                <h2 className="text-xl font-bold mb-4 font-share-tech uppercase text-muted-foreground flex items-center gap-2">
-                  <LinesIcon className="h-7 w-7" />
-                  Transmission Lines
-                </h2>
-                <BranchesList 
-                  branches={engineRef.current?.state.branches} 
-                  onBranchSelect={handleBranchSelect} 
-                />
-              </div>
-            </div>
-          )}
-
-          {/* Help Modal */}
-          <HelpModal 
-            open={isHelpOpen} 
-            onOpenChange={(open) => {
-              setIsHelpOpen(open);
-              if (!open && isInitialTutorial) { // After tutorial, show briefing
-                setIsDayTransition(true);
-                setIsInitialTutorial(false);
-              }
-            }} 
-          />
-
-          {/* Modals */}
-          <AccessibilityModal
-            open={isAccessibilityOpen}
-            onOpenChange={setIsAccessibilityOpen}
-            viewMode={viewMode}
-            onViewModeChange={(mode) => setViewMode(mode)}
-            animationsEnabled={animationsEnabled}
-            onAnimationsEnabledChange={setAnimationsEnabled}
-            renderCanvasText={renderCanvasText}
-            onRenderCanvasTextChange={setRenderCanvasText}
-            keyBindings={keyBindings}
-            onKeyBindingsChange={setKeyBindings}
-          />
-          {/* === NEW DYNAMIC MODALS === */}
-          <SubstationModal 
-            sub={selectedSub} 
-            onClose={() => setSelectedSub(null)} 
+      <AccessibilityModal
+        open={isAccessibilityOpen}
+        onOpenChange={(open) => handleModalOpenChange(setIsAccessibilityOpen, open)}
+        viewMode={viewMode}
+        onViewModeChange={(mode) => {
+          setViewMode(mode);
+          setAnnouncement(`Display mode changed to ${mode}.`);
+        }}
+        animationsEnabled={animationsEnabled}
+        onAnimationsEnabledChange={setAnimationsEnabled}
+        renderCanvasText={renderCanvasText}
+        onRenderCanvasTextChange={setRenderCanvasText}
+        keyBindings={keyBindings}
+        onKeyBindingsChange={setKeyBindings}
+        showDetailsInSidebar={showDetailsInSidebar}
+        onShowDetailsInSidebarChange={setShowDetailsInSidebar}
+        zoomSensitivity={zoomSensitivity}
+        onZoomSensitivityChange={setZoomSensitivity}
+        fontSize={fontSize}
+        onFontSizeChange={setFontSize}
+        isHighContrast={isHighContrast}
+        onIsHighContrastChange={setIsHighContrast}
+      />
+      {!showDetailsInSidebar && (
+        <>
+          <SubstationModal
+            sub={selectedSub}
+            onClose={handleCloseDetails}
             onUnitAction={handleUnitAction}
             onSetSetpoint={handleSetSetpoint}
             frWind={gameStatistics?.fr_wind}
             frSolar={gameStatistics?.fr_solar}
             isPaused={isPaused}
           />
-          <BranchModal branch={selectedBranch} onClose={() => setSelectedBranch(null)} onCircuitAction={(branchId, circuit) => engineRef.current?.toggleBranchCircuitStatus(branchId, circuit)} isPaused={isPaused} />
+          <BranchModal branch={selectedBranch} onClose={handleCloseDetails} onCircuitAction={(branchId, circuit) => dispatch({ type: 'TOGGLE_BRANCH', branchId, circuitNum: circuit })} isPaused={isPaused} />
+        </>
+      )}
+      <QuitModal
+        open={isQuitOpen}
+        onOpenChange={(open) => handleModalOpenChange(setIsQuitOpen, open)}
+        day={gameStatistics?.day || 1}
+        onQuitToStart={handleQuitToStart}
+        onReplayDay={handleReplayDay}
+        onNextDay={handleNextDay}
+      />
+      <Dialog open={isAlertsModalOpen} onOpenChange={(open) => handleModalOpenChange(setIsAlertsModalOpen, open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Alerts</DialogTitle>
+            <DialogDescription>
+              Critical and informational messages about the grid status.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6">
+            <AlertsList alerts={alerts} onRemoveAlert={removeAlert} onDismissAllAlerts={handleDismissAllAlerts} />
+          </div>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isHintsModalOpen} onOpenChange={(open) => handleModalOpenChange(setIsHintsModalOpen, open)}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Hints</DialogTitle>
+            <DialogDescription>
+              Suggestions and guidance for managing the grid.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6">
+            <HintsList hints={hints} onRemoveHint={removeHint} onDismissAllHints={handleDismissAllHints} />
+          </div>
+        </DialogContent>
+      </Dialog>
 
-          <QuitModal
-            open={isQuitOpen}
-            onOpenChange={(open) => {
-              setIsQuitOpen(open);
-              // Pause/resume is now handled by the central useEffect
-            }}
-            day={gameStatistics?.day || 1}
-            onQuitToStart={handleQuitToStart}
-            onReplayDay={handleReplayDay}
-            onNextDay={handleNextDay}
-          />
-        </div>
-        </main>
-        <RightSidebar
-          stats={gameStatistics}
-          briefing={currentBriefing}
-          alerts={alerts}
-          onRemoveAlert={removeAlert}
-          onDismissAllAlerts={handleDismissAllAlerts}
-          hints={hints}
-          onRemoveHint={removeHint}
-          onDismissAllHints={handleDismissAllHints}
-          isDayFinished={isDayFinished}
-          isDayTransition={isDayTransition}
-          targetDay={targetDay}
-          totalDays={Object.keys(scenarios).length}
-          completedDays={Array.from(completedDays)}
-          onStartDay={handleStartDay}
-          onNextDay={handleNextDay}
-          onReplayDay={handleReplayDay}
-          dayResultDetails={dayResultDetails}
-          activeTab={rightSidebarTab}
-          onTabChange={setRightSidebarTab}
-          progress={progress}
-          isPaused={isPaused}
-          isFastForward={isFastForward}
-          onTogglePause={togglePause}
-          onToggleFastForward={toggleFastForward}
-          className="order-3 md:order-2 md:col-span-1 lg:order-1"
-          aria-label="Game information, alerts, and hints"
-        />
-        </div>
       {/* Visually hidden container for screen reader announcements */}
       <div aria-live="polite" aria-atomic="true" className="sr-only">
         {announcement}

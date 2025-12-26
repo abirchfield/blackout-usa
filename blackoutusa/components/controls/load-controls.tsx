@@ -1,9 +1,11 @@
-// components/gen-unit-details/load-unit-details.tsx
+// components/controls/load-controls.tsx
 "use client";
 
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Substation, Unit, UnitStatus } from "@/lib/game/types";
+import { Button } from "@/components/ui/button"
+import { Substation, Unit, UnitStatus, LoadCategoryType } from "@/lib/game/types"
+import { LoadTypeConfig, StatusConfig } from "@/lib/game/config"
+import { Power } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface LoadUnitDetailsProps {
   sub: Substation;
@@ -13,77 +15,50 @@ interface LoadUnitDetailsProps {
   isPaused?: boolean;
 }
 
-const statusStyles: Record<UnitStatus, { text: string; className: string }> = {
-  [UnitStatus.IN]: { text: 'IN-SERVICE', className: 'bg-green-500/20 text-green-400' },
-  [UnitStatus.DIS]: { text: 'OUT-OF-SERVICE', className: 'bg-gray-500/20 text-gray-400' },
-  [UnitStatus.TRIP]: { text: 'TRIPPED', className: 'bg-red-500/20 text-red-400' },
-  // The following are not applicable to loads but are included for type completeness
-  [UnitStatus.STARTUP]: { text: 'N/A', className: 'bg-yellow-500/20 text-yellow-400' },
-  [UnitStatus.SHUTDOWN]: { text: 'N/A', className: 'bg-gray-500/20 text-gray-400' },
-};
+const loadCategories = Object.values(LoadCategoryType);
 
 /**
  * Renders the detailed view and controls for a single load unit (circuit).
  */
 export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: LoadUnitDetailsProps) {
-  /**
-   * Renders the status badge and text for the load unit.
-   */
-  const renderStatusContent = () => {
-    const style = statusStyles[unit.Status];
-
-    if (!style) {
-      return <p className="font-bold">Circuit #{index + 1} ({unit.Status})</p>;
-    }
-
-    return (
-      <div>
-        <div className="flex items-baseline gap-2">
-          <p className="font-bold">Circuit #{index + 1}</p>
-          {unit.Status === UnitStatus.TRIP && <p className="text-red-500 text-sm whitespace-nowrap">Cannot be reconnected.</p>}
-        </div>
-        <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${style.className}`}>
-          {style.text}
-        </span>
-      </div>
-    );
-  };
-
-  /**
-   * Renders the action button for the load unit.
-   */
-  const renderActionControls = () => {
-    switch (unit.Status) {
-      case UnitStatus.IN:
-        return <Button variant="destructive" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Disconnect</Button>;
-      case UnitStatus.DIS:
-        return <Button variant="secondary" size="sm" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused}>Connect</Button>;
-      case UnitStatus.TRIP:
-        return null; // Tripped units have no actions
-      default:
-        return null;
-    }
-  };
+  const config = StatusConfig[unit.Status];
+  const StatusIcon = config.icon;
+  const category = loadCategories[index % loadCategories.length];
+  const { icon: TypeIcon, name: typeName, tailwind } = LoadTypeConfig[category];
+  const mwSuffix = <span className="text-xs text-muted-foreground ml-1">MW</span>;
+  
+  let actionButtonElement: React.ReactNode = null;
+  switch (unit.Status) {
+    case UnitStatus.IN:
+      actionButtonElement = <Button variant="destructive" size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Disconnect Circuit ${index + 1}`} className="cursor-pointer"><Power className="h-5 w-5" /></Button>;
+      break;
+    case UnitStatus.DIS:
+      actionButtonElement = <Button variant="secondary" size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Connect Circuit ${index + 1}`} className="cursor-pointer"><Power className="h-5 w-5" /></Button>;
+      break;
+    default:
+      actionButtonElement = <Button variant="ghost" size="icon" disabled={true} aria-label="Action unavailable" />;
+  }
 
   return (
-    <>
-      <Separator />
-      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-4 py-3 text-sm">
-        {/* Left part: Unit status */}
-        <div className="w-auto flex-shrink-0">
-          {renderStatusContent()}
-        </div>
-
-        {/* Right part: Action controls */}
-        <div className="w-full sm:w-auto flex items-center justify-end gap-x-4">
-          {unit.Status === UnitStatus.IN && (
-            <div className="text-sm font-mono text-right">
-              <p className="font-bold">{unit.P.toFixed(0)} MW</p>
-            </div>
-          )}
-          {renderActionControls()}
-        </div>
-      </div>
-    </>
+    <tr className="border-t border-border/50 align-middle" aria-labelledby={`load-circuit-header-${sub.Number}-${index}`}>
+      <th scope="row" id={`load-circuit-header-${sub.Number}-${index}`} className="p-2 align-middle font-bold text-center">
+        {index + 1}
+      </th>
+      <td className="p-2 align-middle text-left">
+        <TypeIcon aria-hidden="true" className={cn("h-4 w-4 inline-block mr-2 align-middle", tailwind.text)} />
+        <span className="align-middle">{typeName}</span>
+      </td>
+      <td className="p-2 align-middle text-center">
+        {config && (
+          <StatusIcon role="img" aria-label={config.label} className={cn("h-5 w-5 mx-auto", config.tailwind.text)} title={config.label} />
+        )}
+      </td>
+      <td className="p-2 font-mono align-middle text-right">
+        {unit.Status === UnitStatus.IN ? <>{unit.P.toFixed(0)}{mwSuffix}</> : '---'}
+      </td>
+      <td className="p-2 align-middle text-center">
+        {actionButtonElement}
+      </td>
+    </tr>
   );
 }

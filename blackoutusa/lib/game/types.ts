@@ -1,32 +1,40 @@
-import * as math from "mathjs";
 import { KeyBindings } from "./key-bindings";
+import * as math from "mathjs";
 
-// --- Statuses ---
+// Enums
 export enum UnitStatus {
   IN = "IN",
   DIS = "DIS",
-  TRIP = "TRIP",
   STARTUP = "STARTUP",
   SHUTDOWN = "SHUTDOWN",
+  TRIP = "TRIP"
 }
 
 export enum BranchStatus {
   IN = "IN",
   DIS = "DIS",
-  TRIP = "TRIP",
+  TRIP = "TRIP"
 }
-// --- Categories ---
+
 export enum SubstationCategory {
-  Load = "Load",
-  Wind = "Wind",
-  Solar = "Solar PV",
   Nuclear = "Nuclear Steam",
   Thermal = "Thermal",
   GasTurbine = "Gas Turbine",
   GasCombinedCycle = "Gas Combined Cycle",
   CoalFiredSteam = "Coal-fired Steam",
+  Wind = "Wind",
+  Solar = "Solar PV",
+  Load = "Load"
 }
 
+export enum LoadCategoryType {
+  Residential = "Residential",
+  Commercial = "Commercial",
+  Industrial = "Industrial",
+  Datacenter = "Datacenter"
+}
+
+// Interfaces
 export interface Unit {
   Status: UnitStatus;
   P: number;
@@ -38,25 +46,42 @@ export interface Unit {
 
 export interface Substation {
   Name: string;
-  Latitude: number;
-  Longitude: number;
+  Number: string;
+  Category: SubstationCategory;
   Units: number;
-  Category: SubstationCategory; // Now strongly typed
   Pmax: number;
   Pmin: number;
+  Ramp: number;
+  StartTime: number;
   FixedCost: number;
   FuelCost: number;
-  StartTime: number;
-  Ramp: number;
+  Latitude: number;
+  Longitude: number;
   U: Unit[];
-  Number: string;
   island?: number;
+}
+
+export interface Branch {
+  Number: string;
+  FromNum: string;
+  ToNum: string;
+  FromSub: string;
+  ToSub: string;
+  sub1?: Substation;
+  sub2?: Substation;
+  Circuits: number;
+  Status1: BranchStatus;
+  Status2: BranchStatus;
+  P: number;
+  Pmax: number;
+  Z: number;
+  dist?: number;
 }
 
 export interface GameMetrics {
   loadServed: number;
   loadUnserved: number;
-  reserves: number; // Total reserves
+  reserves: number;
   reservesWind: number;
   reservesSolar: number;
   reservesThermal: number;
@@ -65,65 +90,27 @@ export interface GameMetrics {
   solarGen: number;
   thermalGen: number;
   nuclearGen: number;
-  currentFuelCost: number;
   currentOpCost: number;
+  currentFuelCost: number;
   currentUnservedCost: number;
-  totalFuelCost: number;
   totalOpCost: number;
+  totalFuelCost: number;
   totalUnservedCost: number;
   totalCost: number;
   avgCost: number;
   totalMwh: number;
 }
 
-export interface Branch {
-  Number: string;
-  FromSub: string;
-  ToSub: string;
-  FromNum: string;
-  ToNum: string;
-  Status1: BranchStatus;
-  Status2: BranchStatus;
-  P: number;
-  Pmax: number;
-  Circuits: number;
-  Z: number;
-  // These are calculated at runtime, so they are optional in the raw data
-  sub1?: Substation;
-  sub2?: Substation;
-  dist?: number;
-}
+export type GameStatistics = GameMetrics & {
+  day: number;
+  timeStr: string;
+  timeStep: number;
+  frequency: number;
+  fr_wind: number;
+  fr_solar: number;
+};
 
-export interface ScenarioData {
-  subs: Record<string, Substation>;
-  branches: Record<string, Branch>;
-  borders: number[][];
-  nsubs: number;
-}
-
-export interface Briefing {
-  title: string;
-  points: string[];
-  isList: boolean;
-}
-
-export interface Alert {
-  message: string;
-  critical: boolean;
-}
-
-export type AlertHandler = (alert: Alert, reset?: boolean) => void;
-
-export interface Hint {
-  message: string;
-}
-
-export type HintHandler = (hint: Hint, reset?: boolean) => void;
-
-export type InteractionHandler = (type: 'sub' | 'branch', data: Substation | Branch) => void;
-
-export interface GameState {
-  // Game Loop Vars
+export interface ViewState {
   anim_cycle_state: number;
   scale_adjust: number;
   xmax: number;
@@ -142,10 +129,12 @@ export interface GameState {
   theme: 'light' | 'dark';
   animationsEnabled: boolean;
   renderCanvasText: boolean;
+  zoomSensitivity: number;
   debug_draw_map_bounds: boolean;
   keyBindings: KeyBindings;
-  
-  // Input State
+}
+
+export interface InputState {
   inDrag: boolean;
   dragstartX: number;
   dragstartY: number;
@@ -153,27 +142,74 @@ export interface GameState {
   dragorigY: number;
   hoverBranch: Branch | null;
   hoverSub: Substation | null;
+}
 
-  // Data
+export interface SimulationState {
+  t: number;
+  day: number;
+  frequency: number;
   subs: Record<string, Substation>;
   branches: Record<string, Branch>;
   borders: number[][];
   nsubs: number;
   Ybus: math.Matrix | null;
   Yinv: math.LUDecomposition | null;
-  
   metrics: GameMetrics;
-  // Physics factors
   fr_load: number;
   fr_wind: number;
   fr_solar: number;
 }
 
-export interface GameStatistics extends GameMetrics {
-  day: number;
-  timeStr: string;
-  timeStep: number;
-  frequency: number;
-  fr_wind: number;
-  fr_solar: number;
+export interface GameState extends SimulationState, ViewState, InputState {}
+
+export type InteractionHandler = (type: 'sub' | 'branch', data: Substation | Branch) => void;
+export type AlertHandler = (alert: Alert, reset?: boolean) => void;
+export type HintHandler = (hint: Hint, reset?: boolean) => void;
+
+export interface Briefing {
+  title: string;
+  isList: boolean;
+  points: string[];
 }
+
+export interface Alert {
+  message: string;
+  critical: boolean;
+}
+
+export interface Hint {
+  message: string;
+}
+
+export interface AppSettings {
+  viewMode: 'visual' | 'tabular';
+  animationsEnabled: boolean;
+  renderCanvasText: boolean;
+  showDetailsInSidebar: boolean;
+  zoomSensitivity: number;
+  keyBindings: KeyBindings;
+  isHighContrast: boolean;
+}
+
+export interface ResultDetails {
+  performance: 'record' | 'good' | 'okay' | 'bad';
+  costM: string;
+  message: string;
+}
+
+export interface IScenario {
+  readonly day: number;
+  readonly briefing: Briefing;
+  start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
+  update(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
+  getResultDetails(totalCost: number): ResultDetails;
+}
+
+export type SimulationAction =
+  | { type: 'TOGGLE_UNIT'; subId: string; unitIndex: number }
+  | { type: 'TOGGLE_BRANCH'; branchId: string; circuitNum: 1 | 2 }
+  | { type: 'SET_SETPOINT'; subId: string; unitIndex: number; value: number }
+  | { type: 'DISCONNECT_SMALLEST_LOAD' }
+  | { type: 'DISCONNECT_MOST_LOADED_LINE' }
+  | { type: 'EMERGENCY_LOAD_SHED' }
+  | { type: 'RAMP_ALL_GENERATION' };

@@ -1,6 +1,7 @@
 "use client";
 
 import { UnitStatus, BranchStatus, SubstationCategory } from "@/lib/game/types";
+import { StatusConfig } from "@/lib/game/config";
 
 interface StatusIndicatorProps {
   status: UnitStatus | BranchStatus;
@@ -33,30 +34,15 @@ export function StatusIndicator({ status, category, power = 0, pmax = 1, classNa
         break;
     }
   } else { // Generators and Branches
-    switch (status) {
-      case UnitStatus.IN:
-        indicatorClassName = 'bg-green-500';
-        const brightness = pmax > 0 ? power / pmax : 0;
-        indicatorStyle.opacity = Math.max(0.2, brightness);
-        if (!title) title = `In-Service (${power.toFixed(0)} MW)`;
-        break;
-      case UnitStatus.STARTUP:
-        indicatorClassName = 'bg-green-500 animate-pulse';
-        if (!title) title = 'Starting Up';
-        break;
-      case UnitStatus.SHUTDOWN:
-        indicatorClassName = 'bg-gray-600';
-        if (!title) title = 'Shutting Down';
-        break;
-      case UnitStatus.TRIP:
-        indicatorClassName = 'bg-red-500';
-        if (!title) title = 'Tripped';
-        break;
-      case UnitStatus.DIS:
-      default:
-        indicatorClassName = 'border border-muted-foreground';
-        if (!title) title = 'Out-of-Service';
-        break;
+    // Map BranchStatus to UnitStatus for config lookup if needed, or just use the key
+    // Since BranchStatus keys (IN, DIS, TRIP) exist in UnitStatus, this works.
+    const config = StatusConfig[status as UnitStatus] || StatusConfig[UnitStatus.DIS];
+    indicatorClassName = config.tailwind.bg;
+    if (!title) title = config.label;
+    if (status === UnitStatus.IN) {
+      const brightness = pmax > 0 ? power / pmax : 0;
+      indicatorStyle.opacity = Math.max(0.2, brightness);
+      if (!title || title === 'In-Service') title = `In-Service (${power.toFixed(0)} MW)`;
     }
   }
 

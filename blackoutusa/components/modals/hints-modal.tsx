@@ -18,34 +18,27 @@ interface HintsListProps {
 
 export function HintsList({ hints, onRemoveHint, onDismissAllHints }: HintsListProps) {
   return (
-    <div className="-mx-4 border-t">
+    <div>
       {hints.length === 0 ? (
         <div className="p-4 text-center text-muted-foreground">No hints to show</div>
       ) : (
-        <div className="flex flex-col">
-          <div className="p-3 border-b">
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={onDismissAllHints}
-              disabled={hints.length === 0}
-              aria-label="Dismiss all hints"
-              className="w-full"
-            >
-              Dismiss All Hints
-            </Button>
+        <div>
+          <div className="flex justify-end p-2 border-b">
+            <Button variant="ghost" size="sm" onClick={onDismissAllHints}>Dismiss All</Button>
           </div>
-          {hints.map((hint) => (
-            <div key={hint.id} className="flex items-start gap-3 border-b p-3">
-              <Badge variant="secondary" className="mt-0.5 whitespace-nowrap">{hint.time}</Badge>
-              <p className="flex-1 text-sm leading-snug">
-                {hint.message}
-              </p>
-              <Button variant="ghost" size="icon" onClick={() => onRemoveHint(hint.id)} className="h-6 w-6 shrink-0 cursor-pointer">
-                <X className="h-4 w-4" />
-              </Button>
-            </div>
-          ))}
+          <ul className="flex flex-col" aria-label="List of hints">
+            {hints.map((hint) => (
+              <li key={hint.id} className="flex items-start gap-3 border-b p-3">
+                <Badge variant="secondary" className="mt-0.5 whitespace-nowrap">{hint.time}</Badge>
+                <p className="flex-1 text-sm leading-snug">
+                  {hint.message}
+                </p>
+                <Button variant="ghost" size="icon" onClick={() => onRemoveHint(hint.id)} className="h-6 w-6 shrink-0 cursor-pointer" aria-label={`Dismiss hint: ${hint.message}`}>
+                  <X className="h-4 w-4" />
+                </Button>
+              </li>
+            ))}
+          </ul>
         </div>
       )}
     </div>

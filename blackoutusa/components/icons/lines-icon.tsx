@@ -1,8 +1,10 @@
 import React from "react";
 
-type LinesIconProps = React.SVGProps<SVGSVGElement>;
+type LinesIconProps = React.SVGProps<SVGSVGElement> & {
+  title?: string;
+};
 
-export const LinesIcon = (props: LinesIconProps) => {
+export const LinesIcon = ({ title = "Transmission line icon", ...props }: LinesIconProps) => {
   // --- CONFIGURATION ---
   const H_PEAK = 18;       // Triangle height
   const H_NECK = 66;       // Neck height
@@ -40,6 +42,7 @@ export const LinesIcon = (props: LinesIconProps) => {
       // X: -12 to 112 (Width 124) spans the 120-wide arms + padding
       // Y: 3 to 137 (Height 134) spans peak to base legs + padding
       viewBox="-12 3 124 134"
+      role="img"
       fill="none"
       stroke="currentColor"
       strokeWidth="3"
@@ -47,6 +50,7 @@ export const LinesIcon = (props: LinesIconProps) => {
       strokeLinejoin="round"
       {...props}
     >
+      <title>{title}</title>
       {/* --- STRUCTURE --- */}
       {/* Rails & Legs */}
       <path d={`M${xNeckL} ${y1} V${yWaist}`} />

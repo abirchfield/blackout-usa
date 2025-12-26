@@ -5,69 +5,68 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogDescription,
-  DialogFooter,
+  DialogDescription
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
-import { Separator } from "@/components/ui/separator"
-import { Branch, BranchStatus } from "@/lib/game/types"
-import { StatusIndicator } from "../indicators/status-indicator"
+import { X } from "lucide-react"
+import { Branch } from "@/lib/game/types"
+import { CircuitTable } from "../tables/circuit-table"
+import { LinesIcon } from "@/components/icons/lines-icon"
 
-interface CircuitDisplayProps {
+interface BranchModalContentProps {
   branch: Branch;
-  circuitNum: 1 | 2;
+  onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
+  isPaused?: boolean;
+  showTitle?: boolean; // Used to hide title when content is embedded in another component
+}
+
+export function BranchModalContent({ branch, onCircuitAction, isPaused, showTitle = true }: BranchModalContentProps) {
+  const fromSub = branch.sub1?.Name || branch.FromSub;
+  const toSub = branch.sub2?.Name || branch.ToSub;
+
+  return (
+    <>
+      {showTitle && (
+        <div className="flex flex-col space-y-1.5 text-center sm:text-left mb-4">
+          <h2 className="text-3xl font-bold leading-none tracking-tight">Line: {fromSub} to {toSub}</h2>
+          <p className="text-sm text-muted-foreground">
+            Total Flow: {Math.abs(branch.P).toFixed(0)} MW
+          </p>
+        </div>
+      )}
+      <CircuitTable branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} />
+    </>
+  );
+}
+
+// --- Reusable Detail View for Sidebar ---
+interface BranchDetailViewProps {
+  branch: Branch;
+  onClose: () => void;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
 }
 
-function CircuitDisplay({ branch, circuitNum, onCircuitAction, isPaused }: CircuitDisplayProps) {
-  const status = circuitNum === 1 ? branch.Status1 : branch.Status2;
-  
-  // Flow on a single circuit. If both are in, total P is shared.
-  const inServiceCircuits = (branch.Status1 === BranchStatus.IN ? 1 : 0) + (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN ? 1 : 0);
-  const flow = inServiceCircuits > 0 ? branch.P / inServiceCircuits : 0;
-
-  let statusText: string;
-  let buttonText: string | null = null;
-  let buttonDisabled = false;
-
-  switch (status) {
-    case BranchStatus.IN:
-      statusText = `Circuit ${circuitNum} is <strong>IN-SERVICE</strong>.<br/>Flow: ${Math.abs(flow).toFixed(0)} MW<br/>Rating: ${branch.Pmax.toFixed(0)} MW`;
-      buttonText = "Open (Disconnect)";
-      break;
-    case BranchStatus.DIS:
-      statusText = `Circuit ${circuitNum} is <strong>OUT-OF-SERVICE</strong>.`;
-      buttonText = "Close (Connect)";
-      break;
-    case BranchStatus.TRIP:
-      statusText = `Circuit ${circuitNum} has <strong>TRIPPED</strong> and cannot be reclosed.`;
-      buttonText = null;
-      buttonDisabled = true;
-      break;
-    default:
-      statusText = `Circuit ${circuitNum} has an unknown status: ${status}`;
-      buttonDisabled = true;
-  }
+export function BranchDetailView({ branch, onClose, onCircuitAction, isPaused }: BranchDetailViewProps) {
+  const fromSub = branch.sub1?.Name || branch.FromSub;
+  const toSub = branch.sub2?.Name || branch.ToSub;
 
   return (
     <>
-      <Separator />
-      <div className="flex justify-between items-center py-3">
-        <div className="flex items-center gap-3">
-          <StatusIndicator status={status} />
-          <div className="text-sm" dangerouslySetInnerHTML={{ __html: statusText }} />
-        </div>
-        {buttonText && (
-          <Button
-            variant={status === BranchStatus.IN ? "destructive" : "secondary"}
-            size="sm"
-            onClick={() => onCircuitAction(branch.Number, circuitNum)}
-            disabled={buttonDisabled || isPaused}
-          >
-            {buttonText}
-          </Button>
-        )}
+      <div className="flex items-center justify-between mb-4 flex-shrink-0">
+        <h3 className="text-lg font-bold flex items-center gap-2">
+          <LinesIcon className="h-7 w-7" aria-hidden="true" />
+          <span className="truncate" title={`Line: ${fromSub} to ${toSub}`}>{`Line: ${fromSub} to ${toSub}`}</span>
+        </h3>
+        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close details">
+          <X className="h-4 w-4" />
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground mb-4">
+        Total Flow: {Math.abs(branch.P).toFixed(0)} MW ({branch.P >= 0 ? `${fromSub} to ${toSub}` : `${toSub} to ${fromSub}`})
+      </p>
+      <div className="overflow-y-auto flex-1 min-w-0">
+        <BranchModalContent branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} showTitle={false} />
       </div>
     </>
   );
@@ -84,28 +83,22 @@ interface BranchModalProps {
 export function BranchModal({ branch, onClose, onCircuitAction, isPaused }: BranchModalProps) {
   if (!branch) return null;
 
-  const fromSub = branch.sub1?.Name || branch.FromSub;
-  const toSub = branch.sub2?.Name || branch.ToSub;
-  const flowDirection = branch.P >= 0 ? `${fromSub} to ${toSub}` : `${toSub} to ${fromSub}`;
-
   return (
     <Dialog open={!!branch} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-[600px] font-share-tech">
-        <DialogHeader>
-          <DialogTitle className="text-3xl font-bold">Line: {fromSub} to {toSub}</DialogTitle>
-          <DialogDescription>
-            Total Flow: {Math.abs(branch.P).toFixed(0)} MW ({flowDirection})
-          </DialogDescription>
+      <DialogContent className="sm:max-w-3xl font-share-tech">
+        {/* The DialogTitle and DialogDescription are now inside BranchModalContent,
+            but we need a sr-only version here to satisfy accessibility requirements of the Dialog. */}
+        <DialogHeader className="sr-only">
+          <DialogTitle>Line: {branch.sub1?.Name || branch.FromSub} to {branch.sub2?.Name || branch.ToSub}</DialogTitle>
+          <DialogDescription>Controls and details for the transmission line.</DialogDescription>
         </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto pr-4">
-          <CircuitDisplay branch={branch} circuitNum={1} onCircuitAction={onCircuitAction} isPaused={isPaused} />
-          {branch.Circuits === 2 && (
-            <CircuitDisplay branch={branch} circuitNum={2} onCircuitAction={onCircuitAction} isPaused={isPaused} />
-          )}
+        <div className="max-h-[60vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
+          <BranchModalContent
+            branch={branch}
+            onCircuitAction={onCircuitAction}
+            isPaused={isPaused}
+          />
         </div>
-        <DialogFooter className="mt-4">
-          <Button onClick={onClose}>Close</Button>
-        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

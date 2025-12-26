@@ -1,8 +1,12 @@
 import React from "react";
+import { SubstationCategory } from "@/lib/game/types";
 
-type SubstationIconProps = React.SVGProps<SVGSVGElement>;
+type SubstationIconProps = React.SVGProps<SVGSVGElement> & {
+  category?: SubstationCategory;
+  title?: string;
+};
 
-export const SubstationIcon = (props: SubstationIconProps) => {
+export const SubstationIcon = ({ category, title = "Substation icon", ...props }: SubstationIconProps) => {
   // --- CONFIGURATION VARIABLES (Internal Grid 0-100) ---
   // Note: The viewBox is cropped to "7 2 86 86" to fit these elements tightly.
 
@@ -38,6 +42,7 @@ export const SubstationIcon = (props: SubstationIconProps) => {
       // Y=2 (Top tip of center stem)
       // W=86, H=86 (Tightly wraps to bottom tank edge at 87)
       viewBox="7 2 86 86"
+      role="img"
       fill="none"
       stroke="currentColor"
       strokeWidth="4"
@@ -45,6 +50,7 @@ export const SubstationIcon = (props: SubstationIconProps) => {
       strokeLinejoin="round"
       {...props}
     >
+      <title>{title}</title>
       {/* --- MAIN TANK --- */}
       <rect x={tX} y={tY} width={tW} height={tH} rx="3" />
 

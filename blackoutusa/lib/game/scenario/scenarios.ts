@@ -1,18 +1,4 @@
-import { GameState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus } from "../types";
-
-export interface ResultDetails {
-    performance: 'record' | 'good' | 'okay' | 'bad';
-    costM: string;
-    message: string;
-}
-
-export interface IScenario {
-    readonly day: number;
-    readonly briefing: Briefing;
-    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
-    update(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
-    getResultDetails(totalCost: number): ResultDetails;
-}
+import { SimulationState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, IScenario, ResultDetails } from "../types";
 
 class Day1Scenario implements IScenario {
     readonly day = 1;
@@ -28,7 +14,11 @@ class Day1Scenario implements IScenario {
         ]
     };
 
-    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    private readonly restorations: [number, string, string][] = [
+        [30, "15", 'all-u-3'], [50, "35", 'b2'], [70, "8", 'all'], [90, "33", 'b1'], [110, "59", 'b1'], [130, "5", 'all'], [150, "5", 'b1'], [170, "43", 'b1'], [190, "25", 'all-u-2'], [200, "15", 'all-u-8-from-3'], [230, "16", 'all-u-5-from-2'], [250, "10", 'b1'], [270, "25", 'all-u-4-from-2'], [300, "21", 'all-u-4-from-1'], [360, "14", 'all-u-2'], [390, "30", 'b1'], [420, "2", 'all-u-5-from-3'], [430, "14", 'all-u-4-from-2'], [440, "15", 'b1'], [450, "20", 'b1'], [460, "16", 'b1'], [490, "29", 'b1'], [500, "50", 'b1'], [520, "21", 'b1'], [540, "36", 'b1'],
+    ];
+
+    start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
@@ -39,7 +29,7 @@ class Day1Scenario implements IScenario {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    update(state: GameState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
+    update(state: SimulationState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -98,7 +88,7 @@ class Day2Scenario implements IScenario {
         ]
     };
 
-    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
@@ -106,7 +96,7 @@ class Day2Scenario implements IScenario {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    update(state: GameState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
+    update(state: SimulationState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -168,7 +158,7 @@ class Day3Scenario implements IScenario {
         ]
     };
 
-    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
@@ -176,7 +166,7 @@ class Day3Scenario implements IScenario {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    update(state: GameState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
+    update(state: SimulationState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -248,7 +238,7 @@ class Day4Scenario implements IScenario {
         ]
     };
 
-    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
@@ -256,7 +246,7 @@ class Day4Scenario implements IScenario {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    update(state: GameState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
+    update(state: SimulationState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
@@ -318,7 +308,12 @@ class Day5Scenario implements IScenario {
         ]
     };
 
-    start(state: GameState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
+    private readonly restorations: [number, string, string][] = [
+        [30, "15", 'all-u-3'], [50, "35", 'b2'], [70, "8", 'all'], [90, "33", 'b1'], [110, "59", 'b1'], [130, "5", 'all'], [150, "5", 'b1'], [170, "43", 'b1'], [190, "25", 'all-u-2'], [200, "15", 'all-u-8-from-3'], [230, "16", 'all-u-5-from-2'], [250, "10", 'b1'], [270, "25", 'all-u-4-from-2'], [300, "21", 'all-u-4-from-1'], [360, "14", 'all-u-2'], [390, "30", 'b1'], [420, "2", 'all-u-5-from-3'], [430, "14", 'all-u-4-from-2'], [440, "15", 'b1'], [450, "20", 'b1'], [460, "16", 'b1'], [490, "29", 'b1'], [500, "50", 'b1'], [520, "21", 'b1'], [540, "36", 'b1'],
+    ];
+
+
+    start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
@@ -364,16 +359,13 @@ class Day5Scenario implements IScenario {
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    update(state: GameState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
+    update(state: SimulationState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
         if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
         if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
 
-        const restorations: [number, string, string][] = [
-            [30, "15", 'all-u-3'], [50, "35", 'b2'], [70, "8", 'all'], [90, "33", 'b1'], [110, "59", 'b1'], [130, "5", 'all'], [150, "5", 'b1'], [170, "43", 'b1'], [190, "25", 'all-u-2'], [200, "15", 'all-u-8-from-3'], [230, "16", 'all-u-5-from-2'], [250, "10", 'b1'], [270, "25", 'all-u-4-from-2'], [300, "21", 'all-u-4-from-1'], [360, "14", 'all-u-2'], [390, "30", 'b1'], [420, "2", 'all-u-5-from-3'], [430, "14", 'all-u-4-from-2'], [440, "15", 'b1'], [450, "20", 'b1'], [460, "16", 'b1'], [490, "29", 'b1'], [500, "50", 'b1'], [520, "21", 'b1'], [540, "36", 'b1'],
-        ];
-        restorations.forEach(([time, id, target]) => {
+        this.restorations.forEach(([time, id, target]) => {
             if (state.t === time) {
                 if (typeof target === 'string' && target.startsWith('b')) { // Branch
                     const br = state.branches[id];
