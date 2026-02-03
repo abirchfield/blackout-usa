@@ -30,6 +30,11 @@ def build_subs(rows):
             "Number": raw["Number"],
             "Name": raw["Name"],
             "Category": raw["Category"],
+        }
+        load_cat = raw.get("LoadCategory", "").strip()
+        if load_cat:
+            sub["LoadCategory"] = load_cat
+        sub.update({
             "Units": units,
             "Latitude": float(raw["Latitude"]),
             "Longitude": float(raw["Longitude"]),
@@ -40,7 +45,7 @@ def build_subs(rows):
             "FixedCost": float(raw["FixedCost"]),
             "FuelCost": float(raw["FuelCost"]),
             "U": [],
-        }
+        })
         for i in range(units):
             status = raw[f"UState{i}"]
             pset = float(raw[f"UPset{i}"])
@@ -102,8 +107,9 @@ def compile_case(case_name):
     case_dir = DATA_DIR / case_name
     output_file = case_dir / "grid.ts"
 
-    subs = build_subs(parse_csv(case_dir / "substations.csv"))
-    branches = build_branches(parse_csv(case_dir / "branches.csv"))
+    source_dir = case_dir / "source"
+    subs = build_subs(parse_csv(source_dir / "substations.csv"))
+    branches = build_branches(parse_csv(source_dir / "branches.csv"))
     nsubs = len(subs)
 
     sub_lines = ",\n".join(
@@ -113,7 +119,7 @@ def compile_case(case_name):
         f"    {json.dumps(k)}: {format_obj(v, BRANCH_FLOAT_KEYS)}" for k, v in branches.items()
     )
 
-    output = f'''import borders from "./borders.json";
+    output = f'''import borders from "./source/borders.json";
 
 export const scenario_data = {{
   "subs": {{

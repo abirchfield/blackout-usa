@@ -2,11 +2,12 @@ import { Wind, Sun, Atom, Flame, Plug, CheckCircle2, XCircle, ArrowUpCircle, Arr
 import { AppSettings, SubstationCategory, UnitStatus, LoadCategoryType } from "./types";
 import { defaultKeyBindings } from "./key-bindings";
 
-// A mapping for generation types to their specific configurations
+// A mapping for generation types to their specific configurations.
+// The `color` field is the single source of truth for each category's color,
+// used by both the canvas renderer and Tailwind utility classes.
 export const GenerationTypeConfig: Record<SubstationCategory, {
   name: string;
-  color: string; // For Canvas drawing (fallback)
-  chartVar: string; // CSS variable name for theme-aware colors
+  color: string;
   tailwind: {
     text: string;
     bg: string;
@@ -17,44 +18,40 @@ export const GenerationTypeConfig: Record<SubstationCategory, {
   [SubstationCategory.Nuclear]: {
     name: "Nuclear",
     color: "#c084fc", // purple-400
-    chartVar: 'chart-1',
     tailwind: {
-      text: "text-[var(--chart-1)]",
-      bg: "bg-[var(--chart-1)]",
-      border: "border-[var(--chart-1)]",
+      text: "text-[#c084fc]",
+      bg: "bg-[#c084fc]",
+      border: "border-[#c084fc]",
     },
     icon: Atom,
   },
-  [SubstationCategory.Thermal]: { name: "Thermal", color: "#fb923c", chartVar: 'chart-2', tailwind: { text: "text-[var(--chart-2)]", bg: "bg-[var(--chart-2)]", border: "border-[var(--chart-2)]" }, icon: Flame },
-  [SubstationCategory.GasTurbine]: { name: "Gas Turbine", color: "#fb923c", chartVar: 'chart-2', tailwind: { text: "text-[var(--chart-2)]", bg: "bg-[var(--chart-2)]", border: "border-[var(--chart-2)]" }, icon: Flame },
-  [SubstationCategory.GasCombinedCycle]: { name: "Combined Cycle", color: "#fb923c", chartVar: 'chart-2', tailwind: { text: "text-[var(--chart-2)]", bg: "bg-[var(--chart-2)]", border: "border-[var(--chart-2)]" }, icon: Flame },
-  [SubstationCategory.CoalFiredSteam]: { name: "Coal Steam", color: "#fb923c", chartVar: 'chart-2', tailwind: { text: "text-[var(--chart-2)]", bg: "bg-[var(--chart-2)]", border: "border-[var(--chart-2)]" }, icon: Flame },
+  [SubstationCategory.Thermal]: { name: "Thermal", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
+  [SubstationCategory.GasTurbine]: { name: "Gas Turbine", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
+  [SubstationCategory.GasCombinedCycle]: { name: "Combined Cycle", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
+  [SubstationCategory.CoalFiredSteam]: { name: "Coal Steam", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
   [SubstationCategory.Wind]: {
     name: "Wind",
     color: "#22d3ee", // cyan-400
-    chartVar: 'chart-3',
     tailwind: {
-      text: "text-[var(--chart-3)]",
-      bg: "bg-[var(--chart-3)]",
-      border: "border-[var(--chart-3)]",
+      text: "text-[#22d3ee]",
+      bg: "bg-[#22d3ee]",
+      border: "border-[#22d3ee]",
     },
     icon: Wind,
   },
   [SubstationCategory.Solar]: {
     name: "Solar",
     color: "#facc15", // yellow-400
-    chartVar: 'chart-4',
     tailwind: {
-      text: "text-[var(--chart-4)]",
-      bg: "bg-[var(--chart-4)]",
-      border: "border-[var(--chart-4)]",
+      text: "text-[#facc15]",
+      bg: "bg-[#facc15]",
+      border: "border-[#facc15]",
     },
     icon: Sun,
   },
   [SubstationCategory.Load]: {
     name: "Load",
     color: "#6b7280", // gray-500
-    chartVar: 'load', // Not a chart var, but a placeholder for drawer
     tailwind: {
       text: "text-muted-foreground",
       bg: "bg-muted-foreground",
@@ -128,7 +125,7 @@ export const LoadTypeConfig: Record<LoadCategoryType, {
   },
   [LoadCategoryType.Datacenter]: {
     name: "Datacenter",
-    description: "Power-hungry server farms and data facilities.",
+    description: "Server farms and data processing facilities.",
     icon: Server,
     tailwind: { text: "text-[var(--color-load-4)]", bg: "bg-[var(--color-load-4)]" }
   }
@@ -142,14 +139,8 @@ export const PhysicsConfig = {
 
 // View and Map Constants
 export const ViewConfig = {
-  INITIAL_X0: -105,
-  INITIAL_Y0: 36,
-  INITIAL_SCALE: 50,
-  SCALE_ADJUST: 0.25,
   ZOOM_LIMIT_MAX: 500,
   DETAIL_ZOOM_LEVEL: 200,
-  // Map Bounds (Texas)
-  MAP_BOUNDS: { XMAX: -93, XMIN: -107, YMAX: 37, YMIN: 25.5 },
   // Dynamic Substation Radius Parameters
   BASE_SUBSTATION_RADIUS_NORMAL: 10,
   BASE_SUBSTATION_RADIUS_HOVER: 13,
@@ -167,6 +158,16 @@ export const ViewConfig = {
   ZOOM_SENSITIVITY_STEP: 0.1,
 };
 
+// Shared radius calculation used by both canvas drawer and event handler.
+// Keeps hover detection and visual rendering perfectly in sync.
+export function getDynamicSubstationRadius(scaleX: number, referenceScale: number, isHover: boolean): number {
+  const baseRadius = isHover ? ViewConfig.BASE_SUBSTATION_RADIUS_HOVER : ViewConfig.BASE_SUBSTATION_RADIUS_NORMAL;
+  const maxRadius = isHover ? ViewConfig.MAX_SUBSTATION_RADIUS_HOVER : ViewConfig.MAX_SUBSTATION_RADIUS;
+  const scaleFactor = Math.sqrt(scaleX / referenceScale);
+  const radius = baseRadius * scaleFactor;
+  return Math.max(ViewConfig.MIN_SUBSTATION_RADIUS, Math.min(radius, maxRadius));
+}
+
 // Drawing and Style Constants for Canvas
 export const DrawingConfig = {
   // Animation
@@ -182,11 +183,10 @@ export const DrawingConfig = {
   BRANCH_RADIUS_MAX: 5.0,
   BRANCH_RADIUS_HOVER_MAX: 7.0,
   SUBSTATION_BORDER_WIDTH: 3,
-  GENERATOR_OUTLINE_WIDTH: 1,
+  GENERATOR_OUTLINE_WIDTH: 2,
   GENERATOR_OUTER_RADIUS_FACTOR: 1.2,
   // The total separation between lines will be (radius * this_factor).
   SECOND_CIRCUIT_OFFSET_FACTOR: 3.0,
-  SECOND_CIRCUIT_OFFSET_FACTOR_HOVER: 4.0,
   POWER_FLOW_LINE_WIDTH_FACTOR: 1.5,
 
   // Line Dashes
@@ -205,7 +205,6 @@ export const DrawingConfig = {
   LABEL_OFFSET_X: 15,
   LABEL_OFFSET_Y: 5,
   LABEL_OUTLINE_WIDTH: 3,
-  LABEL_FADE_END_MULTIPLIER: 2.0,
 };
 
 export const defaultAppSettings: AppSettings = {
@@ -220,7 +219,7 @@ export const defaultAppSettings: AppSettings = {
 
 // Centralized colors for UI and Canvas elements
 export const AppColors = {
-  TRIPPED: "#ef4444", // red-500
+  TRIPPED: "#FF0000", // true red
   POWER_FLOW: "#84cc16", // lime-500
   DEBUG: "#22d3ee", // cyan-400
 };

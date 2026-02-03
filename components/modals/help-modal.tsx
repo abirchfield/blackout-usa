@@ -125,21 +125,12 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   };
 
   const GeneratorExample = ({ category, p, pmax, capacityLabel }: { category: SubstationCategory, p: number, pmax: number, capacityLabel: string }) => {
-    const [resolvedColor, setResolvedColor] = useState("");
     const outerRadius = 24;
     const innerRadius = outerRadius / 1.2; // from DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR
     const center = 28;
     const strokeWidth = 1;
     const genConfig = GenerationTypeConfig[category];
-    
-    useEffect(() => {
-      // This effect runs on the client side to resolve the CSS variable for the generator color.
-      // This ensures that the color respects the current theme (light, dark, high-contrast).
-      const colorVar = getComputedStyle(document.documentElement).getPropertyValue(`--${genConfig.chartVar}`).trim();
-      setResolvedColor(colorVar || genConfig.color); // Fallback to hardcoded color if var not found
-    }, [genConfig.chartVar, genConfig.color]);
-
-    const genColor = resolvedColor || genConfig.color; // Use resolved color, with initial fallback
+    const genColor = genConfig.color;
 
     const ratio = Math.max(0, Math.min(1, p / pmax));
     const endAngle = -Math.PI / 2 + (Math.PI * 2 * ratio);

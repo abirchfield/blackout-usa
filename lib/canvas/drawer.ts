@@ -1,5 +1,6 @@
 import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "../types";
-import { AppColors, DrawingConfig, GenerationTypeConfig, ViewConfig } from "../config";
+import { AppColors, DrawingConfig, GenerationTypeConfig, getDynamicSubstationRadius } from "../config";
+import { activeCase } from "@/data/cases";
 
 // --- Math ---
 const TWO_PI = Math.PI * 2;
@@ -17,7 +18,7 @@ export class GameDrawer {
   private hover_anim_cycle_state: number = 0;
   private colorWarning!: string;
   private colorOverloadCritical!: string;
-  private chartColors: Record<string, string> = {};
+  private cachedTheme: string | null = null;
 
   constructor(canvas: HTMLCanvasElement) {
     this.canvas = canvas;
@@ -95,20 +96,17 @@ export class GameDrawer {
   }
 
   private setThemeColors() {
-    // Dynamically get the resolved theme colors from the document's computed styles.
-    // This ensures the canvas background perfectly matches the page background.
+    // Only re-read computed styles when the theme actually changes.
+    // getComputedStyle is expensive and was previously called every frame (~60/s).
+    const currentTheme = this.state.theme;
+    if (currentTheme === this.cachedTheme) return;
+    this.cachedTheme = currentTheme;
+
     const bodyStyles = window.getComputedStyle(document.body);
     this.primaryColor = bodyStyles.color;
     this.secondaryColor = bodyStyles.backgroundColor;
     this.colorWarning = bodyStyles.getPropertyValue('--color-warning').trim();
     this.colorOverloadCritical = bodyStyles.getPropertyValue('--color-overload-critical').trim();
-
-    this.chartColors = {
-      'chart-1': bodyStyles.getPropertyValue('--chart-1').trim(),
-      'chart-2': bodyStyles.getPropertyValue('--chart-2').trim(),
-      'chart-3': bodyStyles.getPropertyValue('--chart-3').trim(),
-      'chart-4': bodyStyles.getPropertyValue('--chart-4').trim(),
-    };
   }
 
   public resizeCanvas(): boolean {
@@ -322,17 +320,8 @@ export class GameDrawer {
     this.ctx.setLineDash([]); // Reset line dash after drawing all branches
   }
 
-  private getDynamicSubstationRadius(isHover: boolean): number {
-    const baseRadius = isHover ? ViewConfig.BASE_SUBSTATION_RADIUS_HOVER : ViewConfig.BASE_SUBSTATION_RADIUS_NORMAL;
-    const maxRadius = isHover ? ViewConfig.MAX_SUBSTATION_RADIUS_HOVER : ViewConfig.MAX_SUBSTATION_RADIUS;
-    
-    // Scale radius based on zoom, relative to a reference scale.
-    // ViewConfig.INITIAL_SCALE is a good baseline where the baseRadius should apply.
-    const scaleFactor = Math.sqrt(this.state.scaleX / ViewConfig.INITIAL_SCALE);
-    
-    const radius = baseRadius * scaleFactor;
-    
-    return Math.max(ViewConfig.MIN_SUBSTATION_RADIUS, Math.min(radius, maxRadius));
+  private getSubstationRadius(isHover: boolean): number {
+    return getDynamicSubstationRadius(this.state.scaleX, activeCase.mapConfig.initialView.scale, isHover);
   }
 
   private getDynamicBranchRadius(isHover: boolean): number {
@@ -340,8 +329,8 @@ export class GameDrawer {
     const maxRadius = isHover ? DrawingConfig.BRANCH_RADIUS_HOVER_MAX : DrawingConfig.BRANCH_RADIUS_MAX;
     
     // Scale radius based on zoom, relative to a reference scale.
-    // ViewConfig.INITIAL_SCALE is a good baseline where the baseRadius should apply.
-    const scaleFactor = Math.sqrt(this.state.scaleX / ViewConfig.INITIAL_SCALE);
+    // activeCase.mapConfig.initialView.scale is a good baseline where the baseRadius should apply.
+    const scaleFactor = Math.sqrt(this.state.scaleX / activeCase.mapConfig.initialView.scale);
     
     const radius = baseRadius * scaleFactor;
     
@@ -431,18 +420,11 @@ export class GameDrawer {
   }
 
   private drawAllSubstations() {
-    // Calculate label opacity based on zoom level. Labels fade in as the user zooms in
-    // from the minimum zoom level.
-    const zoomForFadeStart = this.state.scale_min;
-    const zoomForFadeEnd = this.state.scale_min * DrawingConfig.LABEL_FADE_END_MULTIPLIER;
-    let labelOpacity = (this.state.scaleX - zoomForFadeStart) / (zoomForFadeEnd - zoomForFadeStart);
-    labelOpacity = Math.max(0, Math.min(1, labelOpacity)); // Clamp between 0 and 1
-
     for (const key in this.state.subs) {
       const sub = this.state.subs[key];
       const { x: cx, y: cy } = this.getScreenPos(sub.Longitude, sub.Latitude);
       const isHover = sub === this.state.hoverSub;
-      const radius = this.getDynamicSubstationRadius(isHover);
+      const radius = this.getSubstationRadius(isHover);
 
       if (sub.Category === SubstationCategory.Load) {
         this.drawLoadSubstation(sub, cx, cy, radius);
@@ -450,12 +432,9 @@ export class GameDrawer {
         this.drawGeneratorSubstation(sub, cx, cy, radius);
       }
 
-      if (this.state.renderCanvasText && labelOpacity > 0) {
-        this.ctx.save();
-        this.ctx.globalAlpha = labelOpacity;
+      if (this.state.renderCanvasText) {
         const font = isHover ? DrawingConfig.FONT_HOVER : DrawingConfig.FONT_NORMAL;
         this.drawOutlinedText(sub.Name, cx + DrawingConfig.LABEL_OFFSET_X, cy + DrawingConfig.LABEL_OFFSET_Y, font, this.primaryColor, this.secondaryColor);
-        this.ctx.restore();
       }
     }
   }
@@ -490,9 +469,16 @@ export class GameDrawer {
 
     const displayColor = allTripped ? AppColors.TRIPPED : genColor;
     const borderColor = displayColor;
-    
+    const outerR = r * DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR;
+
+    // Draw white outline behind outer circle for contrast
+    this.drawCircle(cx, cy, outerR + 1, {
+        stroke: '#FFFFFF',
+        lineWidth: DrawingConfig.GENERATOR_OUTLINE_WIDTH + 2
+    });
+
     // Draw outer colored circle with border
-    this.drawCircle(cx, cy, r * DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR, {
+    this.drawCircle(cx, cy, outerR, {
         fill: displayColor,
         stroke: borderColor,
         lineWidth: DrawingConfig.GENERATOR_OUTLINE_WIDTH
@@ -506,7 +492,7 @@ export class GameDrawer {
         const endAngle = PIE_CHART_START_ANGLE + (TWO_PI * clampedP / sub.Pmax);
         this.drawPieSlice(cx, cy, r, PIE_CHART_START_ANGLE, endAngle, displayColor);
     }
-    
+
     // Draw inner circle border
     this.drawCircle(cx, cy, r, { stroke: borderColor, lineWidth: DrawingConfig.GENERATOR_OUTLINE_WIDTH });
   }
@@ -543,7 +529,7 @@ export class GameDrawer {
       text = "Out of Service";
     } else if (isCriticallyOverloaded) {
       color = this.colorOverloadCritical;
-      text += " (Crtically Overloaded)";
+      text += " (Critically Overloaded)";
     } else if (isOverloaded) {
       color = this.colorWarning;
       text += " (Overloaded)";
@@ -580,10 +566,6 @@ export class GameDrawer {
 
   private getGeneratorColor(category: string): string {
     const config = GenerationTypeConfig[category as SubstationCategory];
-    if (config?.chartVar && this.chartColors[config.chartVar]) {
-      return this.chartColors[config.chartVar];
-    }
-    // Fallback to the hardcoded color from config if CSS var is not found
     return config?.color || GenerationTypeConfig[SubstationCategory.Thermal].color;
   }
 

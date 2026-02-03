@@ -1,5 +1,5 @@
-import { GameState, GameMetrics, GameStatistics, SubstationCategory, BranchStatus, UnitStatus } from "../types";
-import { scenario_data } from "@/data/texas/grid";
+import { GameState, GameMetrics, GameStatistics, SubstationCategory, LoadCategoryType, BranchStatus, UnitStatus } from "../types";
+import { activeCase } from "@/data/cases";
 import { PhysicsConfig } from "../config";
 
 const BASE_FREQUENCY = PhysicsConfig.BASE_FREQUENCY;
@@ -12,6 +12,10 @@ export function createInitialGameMetrics(): GameMetrics {
   return {
     loadServed: 0,
     loadUnserved: 0,
+    loadServedResidential: 0,
+    loadServedCommercial: 0,
+    loadServedIndustrial: 0,
+    loadServedDatacenter: 0,
     reserves: 0,
     reservesWind: 0,
     reservesSolar: 0,
@@ -48,10 +52,11 @@ export function createInitialGameStatistics(): GameStatistics {
 // --- Grid Data Loading ---
 
 export function loadInitialData(state: GameState) {
-  state.subs = JSON.parse(JSON.stringify(scenario_data.subs));
-  state.branches = JSON.parse(JSON.stringify(scenario_data.branches));
-  state.borders = scenario_data.borders;
-  state.nsubs = scenario_data.nsubs;
+  const { gridData } = activeCase;
+  state.subs = JSON.parse(JSON.stringify(gridData.subs));
+  state.branches = JSON.parse(JSON.stringify(gridData.branches));
+  state.borders = gridData.borders;
+  state.nsubs = gridData.nsubs;
 
   for (const key in state.branches) {
     const branch = state.branches[key];
@@ -101,6 +106,10 @@ export function resetToDefaults(state: GameState) {
 export function updateMetrics(state: GameState) {
   state.metrics.loadServed = 0;
   state.metrics.loadUnserved = 0;
+  state.metrics.loadServedResidential = 0;
+  state.metrics.loadServedCommercial = 0;
+  state.metrics.loadServedIndustrial = 0;
+  state.metrics.loadServedDatacenter = 0;
   state.metrics.windGen = 0;
   state.metrics.solarGen = 0;
   state.metrics.thermalGen = 0;
@@ -122,6 +131,10 @@ export function updateMetrics(state: GameState) {
       if (sub.Category === SubstationCategory.Load) {
         if (u.Status === UnitStatus.IN) {
           state.metrics.loadServed += u.P;
+          if (sub.LoadCategory === LoadCategoryType.Residential) state.metrics.loadServedResidential += u.P;
+          else if (sub.LoadCategory === LoadCategoryType.Commercial) state.metrics.loadServedCommercial += u.P;
+          else if (sub.LoadCategory === LoadCategoryType.Industrial) state.metrics.loadServedIndustrial += u.P;
+          else if (sub.LoadCategory === LoadCategoryType.Datacenter) state.metrics.loadServedDatacenter += u.P;
         } else {
           state.metrics.loadUnserved += pmax_unit * state.fr_load;
         }

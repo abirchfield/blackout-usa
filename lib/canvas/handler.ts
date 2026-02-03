@@ -1,11 +1,11 @@
 import { GameState, InteractionHandler, SimulationAction } from "../types";
 import { GameAction } from "../key-bindings";
-import { ViewConfig } from "../config";
+import { ViewConfig, getDynamicSubstationRadius } from "../config";
+import { activeCase } from "@/data/cases";
 
 export class GameHandler {
   private canvas: HTMLCanvasElement;
   private state: GameState;
-  private drawCallback: () => void;
   public onInteract?: InteractionHandler;
   public onDispatch?: (action: SimulationAction) => void;
   public onTogglePause?: () => void;
@@ -19,10 +19,9 @@ export class GameHandler {
   private boundHandleMouseUp: (e: MouseEvent) => void;
   private boundHandleWheel: (e: WheelEvent) => void;
 
-  constructor(canvas: HTMLCanvasElement, state: GameState, drawCallback: () => void) {
+  constructor(canvas: HTMLCanvasElement, state: GameState) {
     this.canvas = canvas;
     this.state = state;
-    this.drawCallback = drawCallback;
 
     // Bind 'this' to all event handlers and store them
     this.boundHandleMouseDown = this.handleMouseDown.bind(this);
@@ -49,17 +48,8 @@ export class GameHandler {
     this.canvas.removeEventListener("wheel", this.boundHandleWheel);
   }
 
-  private getDynamicSubstationRadius(isHover: boolean): number {
-    const baseRadius = isHover ? ViewConfig.BASE_SUBSTATION_RADIUS_HOVER : ViewConfig.BASE_SUBSTATION_RADIUS_NORMAL;
-    const maxRadius = isHover ? ViewConfig.MAX_SUBSTATION_RADIUS_HOVER : ViewConfig.MAX_SUBSTATION_RADIUS;
-    
-    // Scale radius based on zoom, relative to a reference scale.
-    // ViewConfig.INITIAL_SCALE is a good baseline where the baseRadius should apply.
-    const scaleFactor = Math.sqrt(this.state.scaleX / ViewConfig.INITIAL_SCALE);
-    
-    const radius = baseRadius * scaleFactor;
-    
-    return Math.max(ViewConfig.MIN_SUBSTATION_RADIUS, Math.min(radius, maxRadius));
+  private getSubstationRadius(isHover: boolean): number {
+    return getDynamicSubstationRadius(this.state.scaleX, activeCase.mapConfig.initialView.scale, isHover);
   }
 
   private handleMouseDown(e: MouseEvent) {
@@ -87,7 +77,7 @@ export class GameHandler {
     const worldX = this.state.x0 + e.offsetX / this.state.scaleX;
     const worldY = this.state.y0 - e.offsetY / this.state.scaleY;
 
-    const hoverRadius = this.getDynamicSubstationRadius(true);
+    const hoverRadius = this.getSubstationRadius(true);
 
     for (const key in this.state.subs) {
       const sub = this.state.subs[key];

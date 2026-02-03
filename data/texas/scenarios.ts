@@ -1,4 +1,4 @@
-import { SimulationState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, IScenario, ResultDetails } from "../types";
+import { SimulationState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, IScenario, ResultDetails } from "@/lib/types";
 
 function evaluateResults(totalCost: number, record: number, good: number, okay: number): ResultDetails {
     const costM = (totalCost / 1000000);
@@ -101,7 +101,7 @@ class Day2Scenario implements IScenario {
         else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
         if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
         if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
-        
+
         if (state.t === 90) {
             state.branches["26"].Status1 = BranchStatus.TRIP;
             state.branches["26"].Status2 = BranchStatus.TRIP;
@@ -228,18 +228,18 @@ class Day5Scenario implements IScenario {
         state.fr_load = 0.83;
         state.fr_wind = 0.48;
         state.fr_solar = 1.00;
-        
+
         let i;
-        for (i=0;i<5;++i) state.subs["2"].U[i].Status = UnitStatus.TRIP; 
-        for (i=0;i<3;++i) state.subs["5"].U[i].Status = UnitStatus.TRIP; 
-        for (i=0;i<4;++i) state.subs["8"].U[i].Status = UnitStatus.TRIP; 
-        for (i=0;i<8;++i) state.subs["10"].U[i].Status = UnitStatus.DIS; 
-        for (i=0;i<4;++i) state.subs["14"].U[i].Status = UnitStatus.TRIP; 
-        for (i=0;i<8;++i) state.subs["15"].U[i].Status = UnitStatus.TRIP; 
-        for (i=2;i<5;++i) state.subs["16"].U[i].Status = UnitStatus.TRIP; 
-        for (i=1;i<4;++i) state.subs["21"].U[i].Status = UnitStatus.TRIP; 
-        for (i=0;i<4;++i) state.subs["25"].U[i].Status = UnitStatus.TRIP; 
-        for (i=0;i<2;++i) state.subs["31"].U[i].Status = UnitStatus.TRIP; 
+        for (i=0;i<5;++i) state.subs["2"].U[i].Status = UnitStatus.TRIP;
+        for (i=0;i<3;++i) state.subs["5"].U[i].Status = UnitStatus.TRIP;
+        for (i=0;i<4;++i) state.subs["8"].U[i].Status = UnitStatus.TRIP;
+        for (i=0;i<8;++i) state.subs["10"].U[i].Status = UnitStatus.DIS;
+        for (i=0;i<4;++i) state.subs["14"].U[i].Status = UnitStatus.TRIP;
+        for (i=0;i<8;++i) state.subs["15"].U[i].Status = UnitStatus.TRIP;
+        for (i=2;i<5;++i) state.subs["16"].U[i].Status = UnitStatus.TRIP;
+        for (i=1;i<4;++i) state.subs["21"].U[i].Status = UnitStatus.TRIP;
+        for (i=0;i<4;++i) state.subs["25"].U[i].Status = UnitStatus.TRIP;
+        for (i=0;i<2;++i) state.subs["31"].U[i].Status = UnitStatus.TRIP;
         state.branches["5"].Status1 = BranchStatus.TRIP;
         state.branches["10"].Status1 = BranchStatus.TRIP;
         state.branches["11"].Status1 = BranchStatus.TRIP;
@@ -252,10 +252,10 @@ class Day5Scenario implements IScenario {
         state.branches["31"].Status1 = BranchStatus.TRIP;
         state.branches["32"].Status1 = BranchStatus.TRIP;
         state.branches["32"].Status2 = BranchStatus.TRIP;
-        state.branches["33"].Status1 = BranchStatus.TRIP; 
+        state.branches["33"].Status1 = BranchStatus.TRIP;
         state.branches["35"].Status1 = BranchStatus.TRIP;
         state.branches["35"].Status2 = BranchStatus.TRIP;
-        state.branches["36"].Status1 = BranchStatus.TRIP; 
+        state.branches["36"].Status1 = BranchStatus.TRIP;
         state.branches["36"].Status2 = BranchStatus.TRIP;
         state.branches["43"].Status1 = BranchStatus.TRIP;
         state.branches["44"].Status1 = BranchStatus.TRIP;
@@ -263,9 +263,9 @@ class Day5Scenario implements IScenario {
         state.branches["59"].Status1 = BranchStatus.TRIP;
         state.branches["59"].Status2 = BranchStatus.TRIP;
         state.branches["60"].Status1 = BranchStatus.TRIP;
-        for (i=0;i<2;++i) state.subs["26"].U[i].P = 290; 
-        for (i=0;i<3;++i) state.subs["19"].U[i].Status = UnitStatus.IN; 
-        
+        for (i=0;i<2;++i) state.subs["26"].U[i].P = 290;
+        for (i=0;i<3;++i) state.subs["19"].U[i].Status = UnitStatus.IN;
+
         onHint?.({ message: "Keep checking the coastal substations and lines to see if anything new has become ready for restoration" }, true);
     }
 
