@@ -17,7 +17,8 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighCo
   const status = circuitNum === 1 ? branch.Status1 : branch.Status2;
 
   const inServiceCircuits = (branch.Status1 === BranchStatus.IN ? 1 : 0) + (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN ? 1 : 0);
-  const flow = inServiceCircuits > 0 ? branch.P / inServiceCircuits : 0;
+  const isThisCircuitIn = status === BranchStatus.IN;
+  const flow = isThisCircuitIn && inServiceCircuits > 0 ? branch.P / inServiceCircuits : 0;
   const rating = branch.Pmax;
   const loading = rating > 0 ? (Math.abs(flow) / rating) * 100 : 0;
 

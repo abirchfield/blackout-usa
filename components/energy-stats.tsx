@@ -10,16 +10,16 @@ export function KeyStats({ stats, totalGeneration, className }: { stats: GameSta
   return (
     <div className={cn("grid grid-cols-3 gap-4", className)} role="group" aria-label="Key game statistics">
       <div>
-        <div id="freq-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Frequency</div>
-        <div id="dash-freq" className={`text-lg font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-destructive" : "text-sidebar-foreground"}`} aria-labelledby="freq-label">{s.frequency.toFixed(2)} Hz</div>
+        <div id="freq-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Frequency</div>
+        <div id="dash-freq" className={`text-2xl font-bold ${s.frequency < 59.7 || s.frequency > 60.3 ? "text-destructive" : "text-sidebar-foreground"}`} aria-labelledby="freq-label">{s.frequency.toFixed(2)} Hz</div>
       </div>
       <div>
-        <div id="tgen-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Gen.</div>
-        <div id="dash-tgen" className="text-lg font-bold text-sidebar-foreground" aria-labelledby="tgen-label">{fmtPowerAuto(totalGeneration)}</div>
+        <div id="tgen-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Gen.</div>
+        <div id="dash-tgen" className="text-2xl font-bold text-sidebar-foreground" aria-labelledby="tgen-label">{fmtPowerAuto(totalGeneration)}</div>
       </div>
       <div>
-        <div id="reserve-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Reserves</div>
-        <div id="dash-reserve" className={`text-lg font-bold ${s.reserves < 50 ? "text-destructive" : s.reserves < 500 ? "text-[var(--color-warning)]" : "text-sidebar-foreground"}`} aria-labelledby="reserve-label">{fmtPowerAuto(s.reserves)}</div>
+        <div id="reserve-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Reserves</div>
+        <div id="dash-reserve" className={`text-2xl font-bold ${s.reserves < 50 ? "text-destructive" : s.reserves < 500 ? "text-[var(--color-warning)]" : "text-sidebar-foreground"}`} aria-labelledby="reserve-label">{fmtPowerAuto(s.reserves)}</div>
       </div>
     </div>
   )
@@ -87,19 +87,19 @@ export function GenerationDashboard({ stats }: { stats: GameStatistics }) {
       </div>
       <div className="grid grid-cols-4 gap-4 pt-3 mt-3 border-t border-border/50" role="group" aria-label="Cost statistics">
         <div>
-          <div id="total-cost-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Cost</div>
+          <div id="total-cost-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Cost</div>
             <div className="text-lg font-bold text-sidebar-foreground" aria-labelledby="total-cost-label">{fmtMoneyAuto(s.totalCost)}</div>
           </div>
           <div>
-            <div id="avg-cost-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Avg. Cost</div>
+            <div id="avg-cost-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Avg. Cost</div>
             <div className="text-lg font-bold text-sidebar-foreground" aria-labelledby="avg-cost-label">${s.avgCost.toFixed(2)}</div>
           </div>
           <div>
-            <div id="op-cost-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Op. Cost</div>
+            <div id="op-cost-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Op. Cost</div>
             <div className="text-lg font-bold text-sidebar-foreground" aria-labelledby="op-cost-label">{fmtMoneyAuto(s.totalOpCost)}</div>
           </div>
           <div>
-            <div id="fuel-cost-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Fuel Cost</div>
+            <div id="fuel-cost-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Fuel Cost</div>
             <div className="text-lg font-bold text-sidebar-foreground" aria-labelledby="fuel-cost-label">{fmtMoneyAuto(s.totalFuelCost)}</div>
           </div>
         </div>
@@ -110,17 +110,16 @@ export function GenerationDashboard({ stats }: { stats: GameStatistics }) {
 export function LoadDashboard({ stats }: { stats: GameStatistics }) {
   const s = stats;
   const loadMix = [
-    { ...LoadTypeConfig[LoadCategoryType.Residential], percentage: 0.30 },
-    { ...LoadTypeConfig[LoadCategoryType.Commercial], percentage: 0.15 },
-    { ...LoadTypeConfig[LoadCategoryType.Industrial], percentage: 0.35 },
-    { ...LoadTypeConfig[LoadCategoryType.Datacenter], percentage: 0.20 },
+    { ...LoadTypeConfig[LoadCategoryType.Residential], value: s.loadServedResidential },
+    { ...LoadTypeConfig[LoadCategoryType.Commercial], value: s.loadServedCommercial },
+    { ...LoadTypeConfig[LoadCategoryType.Industrial], value: s.loadServedIndustrial },
+    { ...LoadTypeConfig[LoadCategoryType.Datacenter], value: s.loadServedDatacenter },
   ];
 
   return (
     <div className="space-y-4 pt-2">
       <div className="space-y-3">
-        {loadMix.map(({ name, percentage, icon: Icon, tailwind }, index) => {
-          const value = s.loadServed * percentage;
+        {loadMix.map(({ name, value, icon: Icon, tailwind }, index) => {
           const barPercentage = s.loadServed > 0 ? (value / s.loadServed) * 100 : 0;
           return (
             <div key={index} className="flex items-center gap-3">
@@ -148,15 +147,15 @@ export function LoadDashboard({ stats }: { stats: GameStatistics }) {
       </div>
       <div className="grid grid-cols-3 gap-4 pt-3 mt-3 border-t border-border/50" role="group" aria-label="Load statistics">
         <div>
-          <div id="total-load-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Load</div>
+          <div id="total-load-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Load</div>
           <div className="text-lg font-bold text-sidebar-foreground" aria-labelledby="total-load-label">{fmtPowerAuto(s.loadServed)}</div>
         </div>
         <div>
-          <div id="unserved-load-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Unserved Load</div>
+          <div id="unserved-load-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Unserved Load</div>
           <div className="text-lg font-bold text-sidebar-foreground" aria-labelledby="unserved-load-label">{fmtPowerAuto(s.loadUnserved)}</div>
         </div>
         <div>
-          <div id="unserved-cost-label" className="text-[10px] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Unserved Cost</div>
+          <div id="unserved-cost-label" className="text-xs text-sidebar-foreground/60 uppercase tracking-wider font-bold">Unserved Cost</div>
           <div className="text-lg font-bold text-sidebar-foreground" aria-labelledby="unserved-cost-label">{fmtMoneyAuto(s.totalUnservedCost)}</div>
         </div>
       </div>
@@ -167,8 +166,10 @@ export function LoadDashboard({ stats }: { stats: GameStatistics }) {
 export function EnergyDashboard({ stats }: { stats: GameStatistics }) {
   return (
     <div className="space-y-6">
+      <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Generation</h4>
       <GenerationDashboard stats={stats} />
       <hr className="my-4 border-t border-border/50" />
+      <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground">Load</h4>
       <LoadDashboard stats={stats} />
     </div>
   );

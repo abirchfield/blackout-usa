@@ -48,6 +48,7 @@ export interface Substation {
   Name: string;
   Number: string;
   Category: SubstationCategory;
+  LoadCategory?: LoadCategoryType;
   Units: number;
   Pmax: number;
   Pmin: number;
@@ -81,6 +82,10 @@ export interface Branch {
 export interface GameMetrics {
   loadServed: number;
   loadUnserved: number;
+  loadServedResidential: number;
+  loadServedCommercial: number;
+  loadServedIndustrial: number;
+  loadServedDatacenter: number;
   reserves: number;
   reservesWind: number;
   reservesSolar: number;
@@ -112,7 +117,6 @@ export type GameStatistics = GameMetrics & {
 
 export interface ViewState {
   anim_cycle_state: number;
-  scale_adjust: number;
   xmax: number;
   xmin: number;
   ymax: number;

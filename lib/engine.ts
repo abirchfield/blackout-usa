@@ -1,7 +1,7 @@
 import { GameStatistics, GameState, SimulationState, InputState, InteractionHandler, AlertHandler, HintHandler, Briefing, SubstationCategory, IScenario, ResultDetails, SimulationAction } from "./types";
 import { GameDrawer } from "./canvas/drawer";
 import { GameHandler } from "./canvas/handler";
-import { scenarios } from "./logic/scenarios";
+import { activeCase } from "@/data/cases";
 import { defaultKeyBindings, KeyBindings } from "./key-bindings";
 import { solvePowerFlow } from "./logic/power-flow";
 import { calculatePowerBalance, dispatchGeneration, updateFrequency } from "./logic/dispatch";
@@ -58,17 +58,16 @@ export class GameEngine {
 
     // View State
     anim_cycle_state: 0,
-    scale_adjust: ViewConfig.SCALE_ADJUST,
-    xmax: ViewConfig.MAP_BOUNDS.XMAX,
-    xmin: ViewConfig.MAP_BOUNDS.XMIN,
-    ymax: ViewConfig.MAP_BOUNDS.YMAX,
-    ymin: ViewConfig.MAP_BOUNDS.YMIN,
+    xmax: activeCase.mapConfig.bounds.xMax,
+    xmin: activeCase.mapConfig.bounds.xMin,
+    ymax: activeCase.mapConfig.bounds.yMax,
+    ymin: activeCase.mapConfig.bounds.yMin,
     scale_max: ViewConfig.ZOOM_LIMIT_MAX,
     scale_min: 0, // Will be set dynamically by drawer
-    scaleX: ViewConfig.INITIAL_SCALE,
-    scaleY: ViewConfig.INITIAL_SCALE,
-    x0: ViewConfig.INITIAL_X0,
-    y0: ViewConfig.INITIAL_Y0,
+    scaleX: activeCase.mapConfig.initialView.scale,
+    scaleY: activeCase.mapConfig.initialView.scale,
+    x0: activeCase.mapConfig.initialView.x0,
+    y0: activeCase.mapConfig.initialView.y0,
     theme: 'dark',
     animationsEnabled: true,
     renderCanvasText: true,
@@ -81,7 +80,7 @@ export class GameEngine {
     this.drawer = new GameDrawer(canvas);
 
     if (options.interactive) {
-      this.handler = new GameHandler(canvas, this.state, () => this.draw());
+      this.handler = new GameHandler(canvas, this.state);
       this.handler.onResetView = () => { this.isViewInitialized = false; };
       this.handler.onDispatch = this.dispatch.bind(this);
     }
@@ -167,7 +166,7 @@ export class GameEngine {
     this.state.day = day;
     this.isBlackout = false;
 
-    this.currentScenario = scenarios[day] || null;
+    this.currentScenario = activeCase.scenarios[day] || null;
     if (this.currentScenario) {
       this.currentScenario.start(this.state, this.onAlert, this.onHint);
     } else {
@@ -197,7 +196,7 @@ export class GameEngine {
   }
 
   public getBriefingForDay(day: number): Briefing | null {
-    const scenario = scenarios[day] || null;
+    const scenario = activeCase.scenarios[day] || null;
     return scenario?.briefing || null;
   }
 
@@ -209,7 +208,7 @@ export class GameEngine {
         message: "The grid collapsed under your watch due to a catastrophic frequency drop. You've been relieved of your duties."
       };
     }
-    const scenario = scenarios[day];
+    const scenario = activeCase.scenarios[day];
     if (scenario) {
         return scenario.getResultDetails(totalCost);
     }

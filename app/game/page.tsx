@@ -1,17 +1,15 @@
 "use client";
 
 import { useState, useEffect, useRef, Suspense, useCallback } from "react"
-import { RotateCw, ArrowRight } from "lucide-react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
-import { scenarios } from "@/lib/logic/scenarios"
+import { activeCase } from "@/data/cases"
 import { Substation, Branch, Briefing, ResultDetails } from "@/lib/types"
 import { useGameEngine } from "@/lib/hooks/use-game-engine"
 import { useGameInput } from "@/lib/hooks/use-game-input"
 import { AppHeader } from "@/components/header"
 import { SidebarContent } from "@/components/ui/sidebar"
-import { Button } from "@/components/ui/button"
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog"
@@ -40,6 +38,7 @@ import { NotificationList } from "@/components/modals/notification-list"
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from "@/components/ui/empty"
 import { KeyBindings } from "@/lib/key-bindings"
 import { DayResults } from "@/components/day-results"
+import { DayTransitionModal } from "@/components/modals/day-transition-modal"
 import { defaultAppSettings } from "@/lib/config"
 
 const isStaticExport = process.env.NODE_ENV === 'production';
@@ -364,7 +363,7 @@ function GamePageContent() {
   }
 
   const handleNextDay = (currentDay: number) => {
-    const totalDays = Object.keys(scenarios).length;
+    const totalDays = Object.keys(activeCase.scenarios).length;
     const nextDay = currentDay < totalDays ? currentDay + 1 : 1;
     showBriefingForDay(nextDay);
     setIsDayFinished(false);
@@ -432,22 +431,6 @@ function GamePageContent() {
                             </div>
                           </div>
                         ) : ( !isDayTransition && <div className="p-4 text-center text-muted-foreground">Day {gameStatistics.day}</div> )}
-                      </div>
-                      <div className="mt-auto pt-4">
-                        {isDayTransition ? (
-                          <Button onClick={handleStartDay} className="w-full">Start Day {targetDay}</Button>
-                        ) : isDayFinished && (
-                          <div className="grid grid-cols-2 gap-2">
-                            <Button onClick={() => handleReplayDay(gameStatistics.day)} variant={isHighContrast ? "outline" : "secondary"} className="flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm">
-                              <RotateCw className="h-4 w-4" />
-                              <span>Replay Today</span>
-                            </Button>
-                            <Button onClick={() => handleNextDay(gameStatistics.day)} className="flex items-center justify-center gap-2 cursor-pointer text-xs sm:text-sm">
-                              <span>Next Day</span>
-                              <ArrowRight className="h-4 w-4" />
-                            </Button>
-                          </div>
-                        )}
                       </div>
                     </TabsContent>
                     {!showDetailsInSidebar ? (
@@ -529,10 +512,10 @@ function GamePageContent() {
               {viewMode === 'visual' && (
                 <div role="timer" aria-labelledby="vis-day-label vis-day-value vis-time-value" className="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md border border-border/50 shadow-sm flex items-center gap-4">
                   <div className="flex items-center gap-2">
-                    <span id="vis-day-label" className="text-lg font-semibold text-muted-foreground uppercase">Day</span>
-                    <span id="vis-day-value" className="text-lg font-semibold text-muted-foreground tabular-nums">{gameStatistics.day || 1}</span>
+                    <span id="vis-day-label" className="text-2xl font-semibold text-muted-foreground uppercase">Day</span>
+                    <span id="vis-day-value" className="text-2xl font-semibold text-muted-foreground tabular-nums">{gameStatistics.day || 1}</span>
                   </div>
-                  <time id="vis-time-value" dateTime={`D${gameStatistics.day}T${gameStatistics.timeStr.replace(/ /g, '')}`} className="text-lg font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</time>
+                  <time id="vis-time-value" dateTime={`D${gameStatistics.day}T${gameStatistics.timeStr.replace(/ /g, '')}`} className="text-2xl font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</time>
                 </div>
               )}
               <canvas
@@ -549,10 +532,10 @@ function GamePageContent() {
                       <h2 className="text-xl font-bold uppercase text-muted-foreground flex items-center gap-2"><SubstationIcon className="h-5 w-5" aria-hidden="true" />Substations</h2>
                       <div className="flex items-center gap-4" role="timer" aria-labelledby="tab-day-label tab-day-value tab-time-value">
                         <div className="flex items-center gap-2">
-                          <span id="tab-day-label" className="text-base font-semibold text-muted-foreground uppercase">Day</span>
-                          <span id="tab-day-value" className="text-base font-semibold text-muted-foreground tabular-nums">{gameStatistics.day || 1}</span>
+                          <span id="tab-day-label" className="text-lg font-semibold text-muted-foreground uppercase">Day</span>
+                          <span id="tab-day-value" className="text-lg font-semibold text-muted-foreground tabular-nums">{gameStatistics.day || 1}</span>
                         </div>
-                        <time id="tab-time-value" dateTime={`D${gameStatistics.day}T${gameStatistics.timeStr.replace(/ /g, '')}`} className="text-base font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</time>
+                        <time id="tab-time-value" dateTime={`D${gameStatistics.day}T${gameStatistics.timeStr.replace(/ /g, '')}`} className="text-lg font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</time>
                       </div>
                     </div>
                     <div className="flex-1 overflow-y-auto -mr-4 pr-4">
@@ -672,6 +655,18 @@ function GamePageContent() {
         onReplayDay={handleReplayDay}
         onNextDay={handleNextDay}
         isHighContrast={isHighContrast}
+      />
+      <DayTransitionModal
+        isDayTransition={isDayTransition}
+        isDayFinished={isDayFinished}
+        targetDay={targetDay}
+        currentBriefing={currentBriefing}
+        dayResultDetails={dayResultDetails}
+        gameStatistics={gameStatistics}
+        isHighContrast={isHighContrast}
+        onStartDay={handleStartDay}
+        onReplayDay={handleReplayDay}
+        onNextDay={handleNextDay}
       />
       <Dialog open={isAlertsModalOpen} onOpenChange={(open) => handleModalOpenChange(setIsAlertsModalOpen, open)}>
         <DialogContent>
