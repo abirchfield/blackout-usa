@@ -8,9 +8,9 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Substation, SubstationCategory } from "@/lib/game/types"
+import { Substation, SubstationCategory } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { GenerationTypeConfig } from "@/lib/game/config"
+import { GenerationTypeConfig } from "@/lib/config"
 import { StatusIndicator } from "@/components/ui/status-indicator"
 
 interface SubstationsListProps {

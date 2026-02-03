@@ -4,10 +4,10 @@ import { useEffect, useRef, useState } from "react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { GameEngine } from "@/lib/game/engine";
+import { GameEngine } from "@/lib/engine";
 import { AccessibilityModal } from "@/components/modals/accessibility-modal";
-import { KeyBindings, defaultKeyBindings } from "@/lib/game/key-bindings";
-import { defaultAppSettings } from "@/lib/game/config";
+import { KeyBindings, defaultKeyBindings } from "@/lib/key-bindings";
+import { defaultAppSettings } from "@/lib/config";
 import { PersonStanding, ExternalLink } from "lucide-react";
 
 // In a static export (`next export`), links to pages need to point to the

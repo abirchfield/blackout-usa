@@ -1,6 +1,6 @@
 "use client";
 
-import { Substation } from "@/lib/game/types";
+import { Substation } from "@/lib/types";
 import { LoadUnitDetails } from "@/components/controls";
 import { cn } from "@/lib/utils";
 

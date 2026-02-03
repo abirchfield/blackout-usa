@@ -12,10 +12,10 @@ import {
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "@/components/ui/status-indicator";
 import { GeneratorUnitsTable } from "@/components/tables/unit-table";
-import { Substation, UnitStatus, SubstationCategory } from "@/lib/game/types";
-import { GenerationTypeConfig, LoadTypeConfig } from "@/lib/game/config";
+import { Substation, UnitStatus, SubstationCategory } from "@/lib/types";
+import { GenerationTypeConfig, LoadTypeConfig } from "@/lib/config";
 import { TimeController } from "@/components/controls";
-import { GameEngine } from "@/lib/game/engine"; 
+import { GameEngine } from "@/lib/engine"; 
 import { PersonStanding, Timer, Bell, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";

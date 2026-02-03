@@ -11,10 +11,10 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
-import { Substation, SubstationCategory } from "@/lib/game/types"
+import { Substation, SubstationCategory } from "@/lib/types"
 import { GeneratorUnitsTable } from "../tables/unit-table";
 import { LoadUnitsTable } from "../tables/load-table";
-import { GenerationTypeConfig } from "@/lib/game/config";
+import { GenerationTypeConfig } from "@/lib/config";
 import { cn } from "@/lib/utils";
 
 export const GenerationTypeIcon = ({ category, className, ...props }: { category: string, className?: string } & React.ComponentProps<"svg">) => {

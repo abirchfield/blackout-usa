@@ -1,7 +1,7 @@
 "use client";
 
-import { UnitStatus, BranchStatus, SubstationCategory } from "@/lib/game/types";
-import { StatusConfig } from "@/lib/game/config";
+import { UnitStatus, BranchStatus, SubstationCategory } from "@/lib/types";
+import { StatusConfig } from "@/lib/config";
 
 interface StatusIndicatorProps {
   status: UnitStatus | BranchStatus;

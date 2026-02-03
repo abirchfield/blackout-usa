@@ -1,6 +1,6 @@
 "use client";
 
-import { Branch, BranchStatus } from "@/lib/game/types";
+import { Branch, BranchStatus } from "@/lib/types";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "@/components/ui/status-indicator";

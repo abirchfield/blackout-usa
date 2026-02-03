@@ -1,7 +1,7 @@
 "use client"
 
-import { GameStatistics, SubstationCategory, LoadCategoryType } from "@/lib/game/types"
-import { GenerationTypeConfig, LoadTypeConfig } from "@/lib/game/config"
+import { GameStatistics, SubstationCategory, LoadCategoryType } from "@/lib/types"
+import { GenerationTypeConfig, LoadTypeConfig } from "@/lib/config"
 import { cn, fmtMoneyAuto, fmtPowerAuto } from "@/lib/utils"
 
 export function KeyStats({ stats, totalGeneration, className }: { stats: GameStatistics, totalGeneration: number, className?: string }) {

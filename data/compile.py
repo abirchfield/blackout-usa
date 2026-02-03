@@ -2,21 +2,27 @@
 Compiles CSV data files (substations.csv, branches.csv) and borders.json
 into a TypeScript module (grid.ts) for each case folder.
 
-Usage: python data/compile.py texas
+Run directly: python data/compile.py
 """
 
 import csv
 import json
-import sys
 from pathlib import Path
 
+CASES = ["texas"]
+DATA_DIR = Path(__file__).parent
 
-def parse_csv(file_path: Path) -> list[dict[str, str]]:
+SUB_FLOAT_KEYS = {"Latitude", "Longitude", "Pmax", "Pmin", "Ramp", "StartTime", "FixedCost", "FuelCost"}
+UNIT_FLOAT_KEYS = {"Pset", "P", "P0"}
+BRANCH_FLOAT_KEYS = {"Z", "Pmax"}
+
+
+def parse_csv(file_path):
     with open(file_path, newline="", encoding="utf-8") as f:
         return list(csv.DictReader(f))
 
 
-def build_subs(rows: list[dict]) -> dict:
+def build_subs(rows):
     subs = {}
     for raw in rows:
         units = int(raw["Units"])
@@ -51,7 +57,7 @@ def build_subs(rows: list[dict]) -> dict:
     return subs
 
 
-def build_branches(rows: list[dict]) -> dict:
+def build_branches(rows):
     branches = {}
     for raw in rows:
         branches[raw["Number"]] = {
@@ -70,18 +76,13 @@ def build_branches(rows: list[dict]) -> dict:
     return branches
 
 
-SUB_FLOAT_KEYS = {"Latitude", "Longitude", "Pmax", "Pmin", "Ramp", "StartTime", "FixedCost", "FuelCost"}
-UNIT_FLOAT_KEYS = {"Pset", "P", "P0"}
-BRANCH_FLOAT_KEYS = {"Z", "Pmax"}
-
-
-def format_num(value: float | int, as_float: bool) -> str:
+def format_num(value, as_float):
     if as_float and isinstance(value, float) and value == int(value):
         return f"{value:.1f}"
     return str(value)
 
 
-def format_obj(obj: dict, float_keys: set[str]) -> str:
+def format_obj(obj, float_keys):
     entries = []
     for k, v in obj.items():
         if isinstance(v, (int, float)):
@@ -97,30 +98,20 @@ def format_obj(obj: dict, float_keys: set[str]) -> str:
     return "{ " + ", ".join(entries) + " }"
 
 
-def format_sub(key: str, sub: dict) -> str:
-    return f"    {json.dumps(key)}: {format_obj(sub, SUB_FLOAT_KEYS)}"
+def compile_case(case_name):
+    case_dir = DATA_DIR / case_name
+    output_file = case_dir / "grid.ts"
 
-
-def format_branch(key: str, branch: dict) -> str:
-    return f"    {json.dumps(key)}: {format_obj(branch, BRANCH_FLOAT_KEYS)}"
-
-
-def main():
-    if len(sys.argv) < 2:
-        print("Usage: python data/compile.py <case>", file=sys.stderr)
-        print("Example: python data/compile.py texas", file=sys.stderr)
-        sys.exit(1)
-
-    case_name = sys.argv[1]
-    data_dir = Path(__file__).parent / case_name
-    output_file = data_dir / "grid.ts"
-
-    subs = build_subs(parse_csv(data_dir / "substations.csv"))
-    branches = build_branches(parse_csv(data_dir / "branches.csv"))
+    subs = build_subs(parse_csv(case_dir / "substations.csv"))
+    branches = build_branches(parse_csv(case_dir / "branches.csv"))
     nsubs = len(subs)
 
-    sub_lines = ",\n".join(format_sub(k, v) for k, v in subs.items())
-    branch_lines = ",\n".join(format_branch(k, v) for k, v in branches.items())
+    sub_lines = ",\n".join(
+        f"    {json.dumps(k)}: {format_obj(v, SUB_FLOAT_KEYS)}" for k, v in subs.items()
+    )
+    branch_lines = ",\n".join(
+        f"    {json.dumps(k)}: {format_obj(v, BRANCH_FLOAT_KEYS)}" for k, v in branches.items()
+    )
 
     output = f'''import borders from "./borders.json";
 
@@ -141,5 +132,5 @@ export const scenario_data = {{
     print(f"Generated {output_file} ({nsubs} substations, {len(branches)} branches)")
 
 
-if __name__ == "__main__":
-    main()
+for case in CASES:
+    compile_case(case)
