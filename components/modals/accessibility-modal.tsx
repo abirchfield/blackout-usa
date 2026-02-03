@@ -19,7 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
-import { KeybindSettings } from "@/components/settings/keybind-settings";
+import { KeybindSettings } from "@/components/modals/keybind-settings";
 import { ViewConfig } from "@/lib/game/config";
 import { KeyBindings, defaultKeyBindings } from "@/lib/game/key-bindings";
 

@@ -1,6 +1,6 @@
-import { GameState, InteractionHandler, SimulationAction } from "../types";
-import { GameAction } from "../key-bindings";
-import { ViewConfig } from "../config";
+import { GameState, InteractionHandler, SimulationAction } from "./types";
+import { GameAction } from "./key-bindings";
+import { ViewConfig } from "./config";
 
 export class GameHandler {
   private canvas: HTMLCanvasElement;

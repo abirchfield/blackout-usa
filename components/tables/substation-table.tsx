@@ -11,7 +11,7 @@ import {
 import { Substation, SubstationCategory } from "@/lib/game/types"
 import { Button } from "@/components/ui/button"
 import { GenerationTypeConfig } from "@/lib/game/config"
-import { StatusIndicator } from "@/components/indicators/status-indicator"
+import { StatusIndicator } from "@/components/ui/status-indicator"
 
 interface SubstationsListProps {
   subs?: Record<string, Substation>;

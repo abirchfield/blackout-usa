@@ -10,11 +10,11 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button";
-import { StatusIndicator } from "@/components/indicators/status-indicator";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 import { GeneratorUnitsTable } from "@/components/tables/unit-table";
 import { Substation, UnitStatus, SubstationCategory } from "@/lib/game/types";
 import { GenerationTypeConfig, LoadTypeConfig } from "@/lib/game/config";
-import { TimeController } from "@/components/controls/time-controls";
+import { TimeController } from "@/components/controls";
 import { GameEngine } from "@/lib/game/engine"; 
 import { PersonStanding, Timer, Bell, Lightbulb } from "lucide-react";
 import { cn } from "@/lib/utils";

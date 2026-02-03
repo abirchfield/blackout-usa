@@ -1,5 +1,5 @@
 import { GameState, SubstationCategory, BranchStatus } from "../types";
-import { scenario_data } from "../scenario/scenario_data";
+import { scenario_data } from "@/data/texas/grid";
 import { PhysicsConfig } from "../config";
 
 const BASE_FREQUENCY = PhysicsConfig.BASE_FREQUENCY;
