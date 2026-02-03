@@ -1,8 +1,8 @@
 import { GameStatistics, GameState, InteractionHandler, AlertHandler, HintHandler, Briefing, SubstationCategory, IScenario, ResultDetails, SimulationAction } from "./types";
 import { createInitialSimulationState, createInitialInputState } from "./factories";
-import { GameDrawer } from "./canvas/drawer";
-import { GameHandler } from "./canvas/handler";
-import { scenarios } from "./scenario/scenarios";
+import { GameDrawer } from "./canvas-drawer";
+import { GameHandler } from "./canvas-handler";
+import { scenarios } from "./scenarios";
 import { defaultKeyBindings, KeyBindings } from "./key-bindings";
 import { PowerFlowSolver } from "./simulation/power-flow";
 import { DispatchSolver } from "./simulation/dispatch";

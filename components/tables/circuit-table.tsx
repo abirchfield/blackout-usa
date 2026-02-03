@@ -3,7 +3,7 @@
 import { Branch, BranchStatus } from "@/lib/game/types";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { StatusIndicator } from "../indicators/status-indicator";
+import { StatusIndicator } from "@/components/ui/status-indicator";
 
 interface CircuitRecordProps {
   branch: Branch;

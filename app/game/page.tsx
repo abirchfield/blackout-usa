@@ -5,7 +5,7 @@ import { RotateCw, ArrowRight } from "lucide-react"
 import { useSearchParams, useRouter } from "next/navigation"
 import { useTheme } from "next-themes"
 import { cn } from "@/lib/utils"
-import { scenarios } from "@/lib/game/scenario/scenarios"
+import { scenarios } from "@/lib/game/scenarios"
 import { Substation, Branch, Briefing, ResultDetails } from "@/lib/game/types"
 import { useGameEngine } from "@/lib/hooks/use-game-engine"
 import { useGameInput } from "@/lib/hooks/use-game-input"
@@ -26,21 +26,20 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable"
-import { GenerationDashboard, LoadDashboard, KeyStats, EnergyDashboard } from "@/components/sidebar/energy-stats"
+import { GenerationDashboard, LoadDashboard, KeyStats, EnergyDashboard } from "@/components/energy-stats"
 import { SubstationModal, SubstationDetailView } from "@/components/modals/substation-modal"
 import { BranchModal, BranchDetailView } from "@/components/modals/branch-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
 import { AccessibilityModal } from "@/components/modals/accessibility-modal"
 import { SubstationsList } from "@/components/tables/substation-table"
 import { BranchesList } from "@/components/tables/branch-table"
-import { SubstationIcon } from "@/components/icons/substation-icon"
-import { LinesIcon } from "@/components/icons/lines-icon"
+import { SubstationIcon } from "@/components/ui/substation-icon"
+import { LinesIcon } from "@/components/ui/lines-icon"
 import { HelpModal } from "@/components/modals/help-modal"
-import { AlertsList } from "@/components/modals/alerts-modal"
-import { HintsList } from "@/components/modals/hints-modal"
+import { NotificationList } from "@/components/modals/notification-list"
 import { Empty, EmptyHeader, EmptyTitle, EmptyDescription, EmptyMedia } from "@/components/ui/empty"
 import { KeyBindings } from "@/lib/game/key-bindings"
-import { DayResults } from "@/components/sidebar/day-results"
+import { DayResults } from "@/components/day-results"
 import { defaultAppSettings } from "@/lib/game/config"
 
 const isStaticExport = process.env.NODE_ENV === 'production';
@@ -683,7 +682,7 @@ function GamePageContent() {
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6">
-            <AlertsList alerts={alerts} onRemoveAlert={removeAlert} onDismissAllAlerts={handleDismissAllAlerts} />
+            <NotificationList items={alerts} onRemove={removeAlert} onDismissAll={handleDismissAllAlerts} emptyMessage="No alerts to show" ariaLabel="List of alerts" />
           </div>
         </DialogContent>
       </Dialog>
@@ -696,7 +695,7 @@ function GamePageContent() {
             </DialogDescription>
           </DialogHeader>
           <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6">
-            <HintsList hints={hints} onRemoveHint={removeHint} onDismissAllHints={handleDismissAllHints} />
+            <NotificationList items={hints} onRemove={removeHint} onDismissAll={handleDismissAllHints} emptyMessage="No hints to show" ariaLabel="List of hints" />
           </div>
         </DialogContent>
       </Dialog>

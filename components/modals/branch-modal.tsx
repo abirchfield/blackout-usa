@@ -11,7 +11,7 @@ import { Button } from "@/components/ui/button"
 import { X } from "lucide-react"
 import { Branch } from "@/lib/game/types"
 import { CircuitTable } from "../tables/circuit-table"
-import { LinesIcon } from "@/components/icons/lines-icon"
+import { LinesIcon } from "@/components/ui/lines-icon"
 
 interface BranchModalContentProps {
   branch: Branch;

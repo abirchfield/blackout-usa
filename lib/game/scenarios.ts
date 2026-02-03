@@ -1,4 +1,4 @@
-import { SimulationState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, IScenario, ResultDetails } from "../types";
+import { SimulationState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, IScenario, ResultDetails } from "./types";
 
 function evaluateResults(totalCost: number, record: number, good: number, okay: number): ResultDetails {
     const costM = (totalCost / 1000000);

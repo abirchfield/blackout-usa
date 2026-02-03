@@ -1,5 +1,5 @@
-import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "../types";
-import { AppColors, DrawingConfig, GenerationTypeConfig, ViewConfig } from "../config";
+import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "./types";
+import { AppColors, DrawingConfig, GenerationTypeConfig, ViewConfig } from "./config";
 
 // --- Math ---
 const TWO_PI = Math.PI * 2;

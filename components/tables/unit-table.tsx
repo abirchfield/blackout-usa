@@ -4,7 +4,7 @@ import { Substation, Unit, UnitStatus } from "@/lib/game/types";
 import { Timer, Power } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PowerSlider } from "../controls/setpoint-controls";
+import { PowerSlider } from "@/components/controls";
 import { StatusConfig } from "@/lib/game/config";
 
 export interface ColumnConfig {
