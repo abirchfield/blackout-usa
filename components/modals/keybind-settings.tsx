@@ -1,6 +1,6 @@
 'use client';
 
-import { KeyBindings, GameAction, actionLabels, keyBindingGroups, getDisplayKey, disallowedKeys } from '@/lib/game/key-bindings';
+import { KeyBindings, GameAction, actionLabels, keyBindingGroups, getDisplayKey, disallowedKeys } from '@/lib/key-bindings';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { useState, useEffect, useCallback } from 'react';

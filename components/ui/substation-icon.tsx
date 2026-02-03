@@ -1,5 +1,5 @@
 import React from "react";
-import { SubstationCategory } from "@/lib/game/types";
+import { SubstationCategory } from "@/lib/types";
 
 type SubstationIconProps = React.SVGProps<SVGSVGElement> & {
   category?: SubstationCategory;

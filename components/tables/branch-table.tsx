@@ -8,7 +8,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { Branch, BranchStatus } from "@/lib/game/types"
+import { Branch, BranchStatus } from "@/lib/types"
 import { Button } from "@/components/ui/button"
 
 interface BranchesListProps {

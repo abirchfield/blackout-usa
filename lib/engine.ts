@@ -1,40 +1,61 @@
-import { GameStatistics, GameState, InteractionHandler, AlertHandler, HintHandler, Briefing, SubstationCategory, IScenario, ResultDetails, SimulationAction } from "./types";
-import { createInitialSimulationState, createInitialInputState } from "./factories";
-import { GameDrawer } from "./canvas-drawer";
-import { GameHandler } from "./canvas-handler";
-import { scenarios } from "./scenarios";
+import { GameStatistics, GameState, SimulationState, InputState, InteractionHandler, AlertHandler, HintHandler, Briefing, SubstationCategory, IScenario, ResultDetails, SimulationAction } from "./types";
+import { GameDrawer } from "./canvas/drawer";
+import { GameHandler } from "./canvas/handler";
+import { scenarios } from "./logic/scenarios";
 import { defaultKeyBindings, KeyBindings } from "./key-bindings";
-import { PowerFlowSolver } from "./simulation/power-flow";
-import { DispatchSolver } from "./simulation/dispatch";
-import { TopologyAnalyzer } from "./simulation/topology";
-import { ContingencyManager } from "./simulation/contingency";
-import { MetricsCalculator } from "./simulation/metrics";
-import { GridOperator } from "./simulation/operator";
-import { GridLoader } from "./simulation/loader";
+import { solvePowerFlow } from "./logic/power-flow";
+import { calculatePowerBalance, dispatchGeneration, updateFrequency } from "./logic/dispatch";
+import { updateGridTopology, handleContingencies } from "./logic/grid-analysis";
+import { updateMetrics, loadInitialData, resetToDefaults, createInitialGameMetrics } from "./logic/grid-data";
+import { toggleUnitStatus, toggleBranchCircuitStatus, setUnitSetpoint, disconnectSmallestLoad, disconnectMostLoadedLine, disconnectLargestLoad, rampAllGenerationUp } from "./logic/operator";
 import { PhysicsConfig, ViewConfig } from "./config";
+
+function createInitialSimulationState(): SimulationState {
+  return {
+    t: 0,
+    day: 1,
+    frequency: PhysicsConfig.BASE_FREQUENCY,
+    subs: {},
+    branches: {},
+    borders: [],
+    nsubs: 0,
+    Ybus: null,
+    Yinv: null,
+    metrics: createInitialGameMetrics(),
+    fr_load: 1,
+    fr_wind: 1,
+    fr_solar: 1,
+  };
+}
+
+function createInitialInputState(): InputState {
+  return {
+    inDrag: false,
+    dragstartX: 0,
+    dragstartY: 0,
+    dragorigX: 0,
+    dragorigY: 0,
+    hoverBranch: null,
+    hoverSub: null,
+  };
+}
 
 export class GameEngine {
   private drawer: GameDrawer;
   private handler?: GameHandler;
-  private pfSolver: PowerFlowSolver;
-  private dispatchSolver: DispatchSolver;
-  private topologyAnalyzer: TopologyAnalyzer;
-  private contingencyManager: ContingencyManager;
-  private metricsCalculator: MetricsCalculator;
-  private operator: GridOperator;
   private currentScenario: IScenario | null = null;
   private animationFrameId?: number;
   private isDestroyed = false;
   private isViewInitialized = false;
   public static readonly GAME_DURATION = 600;
   private isBlackout = false;
-  
+
   // Simulation State (formerly G)
   public state: GameState = {
     // Game Loop Vars
     ...createInitialSimulationState(),
     ...createInitialInputState(),
-    
+
     // View State
     anim_cycle_state: 0,
     scale_adjust: ViewConfig.SCALE_ADJUST,
@@ -44,10 +65,10 @@ export class GameEngine {
     ymin: ViewConfig.MAP_BOUNDS.YMIN,
     scale_max: ViewConfig.ZOOM_LIMIT_MAX,
     scale_min: 0, // Will be set dynamically by drawer
-    scaleX: ViewConfig.INITIAL_SCALE, 
-    scaleY: ViewConfig.INITIAL_SCALE, 
-    x0: ViewConfig.INITIAL_X0,     
-    y0: ViewConfig.INITIAL_Y0,     
+    scaleX: ViewConfig.INITIAL_SCALE,
+    scaleY: ViewConfig.INITIAL_SCALE,
+    x0: ViewConfig.INITIAL_X0,
+    y0: ViewConfig.INITIAL_Y0,
     theme: 'dark',
     animationsEnabled: true,
     renderCanvasText: true,
@@ -58,19 +79,13 @@ export class GameEngine {
 
   constructor(canvas: HTMLCanvasElement, options: { interactive?: boolean } = { interactive: true }) {
     this.drawer = new GameDrawer(canvas);
-    this.pfSolver = new PowerFlowSolver();
-    this.dispatchSolver = new DispatchSolver();
-    this.topologyAnalyzer = new TopologyAnalyzer();
-    this.contingencyManager = new ContingencyManager();
-    this.metricsCalculator = new MetricsCalculator();
-    this.operator = new GridOperator();
 
     if (options.interactive) {
       this.handler = new GameHandler(canvas, this.state, () => this.draw());
       this.handler.onResetView = () => { this.isViewInitialized = false; };
       this.handler.onDispatch = this.dispatch.bind(this);
     }
-    
+
     this.init();
   }
 
@@ -79,7 +94,6 @@ export class GameEngine {
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
-    // Clean up resources used by the handler and drawer.
     this.handler?.destroy();
     this.drawer.destroy();
     this.handler = undefined;
@@ -138,13 +152,12 @@ export class GameEngine {
   }
 
   private init() {
-    GridLoader.loadInitialData(this.state);
+    loadInitialData(this.state);
   }
 
   public setDefaults(resetView = true) {
-    GridLoader.resetToDefaults(this.state);
+    resetToDefaults(this.state);
     if (resetView) {
-      // Flag the view to be re-initialized by the drawer on the next frame.
       this.isViewInitialized = false;
     }
   }
@@ -153,12 +166,11 @@ export class GameEngine {
     this.setDefaults(false); // Don't reset view when starting a new day
     this.state.day = day;
     this.isBlackout = false;
-    
+
     this.currentScenario = scenarios[day] || null;
     if (this.currentScenario) {
       this.currentScenario.start(this.state, this.onAlert, this.onHint);
     } else {
-      // Default behavior or error for undefined day
       this.onAlert?.({ message: `Scenario for Day ${day} is not defined.`, critical: true }, true);
     }
 
@@ -179,7 +191,7 @@ export class GameEngine {
         }
     }
   }
-  
+
   public getCurrentScenarioBriefing(): Briefing | null {
     return this.currentScenario?.briefing || null;
   }
@@ -207,27 +219,27 @@ export class GameEngine {
   public dispatch(action: SimulationAction) {
     switch (action.type) {
       case 'TOGGLE_UNIT':
-        this.operator.toggleUnitStatus(this.state, action.subId, action.unitIndex);
+        toggleUnitStatus(this.state, action.subId, action.unitIndex);
         this.draw();
         break;
       case 'TOGGLE_BRANCH':
-        this.operator.toggleBranchCircuitStatus(this.state, action.branchId, action.circuitNum);
+        toggleBranchCircuitStatus(this.state, action.branchId, action.circuitNum);
         this.draw();
         break;
       case 'SET_SETPOINT':
-        this.operator.setUnitSetpoint(this.state, action.subId, action.unitIndex, action.value);
+        setUnitSetpoint(this.state, action.subId, action.unitIndex, action.value);
         break;
       case 'DISCONNECT_SMALLEST_LOAD':
-        this.operator.disconnectSmallestLoad(this.state, this.onAlert);
+        disconnectSmallestLoad(this.state, this.onAlert);
         break;
       case 'DISCONNECT_MOST_LOADED_LINE':
-        this.operator.disconnectMostLoadedLine(this.state, this.onAlert);
+        disconnectMostLoadedLine(this.state, this.onAlert);
         break;
       case 'EMERGENCY_LOAD_SHED':
-        this.operator.disconnectLargestLoad(this.state, this.onAlert);
+        disconnectLargestLoad(this.state, this.onAlert);
         break;
       case 'RAMP_ALL_GENERATION':
-        this.operator.rampAllGenerationUp(this.state, this.onAlert);
+        rampAllGenerationUp(this.state, this.onAlert);
         break;
     }
   }
@@ -253,13 +265,13 @@ export class GameEngine {
 
     this.currentScenario?.update(this.state, this.onAlert, this.onHint);
 
-    this.contingencyManager.handleContingencies(this.state, this.onAlert);
-    this.topologyAnalyzer.updateGridTopology(this.state, this.onAlert);
-    
-    const { PL, PGSET, PGMIN, PGMAX } = this.dispatchSolver.calculatePowerBalance(this.state);
-    
-    this.dispatchSolver.updateFrequency(this.state, PL, PGMIN, PGMAX, PGSET);
-    
+    handleContingencies(this.state, this.onAlert);
+    updateGridTopology(this.state, this.onAlert);
+
+    const { PL, PGSET, PGMIN, PGMAX } = calculatePowerBalance(this.state);
+
+    updateFrequency(this.state, PL, PGMIN, PGMAX, PGSET);
+
     // Check for blackout condition
     if (this.state.frequency < PhysicsConfig.FREQUENCY_BLACKOUT_THRESHOLD) {
       this.onAlert?.({ message: "Grid frequency collapsed, leading to a blackout. You've been fired.", critical: true });
@@ -267,19 +279,17 @@ export class GameEngine {
       return true; // End the day immediately
     }
 
-    const alpha = this.dispatchSolver.dispatchGeneration(this.state, PL);
-    
-    this.pfSolver.solve(this.state, alpha);
-    this.metricsCalculator.updateMetrics(this.state);
+    const alpha = dispatchGeneration(this.state, PL);
+
+    solvePowerFlow(this.state, alpha);
+    updateMetrics(this.state);
 
     return false; // Day not finished
   }
 
   public draw(isPaused?: boolean, isFastForward?: boolean) {
-    // First, ensure canvas dimensions are up-to-date. A resize might trigger a view reset.
     const wasResized = this.drawer.resizeCanvas();
 
-    // Initialize or re-initialize the view if it's the first draw, or if the canvas was resized.
     if ((!this.isViewInitialized && this.drawer.isCanvasReady()) || wasResized) {
       this.drawer.setInitialView(this.state);
       this.isViewInitialized = true;
@@ -288,7 +298,6 @@ export class GameEngine {
   }
 
   public getDashboardStats(): GameStatistics {
-    // Format time string
     const h = Math.floor(this.state.t / 60) + 1;
     const m = (this.state.t - (h - 1) * 60);
     const timeStr = `${h}:${m < 10 ? "0" + m : m} PM`;

@@ -1,7 +1,7 @@
 import { useEffect, useRef } from 'react';
-import { GameEngine } from '../game/engine';
-import { KeyBindings, GameAction } from '../game/key-bindings';
-import { Substation, Branch } from '../game/types';
+import { GameEngine } from '../engine';
+import { KeyBindings, GameAction } from '../key-bindings';
+import { Substation, Branch } from '../types';
 
 interface UseGameInputProps {
   engineRef: React.MutableRefObject<GameEngine | null>;

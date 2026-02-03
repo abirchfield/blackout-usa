@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
-import { GameEngine } from '../game/engine';
-import { GameStatistics, Alert, Hint, Substation, Branch, ResultDetails, SimulationAction } from '../game/types';
-import { KeyBindings } from '../game/key-bindings';
-import { createInitialGameStatistics } from '../game/factories';
+import { GameEngine } from '../engine';
+import { GameStatistics, Alert, Hint, Substation, Branch, ResultDetails, SimulationAction } from '../types';
+import { KeyBindings } from '../key-bindings';
+import { createInitialGameStatistics } from '../logic/grid-data';
 
 interface UseGameEngineProps {
   theme: string | undefined;

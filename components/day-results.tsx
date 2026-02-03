@@ -1,5 +1,5 @@
 import { Badge } from "@/components/ui/badge";
-import { GameStatistics, ResultDetails } from "@/lib/game/types";
+import { GameStatistics, ResultDetails } from "@/lib/types";
 
 interface DayResultsProps {
   stats: GameStatistics;

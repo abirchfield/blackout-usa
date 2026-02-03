@@ -1,11 +1,11 @@
 "use client";
 
-import { Substation, Unit, UnitStatus } from "@/lib/game/types";
+import { Substation, Unit, UnitStatus } from "@/lib/types";
 import { Timer, Power } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PowerSlider } from "@/components/controls";
-import { StatusConfig } from "@/lib/game/config";
+import { StatusConfig } from "@/lib/config";
 
 export interface ColumnConfig {
   unit?: boolean;

@@ -2,8 +2,8 @@
 
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider";
-import { Substation, Unit, UnitStatus, LoadCategoryType } from "@/lib/game/types"
-import { LoadTypeConfig, StatusConfig } from "@/lib/game/config"
+import { Substation, Unit, UnitStatus, LoadCategoryType } from "@/lib/types"
+import { LoadTypeConfig, StatusConfig } from "@/lib/config"
 import { Power, Play, Pause, FastForward } from "lucide-react"
 import { cn } from "@/lib/utils"
 import React from "react";
