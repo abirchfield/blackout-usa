@@ -1,6 +1,4 @@
 import { GameStatistics, GameState, SimulationState, InputState, InteractionHandler, AlertHandler, HintHandler, Briefing, SubstationCategory, IScenario, ResultDetails, SimulationAction } from "./types";
-import { GameDrawer } from "./canvas/drawer";
-import { GameHandler } from "./canvas/handler";
 import { SvgDrawer } from "./svg/drawer";
 import { SvgHandler } from "./svg/handler";
 import { IGridDrawer, IGridHandler } from "./interfaces";
@@ -59,7 +57,6 @@ export class GameEngine {
     ...createInitialInputState(),
 
     // View State
-    anim_cycle_state: 0,
     xmax: activeCase.mapConfig.bounds.xMax,
     xmin: activeCase.mapConfig.bounds.xMin,
     ymax: activeCase.mapConfig.bounds.yMax,
@@ -72,34 +69,21 @@ export class GameEngine {
     y0: activeCase.mapConfig.initialView.y0,
     theme: 'dark',
     animationsEnabled: true,
-    renderCanvasText: true,
+    renderMapLabels: true,
     zoomSensitivity: ViewConfig.ZOOM_SENSITIVITY_DEFAULT,
     debug_draw_map_bounds: false,
     keyBindings: defaultKeyBindings,
   };
 
-  constructor(element: HTMLCanvasElement | HTMLDivElement, options: { interactive?: boolean; renderer?: 'canvas' | 'svg' } = { interactive: true, renderer: 'canvas' }) {
-    const renderer = options.renderer ?? 'canvas';
+  constructor(element: HTMLDivElement, options: { interactive?: boolean } = { interactive: true }) {
+    const svgDrawer = new SvgDrawer(element);
+    this.drawer = svgDrawer;
 
-    if (renderer === 'svg' && element instanceof HTMLDivElement) {
-      const svgDrawer = new SvgDrawer(element);
-      this.drawer = svgDrawer;
-
-      if (options.interactive !== false) {
-        const svgHandler = new SvgHandler(svgDrawer.svgElement, this.state);
-        svgHandler.onResetView = () => { this.isViewInitialized = false; };
-        svgHandler.onDispatch = this.dispatch.bind(this);
-        this.handler = svgHandler;
-      }
-    } else {
-      this.drawer = new GameDrawer(element as HTMLCanvasElement);
-
-      if (options.interactive !== false) {
-        const canvasHandler = new GameHandler(element as HTMLCanvasElement, this.state);
-        canvasHandler.onResetView = () => { this.isViewInitialized = false; };
-        canvasHandler.onDispatch = this.dispatch.bind(this);
-        this.handler = canvasHandler;
-      }
+    if (options.interactive !== false) {
+      const svgHandler = new SvgHandler(svgDrawer.svgElement, this.state);
+      svgHandler.onResetView = () => { this.isViewInitialized = false; };
+      svgHandler.onDispatch = this.dispatch.bind(this);
+      this.handler = svgHandler;
     }
 
     this.init();
@@ -154,8 +138,8 @@ export class GameEngine {
     this.state.animationsEnabled = enabled;
   }
 
-  public setRenderCanvasText(enabled: boolean) {
-    this.state.renderCanvasText = enabled;
+  public setRenderMapLabels(enabled: boolean) {
+    this.state.renderMapLabels = enabled;
   }
 
   public setZoomSensitivity(sensitivity: number) {
@@ -303,12 +287,14 @@ export class GameEngine {
   }
 
   public draw(isPaused?: boolean, isFastForward?: boolean) {
-    const wasResized = this.drawer.resizeCanvas();
+    this.drawer.resizeCanvas();
 
-    if ((!this.isViewInitialized && this.drawer.isCanvasReady()) || wasResized) {
+    if (!this.isViewInitialized && this.drawer.isCanvasReady()) {
       this.drawer.setInitialView(this.state);
       this.isViewInitialized = true;
     }
+    // On resize, updateWorldTransform (called inside draw) will recalculate
+    // scale_min, clamp scale, and apply view bounds — no need to reset the view.
     this.drawer.draw(this.state, isPaused ?? true, isFastForward ?? false);
   }
 

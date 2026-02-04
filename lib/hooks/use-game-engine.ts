@@ -8,28 +8,25 @@ interface UseGameEngineProps {
   theme: string | undefined;
   keyBindings: KeyBindings;
   animationsEnabled: boolean;
-  renderCanvasText: boolean;
+  renderMapLabels: boolean;
   zoomSensitivity: number;
   isPaused: boolean;
   isFastForward: boolean;
   onInteract: (type: 'sub' | 'branch', data: Substation | Branch) => void;
   onDayComplete: (day: number, results: ResultDetails | null) => void;
-  renderer?: 'canvas' | 'svg';
 }
 
 export function useGameEngine({
   theme,
   keyBindings,
   animationsEnabled,
-  renderCanvasText,
+  renderMapLabels,
   zoomSensitivity,
   isPaused,
   isFastForward,
   onInteract,
   onDayComplete,
-  renderer = 'canvas'
 }: UseGameEngineProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
 
@@ -48,18 +45,17 @@ export function useGameEngine({
   useEffect(() => { onInteractRef.current = onInteract; }, [onInteract]);
   useEffect(() => { onDayCompleteRef.current = onDayComplete; }, [onDayComplete]);
 
-  // Initialize Engine — recreate when renderer changes
+  // Initialize Engine
   useEffect(() => {
-    const element = renderer === 'svg' ? svgContainerRef.current : canvasRef.current;
+    const element = svgContainerRef.current;
     if (!element) return;
 
-    // Destroy previous engine if switching renderers
     if (engineRef.current) {
       engineRef.current.destroy();
       engineRef.current = null;
     }
 
-    engineRef.current = new GameEngine(element, { interactive: true, renderer });
+    engineRef.current = new GameEngine(element, { interactive: true });
 
     // Initial Setup
     engineRef.current.startDay(1);
@@ -119,7 +115,7 @@ export function useGameEngine({
       engineRef.current?.destroy();
       engineRef.current = null;
     };
-  }, [renderer]); // Recreate engine when renderer changes
+  }, []);
 
   // Sync Props to Engine
   useEffect(() => {
@@ -131,8 +127,8 @@ export function useGameEngine({
   }, [animationsEnabled]);
 
   useEffect(() => {
-    engineRef.current?.setRenderCanvasText(renderCanvasText);
-  }, [renderCanvasText]);
+    engineRef.current?.setRenderMapLabels(renderMapLabels);
+  }, [renderMapLabels]);
 
   useEffect(() => {
     engineRef.current?.setKeyBindings(keyBindings);
@@ -157,5 +153,5 @@ export function useGameEngine({
     return engineRef.current?.getBriefingForDay(day) || null;
   }, []);
 
-  return { canvasRef, svgContainerRef, engineRef, stats, alerts, hints, setAlerts, setHints, dispatch, startDay, getBriefing };
+  return { svgContainerRef, engineRef, stats, alerts, hints, setAlerts, setHints, dispatch, startDay, getBriefing };
 }

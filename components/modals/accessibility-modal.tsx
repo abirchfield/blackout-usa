@@ -28,12 +28,12 @@ interface AccessibilityModalProps {
   onOpenChange: (open: boolean) => void;
 
   // Game-specific settings
-  viewMode?: 'canvas' | 'svg' | 'tabular';
-  onViewModeChange?: (mode: 'canvas' | 'svg' | 'tabular') => void;
+  viewMode?: 'map' | 'tabular';
+  onViewModeChange?: (mode: 'map' | 'tabular') => void;
   animationsEnabled?: boolean;
   onAnimationsEnabledChange?: (enabled: boolean) => void;
-  renderCanvasText?: boolean;
-  onRenderCanvasTextChange?: (enabled: boolean) => void;
+  renderMapLabels?: boolean;
+  onRenderMapLabelsChange?: (enabled: boolean) => void;
   keyBindings?: KeyBindings;
   onKeyBindingsChange?: (bindings: KeyBindings) => void;
   showDetailsInSidebar?: boolean;
@@ -53,8 +53,8 @@ export function AccessibilityModal({
   onViewModeChange,
   animationsEnabled,
   onAnimationsEnabledChange,
-  renderCanvasText,
-  onRenderCanvasTextChange,
+  renderMapLabels,
+  onRenderMapLabelsChange,
   keyBindings,
   onKeyBindingsChange,
   showDetailsInSidebar,
@@ -137,13 +137,12 @@ export function AccessibilityModal({
                 <Label htmlFor="view-mode-select" className="text-base font-normal">
                   Display Mode
                 </Label>
-                <Select value={viewMode} onValueChange={(value: 'canvas' | 'svg' | 'tabular') => onViewModeChange(value)}>
+                <Select value={viewMode} onValueChange={(value: 'map' | 'tabular') => onViewModeChange(value)}>
                   <SelectTrigger id="view-mode-select" className="w-[180px] justify-self-end">
                     <SelectValue placeholder="Select mode" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="canvas">Canvas</SelectItem>
-                    <SelectItem value="svg">SVG</SelectItem>
+                    <SelectItem value="map">Map</SelectItem>
                     <SelectItem value="tabular">Tabular</SelectItem>
                   </SelectContent>
                 </Select>
@@ -163,15 +162,15 @@ export function AccessibilityModal({
                 />
               </div>
             )}
-            {renderCanvasText !== undefined && onRenderCanvasTextChange && (
+            {renderMapLabels !== undefined && onRenderMapLabelsChange && (
               <div className="grid grid-cols-[1fr_auto] items-center gap-x-4">
-                <Label htmlFor="canvas-text-toggle-modal" className="text-base font-normal" aria-disabled={viewMode === 'tabular'}>
+                <Label htmlFor="map-labels-toggle-modal" className="text-base font-normal" aria-disabled={viewMode === 'tabular'}>
                   Show Map Labels
                 </Label>
                 <Switch
-                  id="canvas-text-toggle-modal"
-                  checked={renderCanvasText}
-                  onCheckedChange={onRenderCanvasTextChange}
+                  id="map-labels-toggle-modal"
+                  checked={renderMapLabels}
+                  onCheckedChange={onRenderMapLabelsChange}
                   disabled={viewMode === 'tabular'}
                   className="justify-self-end"
                 />

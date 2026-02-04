@@ -116,7 +116,6 @@ export type GameStatistics = GameMetrics & {
 };
 
 export interface ViewState {
-  anim_cycle_state: number;
   xmax: number;
   xmin: number;
   ymax: number;
@@ -132,7 +131,7 @@ export interface ViewState {
   y0: number;
   theme: 'light' | 'dark';
   animationsEnabled: boolean;
-  renderCanvasText: boolean;
+  renderMapLabels: boolean;
   zoomSensitivity: number;
   debug_draw_map_bounds: boolean;
   keyBindings: KeyBindings;
@@ -186,9 +185,9 @@ export interface Hint {
 }
 
 export interface AppSettings {
-  viewMode: 'canvas' | 'svg' | 'tabular';
+  viewMode: 'map' | 'tabular';
   animationsEnabled: boolean;
-  renderCanvasText: boolean;
+  renderMapLabels: boolean;
   showDetailsInSidebar: boolean;
   zoomSensitivity: number;
   keyBindings: KeyBindings;
