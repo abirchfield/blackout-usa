@@ -17,13 +17,13 @@ import { PersonStanding, ExternalLink } from "lucide-react";
 const isStaticExport = process.env.NODE_ENV === 'production';
 
 export default function WelcomePage() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const svgContainerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const { resolvedTheme } = useTheme();
   const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
 
   const [animationsEnabled, setAnimationsEnabled] = useState(defaultAppSettings.animationsEnabled);
-  const [renderCanvasText, setRenderCanvasText] = useState(false); // Default to false for home page
+  const [renderMapLabels, setRenderMapLabels] = useState(false); // Default to false for home page
   const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultKeyBindings);
   const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base');
   const [isHighContrast, setIsHighContrast] = useState(defaultAppSettings.isHighContrast);
@@ -34,8 +34,8 @@ export default function WelcomePage() {
   useEffect(() => {
     let animationFrameId: number;
 
-    if (canvasRef.current && !engineRef.current) {
-      const engine = new GameEngine(canvasRef.current, { interactive: false });
+    if (svgContainerRef.current && !engineRef.current) {
+      const engine = new GameEngine(svgContainerRef.current, { interactive: false });
       engineRef.current = engine;
 
       engine.setKeyBindings(keyBindings);
@@ -97,9 +97,9 @@ export default function WelcomePage() {
 
   useEffect(() => {
     if (engineRef.current) {
-      engineRef.current.setRenderCanvasText(renderCanvasText);
+      engineRef.current.setRenderMapLabels(renderMapLabels);
     }
-  }, [renderCanvasText]);
+  }, [renderMapLabels]);
 
   useEffect(() => {
     if (engineRef.current) {
@@ -156,8 +156,8 @@ export default function WelcomePage() {
         </div>
       </div>
       <div className="w-full lg:w-1/2 h-[50vh] lg:h-[70vh] rounded-lg bg-background overflow-hidden">
-        <canvas
-          ref={canvasRef}
+        <div
+          ref={svgContainerRef}
           aria-label="A static visual of the Texas electrical grid map"
           role="img"
           className="h-full w-full"
@@ -168,8 +168,8 @@ export default function WelcomePage() {
         onOpenChange={setIsAccessibilityOpen}
         animationsEnabled={animationsEnabled}
         onAnimationsEnabledChange={setAnimationsEnabled}
-        renderCanvasText={renderCanvasText}
-        onRenderCanvasTextChange={setRenderCanvasText}
+        renderMapLabels={renderMapLabels}
+        onRenderMapLabelsChange={setRenderMapLabels}
         keyBindings={keyBindings}
         onKeyBindingsChange={setKeyBindings}
         fontSize={fontSize}

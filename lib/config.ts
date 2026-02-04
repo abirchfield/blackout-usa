@@ -168,70 +168,43 @@ export function getDynamicSubstationRadius(scaleX: number, referenceScale: numbe
   return Math.max(ViewConfig.MIN_SUBSTATION_RADIUS, Math.min(radius, maxRadius));
 }
 
-// Drawing and Style Constants for Canvas
+// Drawing and Style Constants for SVG Renderer
 export const DrawingConfig = {
   // Animation
-  POWER_FLOW_PATTERN_LENGTH: 32,
   MIN_POWER_FOR_ANIMATION: 10,
-  ANIMATION_SPEED_FACTOR: 0.5,
 
   // Drawing Styles
   BORDER_LINE_WIDTH: 2,
-  BRANCH_RADIUS_NORMAL: 2.0,
-  BRANCH_RADIUS_HOVER: 4.0,
-  BRANCH_RADIUS_MIN: 1.0,
-  BRANCH_RADIUS_MAX: 5.0,
+  BRANCH_RADIUS_NORMAL: 3.0,
+  BRANCH_RADIUS_HOVER: 4.5,
+  BRANCH_RADIUS_MIN: 1.5,
+  BRANCH_RADIUS_MAX: 6.0,
   BRANCH_RADIUS_HOVER_MAX: 7.0,
   SUBSTATION_BORDER_WIDTH: 3,
   GENERATOR_OUTLINE_WIDTH: 2,
   GENERATOR_OUTER_RADIUS_FACTOR: 1.2,
-  // The total separation between lines will be (radius * this_factor).
   SECOND_CIRCUIT_OFFSET_FACTOR: 3.0,
-  POWER_FLOW_LINE_WIDTH_FACTOR: 1.5,
-
-  // Line Dashes
-  DISCONNECTED_LINE_DASH: [5, 5],
-  POWER_FLOW_DASH_BACKGROUND: [6, 26], // Must sum to POWER_FLOW_PATTERN_LENGTH
-  POWER_FLOW_DASH_FOREGROUND: [4, 28], // Must sum to POWER_FLOW_PATTERN_LENGTH
+  POWER_FLOW_LINE_WIDTH_FACTOR: 2.0,
 
   // Overload Thresholds (for drawing)
   BRANCH_OVERLOAD_NORMAL_THRESHOLD: 1.0,
   BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW: 1.2,
   BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL: 1.5,
 
-  // Fonts & Labels
-  FONT_NORMAL: "15px 'Share Tech'",
-  FONT_HOVER: "20px 'Share Tech'",
+  // Labels
+  LABEL_DISTANCE: 15,
   LABEL_OFFSET_X: 15,
   LABEL_OFFSET_Y: 5,
   LABEL_OUTLINE_WIDTH: 3,
 };
 
 export const defaultAppSettings: AppSettings = {
-  viewMode: 'canvas',
+  viewMode: 'map',
   animationsEnabled: true,
-  renderCanvasText: true,
+  renderMapLabels: true,
   showDetailsInSidebar: false,
   zoomSensitivity: ViewConfig.ZOOM_SENSITIVITY_DEFAULT,
   keyBindings: defaultKeyBindings,
   isHighContrast: false,
 };
 
-// Centralized colors for UI and Canvas elements
-export const AppColors = {
-  TRIPPED: "#FF0000", // true red
-  POWER_FLOW: "#84cc16", // lime-500
-  DEBUG: "#22d3ee", // cyan-400
-};
-
-// Centralized theme colors for the canvas to match globals.css
-export const ThemeCanvasColors = {
-  light: {
-    primary: 'black',
-    background: '#ffffff', // Corresponds to --background: oklch(1 0 0)
-  },
-  dark: {
-    primary: 'white',
-    background: 'rgb(37, 37, 37)', // Corresponds to --background: oklch(0.145 0 0)
-  }
-};

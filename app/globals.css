@@ -293,3 +293,202 @@
 .high-contrast .hover\:bg-accent:hover {
   @apply outline outline-1 outline-offset-[-1px] outline-foreground;
 }
+
+/* =============================================
+   SVG Grid Map Styles
+   ============================================= */
+
+:root {
+  /* Generation type colors (used by SVG map) */
+  --color-gen-nuclear: #c084fc;
+  --color-gen-thermal: #A08060;
+  --color-gen-wind: #22d3ee;
+  --color-gen-solar: #facc15;
+  --color-gen-load: #6b7280;
+  --color-power-flow: #4ade80;
+  --color-tripped: #FF0000;
+}
+
+/* SVG background */
+svg.grid-map {
+  background-color: var(--background);
+}
+
+/* --- Branch Lines: static properties via CSS --- */
+#branches-layer line {
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* Base line default color */
+.circuit .base {
+  stroke: var(--foreground);
+}
+
+/* Overload styling on base line: distinct colors and line patterns per level */
+[data-overload="warning"] .circuit .base {
+  stroke: var(--color-warning);
+}
+[data-overload="critical"] .circuit .base {
+  stroke: var(--color-overload-critical);
+  stroke-dasharray: 8,4;
+}
+
+/* --- Circuit Status Styling --- */
+
+/* DIS: base line stays default, flow-bg shows disconnected dash */
+.circuit[data-status="DIS"] .flow-bg {
+  stroke: var(--background);
+  stroke-dasharray: 5,5;
+  visibility: visible;
+}
+.circuit[data-status="DIS"] .flow-fg {
+  visibility: hidden;
+}
+
+/* TRIP: base line is red dashed, flow lines hidden */
+.circuit[data-status="TRIP"] .base {
+  stroke: var(--color-tripped) !important;
+  stroke-dasharray: 5,5;
+}
+.circuit[data-status="TRIP"] .flow-bg,
+.circuit[data-status="TRIP"] .flow-fg {
+  visibility: hidden;
+}
+
+/* --- Power Flow Animation (JS-driven offset, zoom-scaled dash patterns) --- */
+
+/* Forward-flowing circuits: offset moves dashes forward */
+.circuit.flow-forward[data-animated] .flow-bg,
+.circuit.flow-forward[data-animated] .flow-fg {
+  stroke-dashoffset: calc(-1 * var(--flow-offset, 0));
+}
+/* Reverse-flowing circuits: offset moves dashes backward */
+.circuit.flow-reverse[data-animated] .flow-bg,
+.circuit.flow-reverse[data-animated] .flow-fg {
+  stroke-dashoffset: var(--flow-offset, 0);
+}
+
+/* flow-bg: eraser that clears behind each packet */
+.circuit[data-animated] .flow-bg {
+  stroke: var(--background);
+  stroke-dasharray: var(--flow-dash-bg, 12 20);
+  visibility: visible;
+}
+/* flow-fg: bright packet with round caps for a smoother, pill-shaped look */
+.circuit[data-animated] .flow-fg {
+  stroke: var(--color-power-flow);
+  stroke-dasharray: var(--flow-dash-fg, 10 22);
+  stroke-linecap: round;
+  visibility: visible;
+}
+
+/* Non-animated IN circuits: flow lines hidden */
+.circuit[data-status="IN"]:not([data-animated]) .flow-bg,
+.circuit[data-status="IN"]:not([data-animated]) .flow-fg {
+  visibility: hidden;
+}
+
+/* --- Border Polyline --- */
+#world-transform > polyline {
+  fill: none;
+  stroke: var(--foreground);
+  vector-effect: non-scaling-stroke;
+  pointer-events: none;
+}
+
+/* --- Substation Text Labels --- */
+#substations-layer text {
+  font-family: 'Share Tech', monospace;
+  paint-order: stroke;
+  stroke-linejoin: round;
+  pointer-events: none;
+  fill: var(--foreground);
+  stroke: var(--background);
+}
+
+/* Hover font size */
+#substations-layer .hovered text {
+  font-size: 20px;
+}
+#substations-layer [data-sub-id]:not(.hovered) text {
+  font-size: 15px;
+}
+
+/* --- Substation Background Circles --- */
+.sub-bg {
+  fill: var(--background);
+}
+
+/* --- Substation Pie Chart Wedge --- */
+.sub-pie {
+  stroke: none;
+}
+
+/* --- Substation Border Circles --- */
+.sub-border {
+  fill: none;
+}
+
+/* Load border and pie default color */
+[data-category="load"] .sub-border {
+  stroke: var(--foreground);
+}
+[data-category="load"] .sub-pie {
+  fill: var(--foreground);
+}
+
+/* Generator category colors: border (stroke-only), pie (fill-only), outer ring (filled) */
+[data-category="nuclear"] .sub-border { stroke: var(--color-gen-nuclear); }
+[data-category="nuclear"] .sub-pie { fill: var(--color-gen-nuclear); }
+[data-category="nuclear"] .outer-ring { stroke: var(--color-gen-nuclear); fill: var(--color-gen-nuclear); }
+
+[data-category="thermal"] .sub-border { stroke: var(--color-gen-thermal); }
+[data-category="thermal"] .sub-pie { fill: var(--color-gen-thermal); }
+[data-category="thermal"] .outer-ring { stroke: var(--color-gen-thermal); fill: var(--color-gen-thermal); }
+
+[data-category="wind"] .sub-border { stroke: var(--color-gen-wind); }
+[data-category="wind"] .sub-pie { fill: var(--color-gen-wind); }
+[data-category="wind"] .outer-ring { stroke: var(--color-gen-wind); fill: var(--color-gen-wind); }
+
+[data-category="solar"] .sub-border { stroke: var(--color-gen-solar); }
+[data-category="solar"] .sub-pie { fill: var(--color-gen-solar); }
+[data-category="solar"] .outer-ring { stroke: var(--color-gen-solar); fill: var(--color-gen-solar); }
+
+/* Outer ring background is always white outline */
+.outer-ring-bg {
+  fill: none;
+  stroke: #FFFFFF;
+}
+
+/* Tripped state overrides category colors */
+[data-tripped] .sub-border,
+[data-tripped] .outer-ring {
+  stroke: var(--color-tripped) !important;
+  fill: var(--color-tripped) !important;
+}
+[data-tripped] .sub-pie {
+  visibility: hidden !important;
+}
+
+/* --- Hover Label --- */
+#hover-label-layer text {
+  font-family: 'Share Tech', monospace;
+  font-size: 20px;
+  paint-order: stroke;
+  stroke-linejoin: round;
+  pointer-events: none;
+  fill: var(--foreground);
+  stroke: var(--background);
+}
+
+/* Hover label overload colors */
+#hover-label-layer text[data-label-status="warning"] {
+  fill: var(--color-warning);
+}
+#hover-label-layer text[data-label-status="critical"] {
+  fill: var(--color-overload-critical);
+}
+#hover-label-layer text[data-label-status="tripped"] {
+  fill: var(--color-tripped);
+}

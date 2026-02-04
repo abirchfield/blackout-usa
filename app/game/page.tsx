@@ -64,9 +64,9 @@ function GamePageContent() {
 
   const [dayResultDetails, setDayResultDetails] = useState<ResultDetails | null>(null);
 
-  const [viewMode, setViewMode] = useState<'canvas' | 'svg' | 'tabular'>(defaultAppSettings.viewMode);
+  const [viewMode, setViewMode] = useState<'map' | 'tabular'>(defaultAppSettings.viewMode);
   const [animationsEnabled, setAnimationsEnabled] = useState(defaultAppSettings.animationsEnabled);
-  const [renderCanvasText, setRenderCanvasText] = useState(defaultAppSettings.renderCanvasText);
+  const [renderMapLabels, setRenderMapLabels] = useState(defaultAppSettings.renderMapLabels);
   const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultAppSettings.keyBindings);
   const [showDetailsInSidebar, setShowDetailsInSidebar] = useState(defaultAppSettings.showDetailsInSidebar);
   const [zoomSensitivity, setZoomSensitivity] = useState(defaultAppSettings.zoomSensitivity);
@@ -205,10 +205,7 @@ function GamePageContent() {
   }, []);
 
   // --- Use Game Engine Hook ---
-  const renderer = viewMode === 'svg' ? 'svg' : 'canvas' as const;
-
   const {
-    canvasRef,
     svgContainerRef,
     engineRef,
     stats: gameStatistics,
@@ -223,7 +220,7 @@ function GamePageContent() {
     theme: resolvedTheme,
     keyBindings,
     animationsEnabled,
-    renderCanvasText,
+    renderMapLabels,
     zoomSensitivity,
     isPaused,
     isFastForward,
@@ -232,7 +229,6 @@ function GamePageContent() {
       else if (type === 'branch') handleBranchSelect(data as Branch);
     },
     onDayComplete: handleDayComplete,
-    renderer
   });
 
   const isBlackout = gameStatistics.blackout || false;
@@ -522,16 +518,12 @@ function GamePageContent() {
                   <time id="vis-time-value" dateTime={`D${gameStatistics.day}T${gameStatistics.timeStr.replace(/ /g, '')}`} className="text-2xl font-bold text-foreground tabular-nums tracking-wider">{gameStatistics.timeStr}</time>
                 </div>
               )}
-              <canvas
-                ref={canvasRef}
+              <div
+                ref={svgContainerRef}
                 tabIndex={0}
                 aria-label="Interactive Texas electrical grid map"
                 role="application"
-                className={`h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary ${viewMode !== 'canvas' ? 'hidden' : ''}`}
-              ></canvas>
-              <div
-                ref={svgContainerRef}
-                className={`h-full w-full ${viewMode !== 'svg' ? 'hidden' : ''}`}
+                className={`h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary ${viewMode !== 'map' ? 'hidden' : ''}`}
               ></div>
               {viewMode === 'tabular' && (
                 <div className="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-share-tech">
@@ -621,8 +613,8 @@ function GamePageContent() {
         }}
         animationsEnabled={animationsEnabled}
         onAnimationsEnabledChange={setAnimationsEnabled}
-        renderCanvasText={renderCanvasText}
-        onRenderCanvasTextChange={setRenderCanvasText}
+        renderMapLabels={renderMapLabels}
+        onRenderMapLabelsChange={setRenderMapLabels}
         keyBindings={keyBindings}
         onKeyBindingsChange={setKeyBindings}
         showDetailsInSidebar={showDetailsInSidebar}
