@@ -64,7 +64,7 @@ function GamePageContent() {
 
   const [dayResultDetails, setDayResultDetails] = useState<ResultDetails | null>(null);
 
-  const [viewMode, setViewMode] = useState<'visual' | 'tabular'>(defaultAppSettings.viewMode);
+  const [viewMode, setViewMode] = useState<'canvas' | 'svg' | 'tabular'>(defaultAppSettings.viewMode);
   const [animationsEnabled, setAnimationsEnabled] = useState(defaultAppSettings.animationsEnabled);
   const [renderCanvasText, setRenderCanvasText] = useState(defaultAppSettings.renderCanvasText);
   const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultAppSettings.keyBindings);
@@ -205,8 +205,11 @@ function GamePageContent() {
   }, []);
 
   // --- Use Game Engine Hook ---
+  const renderer = viewMode === 'svg' ? 'svg' : 'canvas' as const;
+
   const {
     canvasRef,
+    svgContainerRef,
     engineRef,
     stats: gameStatistics,
     alerts,
@@ -228,7 +231,8 @@ function GamePageContent() {
       if (type === 'sub') handleSubstationSelect(data as Substation);
       else if (type === 'branch') handleBranchSelect(data as Branch);
     },
-    onDayComplete: handleDayComplete
+    onDayComplete: handleDayComplete,
+    renderer
   });
 
   const isBlackout = gameStatistics.blackout || false;
@@ -509,7 +513,7 @@ function GamePageContent() {
     <ResizablePanel defaultSize={isMobile ? 60 : 60} minSize={30} key="main-panel">
           <main className="h-full flex flex-col" aria-label="Main game area">
             <div className="font-share-tech relative flex-1 w-full h-full flex flex-col">
-              {viewMode === 'visual' && (
+              {viewMode !== 'tabular' && (
                 <div role="timer" aria-labelledby="vis-day-label vis-day-value vis-time-value" className="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-4 py-2 rounded-md border border-border/50 shadow-sm flex items-center gap-4">
                   <div className="flex items-center gap-2">
                     <span id="vis-day-label" className="text-2xl font-semibold text-muted-foreground uppercase">Day</span>
@@ -523,8 +527,12 @@ function GamePageContent() {
                 tabIndex={0}
                 aria-label="Interactive Texas electrical grid map"
                 role="application"
-                className={`h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary ${viewMode !== 'visual' ? 'hidden' : ''}`}
+                className={`h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary ${viewMode !== 'canvas' ? 'hidden' : ''}`}
               ></canvas>
+              <div
+                ref={svgContainerRef}
+                className={`h-full w-full ${viewMode !== 'svg' ? 'hidden' : ''}`}
+              ></div>
               {viewMode === 'tabular' && (
                 <div className="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-share-tech">
                   <div className="flex-1 border-b md:border-b-0 md:border-r p-4 flex flex-col min-h-0">
