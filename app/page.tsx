@@ -1,32 +1,23 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { GameEngine } from "@/lib/engine";
 import { AccessibilityModal } from "@/components/modals/accessibility-modal";
-import { KeyBindings, defaultKeyBindings } from "@/lib/key-bindings";
-import { defaultAppSettings, FONT_SIZE_MAP } from "@/lib/config";
+import { useAppSettings } from "@/lib/hooks/use-app-settings";
+import { useModalManager } from "@/lib/hooks/use-modal-manager";
 import { PersonStanding, ExternalLink } from "lucide-react";
 
-// In a static export (`next export`), links to pages need to point to the
-// generated .html file to work on simple static servers without URL rewriting.
-// This conditional logic ensures the links work in both development (`/game`)
-// and in the static export (`/game.html`).
 const isStaticExport = process.env.NODE_ENV === 'production';
 
 export default function WelcomePage() {
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const { resolvedTheme } = useTheme();
-  const [isAccessibilityOpen, setIsAccessibilityOpen] = useState(false);
-
-  const [animationsEnabled, setAnimationsEnabled] = useState(defaultAppSettings.animationsEnabled);
-  const [renderMapLabels, setRenderMapLabels] = useState(false); // Default to false for home page
-  const [keyBindings, setKeyBindings] = useState<KeyBindings>(defaultKeyBindings);
-  const [fontSize, setFontSize] = useState<'sm' | 'base' | 'lg' | 'xl'>('base');
-  const [isHighContrast, setIsHighContrast] = useState(defaultAppSettings.isHighContrast);
+  const modals = useModalManager();
+  const { settings, updateSettings } = useAppSettings({ renderMapLabels: false });
 
   const gameUrl = isStaticExport ? './game.html' : '/game';
   const tutorialUrl = isStaticExport ? './game.html?tutorial=true' : '/game?tutorial=true';
@@ -38,15 +29,13 @@ export default function WelcomePage() {
       const engine = new GameEngine(svgContainerRef.current, { interactive: false });
       engineRef.current = engine;
 
-      engine.setKeyBindings(keyBindings);
-      // Pre-calculate power flow to have something to animate
+      engine.setKeyBindings(settings.keyBindings);
       engine.startDay(1);
       engine.update(1, false);
 
       const animate = () => {
         if (engineRef.current) {
           engine.setTheme((resolvedTheme as 'light' | 'dark') || 'dark');
-          // isPaused is false to allow the animation cycle to run in the drawer
           engine.draw(false, false);
         }
         animationFrameId = requestAnimationFrame(animate);
@@ -56,10 +45,9 @@ export default function WelcomePage() {
         engineRef.current?.draw(false, false);
       };
 
-      animate(); // Start the animation loop
+      animate();
       window.addEventListener('resize', handleResize);
 
-      // Cleanup function
       return () => {
         window.removeEventListener('resize', handleResize);
         cancelAnimationFrame(animationFrameId);
@@ -67,39 +55,20 @@ export default function WelcomePage() {
         engineRef.current = null;
       };
     }
-  }, [resolvedTheme, keyBindings]);
+  }, [resolvedTheme, settings.keyBindings]);
+
+  // Sync settings to engine
+  useEffect(() => {
+    engineRef.current?.setAnimationsEnabled(settings.animationsEnabled);
+  }, [settings.animationsEnabled]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    if (isHighContrast) {
-      root.classList.add('high-contrast');
-    } else {
-      root.classList.remove('high-contrast');
-    }
-  }, [isHighContrast]);
+    engineRef.current?.setRenderMapLabels(settings.renderMapLabels);
+  }, [settings.renderMapLabels]);
 
   useEffect(() => {
-    const root = document.documentElement;
-    root.style.fontSize = FONT_SIZE_MAP[fontSize] || '16px';
-  }, [fontSize]);
-
-  useEffect(() => {
-    if (engineRef.current) {
-      engineRef.current.setAnimationsEnabled(animationsEnabled);
-    }
-  }, [animationsEnabled]);
-
-  useEffect(() => {
-    if (engineRef.current) {
-      engineRef.current.setRenderMapLabels(renderMapLabels);
-    }
-  }, [renderMapLabels]);
-
-  useEffect(() => {
-    if (engineRef.current) {
-      engineRef.current.setKeyBindings(keyBindings);
-    }
-  }, [keyBindings]);
+    engineRef.current?.setKeyBindings(settings.keyBindings);
+  }, [settings.keyBindings]);
 
   return (
     <main className="relative flex min-h-screen flex-col lg:flex-row items-center justify-center p-4 lg:p-8 font-share-tech gap-8">
@@ -108,7 +77,7 @@ export default function WelcomePage() {
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => setIsAccessibilityOpen(true)}
+            onClick={() => modals.openModal('accessibility')}
             aria-label="Accessibility Settings"
           >
             <PersonStanding className="h-6 w-6" />
@@ -157,20 +126,14 @@ export default function WelcomePage() {
           className="h-full w-full"
         />
       </div>
-      <AccessibilityModal
-        open={isAccessibilityOpen}
-        onOpenChange={setIsAccessibilityOpen}
-        animationsEnabled={animationsEnabled}
-        onAnimationsEnabledChange={setAnimationsEnabled}
-        renderMapLabels={renderMapLabels}
-        onRenderMapLabelsChange={setRenderMapLabels}
-        keyBindings={keyBindings}
-        onKeyBindingsChange={setKeyBindings}
-        fontSize={fontSize}
-        onFontSizeChange={setFontSize}
-        isHighContrast={isHighContrast}
-        onIsHighContrastChange={setIsHighContrast}
-      />
+      {modals.isOpen('accessibility') && (
+        <AccessibilityModal
+          open={true}
+          onOpenChange={(open) => modals.onOpenChange('accessibility', open)}
+          settings={settings}
+          onSettingsChange={updateSettings}
+        />
+      )}
     </main>
   );
 }

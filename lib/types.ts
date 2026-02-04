@@ -186,6 +186,8 @@ export interface Hint {
   message: string;
 }
 
+export type FontSize = 'sm' | 'base' | 'lg' | 'xl';
+
 export interface AppSettings {
   viewMode: 'map' | 'tabular';
   animationsEnabled: boolean;
@@ -193,12 +195,21 @@ export interface AppSettings {
   zoomSensitivity: number;
   keyBindings: KeyBindings;
   isHighContrast: boolean;
+  fontSize: FontSize;
 }
 
 export interface ResultDetails {
   performance: 'record' | 'good' | 'okay' | 'bad';
   costM: string;
   message: string;
+}
+
+export interface DayFlowState {
+  targetDay: number;
+  isDayFinished: boolean;
+  resultDetails: ResultDetails | null;
+  briefing: Briefing | null;
+  isTransitioning: boolean;
 }
 
 export interface IScenario {

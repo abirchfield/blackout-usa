@@ -2,6 +2,7 @@
 
 import { RotateCw, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { hcVariant } from "@/lib/utils";
 import { DayResults } from "@/components/day-results";
 import {
   Dialog,
@@ -61,15 +62,15 @@ export function DayTransitionModal({
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <Button
                   onClick={() => onReplayDay(gameStatistics.day)}
-                  variant={isHighContrast ? "outline" : "secondary"}
-                  className="flex items-center justify-center gap-2 cursor-pointer"
+                  variant={hcVariant(isHighContrast)}
+                  className="flex items-center justify-center gap-2"
                 >
                   <RotateCw className="h-4 w-4" />
                   <span>Replay Today</span>
                 </Button>
                 <Button
                   onClick={() => onNextDay(gameStatistics.day)}
-                  className="flex items-center justify-center gap-2 cursor-pointer"
+                  className="flex items-center justify-center gap-2"
                 >
                   <span>Next Day</span>
                   <ArrowRight className="h-4 w-4" />

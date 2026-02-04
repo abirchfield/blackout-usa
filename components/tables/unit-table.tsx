@@ -2,7 +2,7 @@
 
 import { Substation, Unit, UnitStatus } from "@/lib/types";
 import { Timer, Power } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { cn, hcVariant } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { PowerSlider } from "@/components/controls";
 import { StatusConfig } from "@/lib/config";
@@ -124,7 +124,7 @@ export function GeneratorUnitDetails({
             {startupTimeHours} hr
           </time>
         );
-        actionButtonElement = <Button variant={isHighContrast ? "outline" : "secondary"} size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Start Up Unit ${index + 1}`}><Power className="h-5 w-5" aria-hidden="true" /></Button>;
+        actionButtonElement = <Button variant={hcVariant(isHighContrast ?? false)} size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Start Up Unit ${index + 1}`}><Power className="h-5 w-5" aria-hidden="true" /></Button>;
         break;
       case UnitStatus.STARTUP:
         controlElement = <PowerSlider {...sliderProps} disabled={true} />;

@@ -17,45 +17,45 @@ export const GenerationTypeConfig: Record<SubstationCategory, {
 }> = {
   [SubstationCategory.Nuclear]: {
     name: "Nuclear",
-    color: "#c084fc", // purple-400
+    color: "#c084fc",
     tailwind: {
-      text: "text-[#c084fc]",
-      bg: "bg-[#c084fc]",
-      border: "border-[#c084fc]",
+      text: "text-[var(--color-gen-nuclear)]",
+      bg: "bg-[var(--color-gen-nuclear)]",
+      border: "border-[var(--color-gen-nuclear)]",
     },
     icon: Atom,
   },
-  [SubstationCategory.Thermal]: { name: "Thermal", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
-  [SubstationCategory.GasTurbine]: { name: "Gas Turbine", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
-  [SubstationCategory.GasCombinedCycle]: { name: "Combined Cycle", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
-  [SubstationCategory.CoalFiredSteam]: { name: "Coal Steam", color: "#A08060", tailwind: { text: "text-[#A08060]", bg: "bg-[#A08060]", border: "border-[#A08060]" }, icon: Flame },
+  [SubstationCategory.Thermal]: { name: "Thermal", color: "#A08060", tailwind: { text: "text-[var(--color-gen-thermal)]", bg: "bg-[var(--color-gen-thermal)]", border: "border-[var(--color-gen-thermal)]" }, icon: Flame },
+  [SubstationCategory.GasTurbine]: { name: "Gas Turbine", color: "#A08060", tailwind: { text: "text-[var(--color-gen-thermal)]", bg: "bg-[var(--color-gen-thermal)]", border: "border-[var(--color-gen-thermal)]" }, icon: Flame },
+  [SubstationCategory.GasCombinedCycle]: { name: "Combined Cycle", color: "#A08060", tailwind: { text: "text-[var(--color-gen-thermal)]", bg: "bg-[var(--color-gen-thermal)]", border: "border-[var(--color-gen-thermal)]" }, icon: Flame },
+  [SubstationCategory.CoalFiredSteam]: { name: "Coal Steam", color: "#A08060", tailwind: { text: "text-[var(--color-gen-thermal)]", bg: "bg-[var(--color-gen-thermal)]", border: "border-[var(--color-gen-thermal)]" }, icon: Flame },
   [SubstationCategory.Wind]: {
     name: "Wind",
-    color: "#22d3ee", // cyan-400
+    color: "#22d3ee",
     tailwind: {
-      text: "text-[#22d3ee]",
-      bg: "bg-[#22d3ee]",
-      border: "border-[#22d3ee]",
+      text: "text-[var(--color-gen-wind)]",
+      bg: "bg-[var(--color-gen-wind)]",
+      border: "border-[var(--color-gen-wind)]",
     },
     icon: Wind,
   },
   [SubstationCategory.Solar]: {
     name: "Solar",
-    color: "#facc15", // yellow-400
+    color: "#facc15",
     tailwind: {
-      text: "text-[#facc15]",
-      bg: "bg-[#facc15]",
-      border: "border-[#facc15]",
+      text: "text-[var(--color-gen-solar)]",
+      bg: "bg-[var(--color-gen-solar)]",
+      border: "border-[var(--color-gen-solar)]",
     },
     icon: Sun,
   },
   [SubstationCategory.Load]: {
     name: "Load",
-    color: "#6b7280", // gray-500
+    color: "#6b7280",
     tailwind: {
-      text: "text-muted-foreground",
-      bg: "bg-muted-foreground",
-      border: "border-muted-foreground",
+      text: "text-[var(--color-gen-load)]",
+      bg: "bg-[var(--color-gen-load)]",
+      border: "border-[var(--color-gen-load)]",
     },
     icon: Plug,
   }
@@ -233,5 +233,6 @@ export const defaultAppSettings: AppSettings = {
   zoomSensitivity: ViewConfig.ZOOM_SENSITIVITY_DEFAULT,
   keyBindings: defaultKeyBindings,
   isHighContrast: false,
+  fontSize: 'base',
 };
 

@@ -3,6 +3,16 @@
 import { useState } from "react"
 import { HelpCircle, LogOut, PersonStanding, Play, Pause, FastForward, Bell, Lightbulb, FileText, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { hcVariant } from "@/lib/utils"
+
+function NotificationDot({ ping, color }: { ping?: boolean; color: string }) {
+  return (
+    <span className="absolute top-1 right-1 flex h-2 w-2" aria-hidden="true">
+      {ping && <span className={`animate-ping absolute inline-flex h-full w-full rounded-full ${color} opacity-75`} />}
+      <span className={`relative inline-flex rounded-full h-2 w-2 ${color}`} />
+    </span>
+  );
+}
 
 interface AppHeaderProps {
   onAccessibilityClick: () => void;
@@ -28,7 +38,7 @@ function TimeControls({ isPaused, isFastForward, onTogglePause, onToggleFastForw
       <Button variant="ghost" size="icon" onClick={onTogglePause} aria-label={isPaused ? "Resume game" : "Pause game"} disabled={controlsDisabled}>
         {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
       </Button>
-      <Button variant={isFastForward ? (isHighContrast ? "outline" : "secondary") : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
+      <Button variant={isFastForward ? hcVariant(isHighContrast ?? false) : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
         <FastForward className={`h-5 w-5 ${isFastForward ? "fill-current" : ""}`} />
       </Button>
     </>
@@ -52,20 +62,11 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
             <TimeControls {...timeControlProps} />
             <Button variant="ghost" size="icon" onClick={onAlertsClick} className="relative" aria-label={`View alerts, ${alertsCount} new notifications`} disabled={controlsDisabled}>
               <Bell className="h-5 w-5" />
-              {alertsCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-2 w-2" aria-hidden="true">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-              )}
+              {alertsCount > 0 && <NotificationDot ping color="bg-red-500" />}
             </Button>
             <Button variant="ghost" size="icon" onClick={onHintsClick} className="relative" aria-label={`View hints, ${hintsCount} new items`} disabled={controlsDisabled}>
               <Lightbulb className="h-5 w-5" />
-              {hintsCount > 0 && (
-                <span className="absolute top-1 right-1 flex h-2 w-2" aria-hidden="true">
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
-              )}
+              {hintsCount > 0 && <NotificationDot color="bg-amber-500" />}
             </Button>
             <Button variant="ghost" size="icon" onClick={onBriefingClick} aria-label="View briefing" disabled={controlsDisabled}>
               <FileText className="h-5 w-5" />
@@ -107,21 +108,12 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
             <Button variant="ghost" onClick={() => { onAlertsClick(); setIsMenuOpen(false); }} className="justify-start relative" disabled={controlsDisabled} aria-label={`View alerts, ${alertsCount} new notifications`}>
               <Bell className="mr-2 h-4 w-4" aria-hidden="true" />
               Alerts
-              {alertsCount > 0 && (
-                <span className="absolute top-2 right-2 flex h-2 w-2" aria-hidden="true">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
-                </span>
-              )}
+              {alertsCount > 0 && <NotificationDot ping color="bg-red-500" />}
             </Button>
             <Button variant="ghost" onClick={() => { onHintsClick(); setIsMenuOpen(false); }} className="justify-start relative" disabled={controlsDisabled} aria-label={`View hints, ${hintsCount} new items`}>
               <Lightbulb className="mr-2 h-4 w-4" aria-hidden="true" />
               Hints
-              {hintsCount > 0 && (
-                <span className="absolute top-2 right-2 flex h-2 w-2" aria-hidden="true">
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
-                </span>
-              )}
+              {hintsCount > 0 && <NotificationDot color="bg-amber-500" />}
             </Button>
             <Button variant="ghost" onClick={() => { onBriefingClick(); setIsMenuOpen(false); }} className="justify-start" disabled={controlsDisabled}>
               <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
