@@ -28,8 +28,8 @@ interface AccessibilityModalProps {
   onOpenChange: (open: boolean) => void;
 
   // Game-specific settings
-  viewMode?: 'visual' | 'tabular';
-  onViewModeChange?: (mode: 'visual' | 'tabular') => void;
+  viewMode?: 'canvas' | 'svg' | 'tabular';
+  onViewModeChange?: (mode: 'canvas' | 'svg' | 'tabular') => void;
   animationsEnabled?: boolean;
   onAnimationsEnabledChange?: (enabled: boolean) => void;
   renderCanvasText?: boolean;
@@ -137,12 +137,13 @@ export function AccessibilityModal({
                 <Label htmlFor="view-mode-select" className="text-base font-normal">
                   Display Mode
                 </Label>
-                <Select value={viewMode} onValueChange={(value: 'visual' | 'tabular') => onViewModeChange(value)}>
+                <Select value={viewMode} onValueChange={(value: 'canvas' | 'svg' | 'tabular') => onViewModeChange(value)}>
                   <SelectTrigger id="view-mode-select" className="w-[180px] justify-self-end">
                     <SelectValue placeholder="Select mode" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="visual">Visual</SelectItem>
+                    <SelectItem value="canvas">Canvas</SelectItem>
+                    <SelectItem value="svg">SVG</SelectItem>
                     <SelectItem value="tabular">Tabular</SelectItem>
                   </SelectContent>
                 </Select>
@@ -150,35 +151,35 @@ export function AccessibilityModal({
             )}
             {animationsEnabled !== undefined && onAnimationsEnabledChange && (
               <div className="grid grid-cols-[1fr_auto] items-center gap-x-4">
-                <Label htmlFor="animations-toggle-modal" className="text-base font-normal" aria-disabled={viewMode !== 'visual'}>
+                <Label htmlFor="animations-toggle-modal" className="text-base font-normal" aria-disabled={viewMode === 'tabular'}>
                   Enable Animations
                 </Label>
                 <Switch
                   id="animations-toggle-modal"
                   checked={animationsEnabled}
                   onCheckedChange={onAnimationsEnabledChange}
-                  disabled={viewMode !== 'visual'}
+                  disabled={viewMode === 'tabular'}
                   className="justify-self-end"
                 />
               </div>
             )}
             {renderCanvasText !== undefined && onRenderCanvasTextChange && (
               <div className="grid grid-cols-[1fr_auto] items-center gap-x-4">
-                <Label htmlFor="canvas-text-toggle-modal" className="text-base font-normal" aria-disabled={viewMode !== 'visual'}>
+                <Label htmlFor="canvas-text-toggle-modal" className="text-base font-normal" aria-disabled={viewMode === 'tabular'}>
                   Show Map Labels
                 </Label>
                 <Switch
                   id="canvas-text-toggle-modal"
                   checked={renderCanvasText}
                   onCheckedChange={onRenderCanvasTextChange}
-                  disabled={viewMode !== 'visual'}
+                  disabled={viewMode === 'tabular'}
                   className="justify-self-end"
                 />
               </div>
             )}
             {zoomSensitivity !== undefined && onZoomSensitivityChange && (
               <div className="grid grid-cols-[1fr_auto] items-center gap-x-4">
-                <Label htmlFor="zoom-sensitivity-slider" className="text-base font-normal" aria-disabled={viewMode !== 'visual'}>
+                <Label htmlFor="zoom-sensitivity-slider" className="text-base font-normal" aria-disabled={viewMode === 'tabular'}>
                   Zoom Sensitivity
                 </Label>
                 <div className="flex items-center gap-2 w-[180px] justify-self-end">
@@ -189,7 +190,7 @@ export function AccessibilityModal({
                     step={ViewConfig.ZOOM_SENSITIVITY_STEP}
                     value={[zoomSensitivity]}
                     onValueChange={(value) => onZoomSensitivityChange(value[0])}
-                    disabled={viewMode !== 'visual'}
+                    disabled={viewMode === 'tabular'}
                     aria-label="Zoom speed"
                   />
                 </div>

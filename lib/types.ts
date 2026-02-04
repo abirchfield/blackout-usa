@@ -186,7 +186,7 @@ export interface Hint {
 }
 
 export interface AppSettings {
-  viewMode: 'visual' | 'tabular';
+  viewMode: 'canvas' | 'svg' | 'tabular';
   animationsEnabled: boolean;
   renderCanvasText: boolean;
   showDetailsInSidebar: boolean;

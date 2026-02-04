@@ -1,6 +1,9 @@
 import { GameStatistics, GameState, SimulationState, InputState, InteractionHandler, AlertHandler, HintHandler, Briefing, SubstationCategory, IScenario, ResultDetails, SimulationAction } from "./types";
 import { GameDrawer } from "./canvas/drawer";
 import { GameHandler } from "./canvas/handler";
+import { SvgDrawer } from "./svg/drawer";
+import { SvgHandler } from "./svg/handler";
+import { IGridDrawer, IGridHandler } from "./interfaces";
 import { activeCase } from "@/data/cases";
 import { defaultKeyBindings, KeyBindings } from "./key-bindings";
 import { solvePowerFlow } from "./logic/power-flow";
@@ -41,11 +44,10 @@ function createInitialInputState(): InputState {
 }
 
 export class GameEngine {
-  private drawer: GameDrawer;
-  private handler?: GameHandler;
+  private drawer: IGridDrawer;
+  private handler?: IGridHandler;
   private currentScenario: IScenario | null = null;
   private animationFrameId?: number;
-  private isDestroyed = false;
   private isViewInitialized = false;
   public static readonly GAME_DURATION = 600;
   private isBlackout = false;
@@ -76,20 +78,34 @@ export class GameEngine {
     keyBindings: defaultKeyBindings,
   };
 
-  constructor(canvas: HTMLCanvasElement, options: { interactive?: boolean } = { interactive: true }) {
-    this.drawer = new GameDrawer(canvas);
+  constructor(element: HTMLCanvasElement | HTMLDivElement, options: { interactive?: boolean; renderer?: 'canvas' | 'svg' } = { interactive: true, renderer: 'canvas' }) {
+    const renderer = options.renderer ?? 'canvas';
 
-    if (options.interactive) {
-      this.handler = new GameHandler(canvas, this.state);
-      this.handler.onResetView = () => { this.isViewInitialized = false; };
-      this.handler.onDispatch = this.dispatch.bind(this);
+    if (renderer === 'svg' && element instanceof HTMLDivElement) {
+      const svgDrawer = new SvgDrawer(element);
+      this.drawer = svgDrawer;
+
+      if (options.interactive !== false) {
+        const svgHandler = new SvgHandler(svgDrawer.svgElement, this.state);
+        svgHandler.onResetView = () => { this.isViewInitialized = false; };
+        svgHandler.onDispatch = this.dispatch.bind(this);
+        this.handler = svgHandler;
+      }
+    } else {
+      this.drawer = new GameDrawer(element as HTMLCanvasElement);
+
+      if (options.interactive !== false) {
+        const canvasHandler = new GameHandler(element as HTMLCanvasElement, this.state);
+        canvasHandler.onResetView = () => { this.isViewInitialized = false; };
+        canvasHandler.onDispatch = this.dispatch.bind(this);
+        this.handler = canvasHandler;
+      }
     }
 
     this.init();
   }
 
   public destroy() {
-    this.isDestroyed = true;
     if (this.animationFrameId) {
       cancelAnimationFrame(this.animationFrameId);
     }
@@ -108,7 +124,7 @@ export class GameEngine {
     return this.handler?.onInteract;
   }
 
-  public getHandler(): GameHandler | undefined {
+  public getHandler(): IGridHandler | undefined {
     return this.handler;
   }
 

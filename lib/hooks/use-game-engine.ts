@@ -14,6 +14,7 @@ interface UseGameEngineProps {
   isFastForward: boolean;
   onInteract: (type: 'sub' | 'branch', data: Substation | Branch) => void;
   onDayComplete: (day: number, results: ResultDetails | null) => void;
+  renderer?: 'canvas' | 'svg';
 }
 
 export function useGameEngine({
@@ -25,11 +26,13 @@ export function useGameEngine({
   isPaused,
   isFastForward,
   onInteract,
-  onDayComplete
+  onDayComplete,
+  renderer = 'canvas'
 }: UseGameEngineProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const svgContainerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
-  
+
   const [stats, setStats] = useState<GameStatistics & { blackout?: boolean }>(createInitialGameStatistics());
   const [alerts, setAlerts] = useState<Array<{id: number, time: string, message: string, critical: boolean}>>([]);
   const [hints, setHints] = useState<Array<{id: number, time: string, message: string}>>([]);
@@ -45,71 +48,78 @@ export function useGameEngine({
   useEffect(() => { onInteractRef.current = onInteract; }, [onInteract]);
   useEffect(() => { onDayCompleteRef.current = onDayComplete; }, [onDayComplete]);
 
-  // Initialize Engine
+  // Initialize Engine — recreate when renderer changes
   useEffect(() => {
-    if (canvasRef.current && !engineRef.current) {
-      engineRef.current = new GameEngine(canvasRef.current);
-      
-      // Initial Setup
-      engineRef.current.startDay(1);
-      engineRef.current.update(1, false);
-      setStats(engineRef.current.getDashboardStats());
+    const element = renderer === 'svg' ? svgContainerRef.current : canvasRef.current;
+    if (!element) return;
 
-      // Event Wiring
-      engineRef.current.onInteract = (type, data) => onInteractRef.current(type, data);
-      
-      engineRef.current.onAlert = (alert: Alert, reset?: boolean) => {
-        const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
-        setAlerts(prev => {
-          const nextId = (reset || prev.length === 0) ? 0 : (prev[0].id + 1);
-          const newAlert = { id: nextId, time: timeStr, ...alert };
-          return reset ? [newAlert] : [newAlert, ...prev];
-        });
-      };
+    // Destroy previous engine if switching renderers
+    if (engineRef.current) {
+      engineRef.current.destroy();
+      engineRef.current = null;
+    }
 
-      engineRef.current.onHint = (hint: Hint, reset?: boolean) => {
-        const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
-        setHints(prev => {
-          const nextId = (reset || prev.length === 0) ? 0 : (prev[0].id + 1);
-          const newHint = { id: nextId, time: timeStr, ...hint };
-          return reset ? [newHint] : [newHint, ...prev];
-        });
-      };
+    engineRef.current = new GameEngine(element, { interactive: true, renderer });
 
-      // Game Loop
-      let animationFrameId: number;
-      let lastGameStepTime = 0;
+    // Initial Setup
+    engineRef.current.startDay(1);
+    engineRef.current.update(1, false);
+    setStats(engineRef.current.getDashboardStats());
 
-      const loop = (timestamp: number) => {
-        if (engineRef.current) {
-          if (!isPausedRef.current) {
-            const gameSpeed = isFastForwardRef.current ? 50 : 500;
-            if (timestamp - lastGameStepTime > gameSpeed) {
-              const isDayOver = engineRef.current.update(1);
-              lastGameStepTime = timestamp;
-              
-              const newStats = engineRef.current.getDashboardStats();
-              setStats(newStats);
+    // Event Wiring
+    engineRef.current.onInteract = (type, data) => onInteractRef.current(type, data);
 
-              if (isDayOver) {
-                const results = engineRef.current.getResultsForDay(newStats.day, newStats.totalCost);
-                onDayCompleteRef.current(newStats.day, results);
-              }
+    engineRef.current.onAlert = (alert: Alert, reset?: boolean) => {
+      const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
+      setAlerts(prev => {
+        const nextId = (reset || prev.length === 0) ? 0 : (prev[0].id + 1);
+        const newAlert = { id: nextId, time: timeStr, ...alert };
+        return reset ? [newAlert] : [newAlert, ...prev];
+      });
+    };
+
+    engineRef.current.onHint = (hint: Hint, reset?: boolean) => {
+      const timeStr = engineRef.current?.getDashboardStats().timeStr || "1:00 PM";
+      setHints(prev => {
+        const nextId = (reset || prev.length === 0) ? 0 : (prev[0].id + 1);
+        const newHint = { id: nextId, time: timeStr, ...hint };
+        return reset ? [newHint] : [newHint, ...prev];
+      });
+    };
+
+    // Game Loop
+    let animationFrameId: number;
+    let lastGameStepTime = 0;
+
+    const loop = (timestamp: number) => {
+      if (engineRef.current) {
+        if (!isPausedRef.current) {
+          const gameSpeed = isFastForwardRef.current ? 50 : 500;
+          if (timestamp - lastGameStepTime > gameSpeed) {
+            const isDayOver = engineRef.current.update(1);
+            lastGameStepTime = timestamp;
+
+            const newStats = engineRef.current.getDashboardStats();
+            setStats(newStats);
+
+            if (isDayOver) {
+              const results = engineRef.current.getResultsForDay(newStats.day, newStats.totalCost);
+              onDayCompleteRef.current(newStats.day, results);
             }
           }
-          engineRef.current.draw(isPausedRef.current, isFastForwardRef.current);
         }
-        animationFrameId = requestAnimationFrame(loop);
-      };
+        engineRef.current.draw(isPausedRef.current, isFastForwardRef.current);
+      }
       animationFrameId = requestAnimationFrame(loop);
+    };
+    animationFrameId = requestAnimationFrame(loop);
 
-      return () => {
-        cancelAnimationFrame(animationFrameId);
-        engineRef.current?.destroy();
-        engineRef.current = null;
-      };
-    }
-  }, []); // Run once on mount
+    return () => {
+      cancelAnimationFrame(animationFrameId);
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
+  }, [renderer]); // Recreate engine when renderer changes
 
   // Sync Props to Engine
   useEffect(() => {
@@ -147,5 +157,5 @@ export function useGameEngine({
     return engineRef.current?.getBriefingForDay(day) || null;
   }, []);
 
-  return { canvasRef, engineRef, stats, alerts, hints, setAlerts, setHints, dispatch, startDay, getBriefing };
+  return { canvasRef, svgContainerRef, engineRef, stats, alerts, hints, setAlerts, setHints, dispatch, startDay, getBriefing };
 }

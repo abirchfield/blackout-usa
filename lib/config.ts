@@ -208,7 +208,7 @@ export const DrawingConfig = {
 };
 
 export const defaultAppSettings: AppSettings = {
-  viewMode: 'visual',
+  viewMode: 'canvas',
   animationsEnabled: true,
   renderCanvasText: true,
   showDetailsInSidebar: false,
