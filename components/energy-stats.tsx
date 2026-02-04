@@ -5,8 +5,9 @@ import { GameStatistics, SubstationCategory, LoadCategoryType } from "@/lib/type
 import { GenerationTypeConfig, LoadTypeConfig, PhysicsConfig } from "@/lib/config"
 import { cn, fmtMoneyAuto, fmtPowerAuto } from "@/lib/utils"
 
-export const KeyStats = React.memo(function KeyStats({ stats, totalGeneration, className }: { stats: GameStatistics, totalGeneration: number, className?: string }) {
+export const KeyStats = React.memo(function KeyStats({ stats, className }: { stats: GameStatistics, className?: string }) {
   const s = stats;
+  const totalGeneration = s.windGen + s.solarGen + s.thermalGen + s.nuclearGen;
 
   return (
     <div className={cn("grid grid-cols-3 gap-4", className)} role="group" aria-label="Key game statistics">

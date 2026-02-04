@@ -8,6 +8,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
+import { hcVariant } from "@/lib/utils"
 import { RotateCw, ArrowRight, LogOut } from "lucide-react"
 
 interface QuitModalProps {
@@ -31,7 +32,7 @@ export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay,
             <LogOut className="h-5 w-5" aria-hidden="true" />
             <span>Quit to Start</span>
           </Button>
-          <Button variant={isHighContrast ? "outline" : "secondary"} className="w-full justify-center gap-2 py-4 text-base" onClick={() => onReplayDay(day)}>
+          <Button variant={hcVariant(isHighContrast ?? false)} className="w-full justify-center gap-2 py-4 text-base" onClick={() => onReplayDay(day)}>
             <RotateCw className="h-5 w-5" aria-hidden="true" />
             <span>Restart This Day</span>
           </Button>

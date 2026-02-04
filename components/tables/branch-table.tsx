@@ -10,6 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Branch, BranchStatus } from "@/lib/types"
+import { getLoadingBarColor } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 interface BranchesListProps {
@@ -72,7 +73,7 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
                 if (branch.Status1 === BranchStatus.IN) inServiceCircuits++;
                 if (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN) inServiceCircuits++;
 
-                const barColor = loading > 100 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-status-in)]';
+                const barColor = getLoadingBarColor(loading);
 
                 return (
                   <TableRow key={branch.Number}>

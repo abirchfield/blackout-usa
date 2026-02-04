@@ -1,6 +1,7 @@
 "use client";
 
 import { Branch, BranchStatus } from "@/lib/types";
+import { getLoadingBarColor, hcVariant } from "@/lib/utils";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
 import { StatusIndicator } from "@/components/ui/status-indicator";
@@ -45,7 +46,7 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighCo
       buttonDisabled = true;
   }
 
-  const barColor = loading > 100 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-status-in)]';
+  const barColor = getLoadingBarColor(loading);
 
   return (
     <TableRow aria-labelledby={`circuit-header-${branch.Number}-${circuitNum}`}>
@@ -76,7 +77,7 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighCo
       <TableCell>
         {buttonText && (
           <Button
-            variant={status === BranchStatus.IN ? "destructive" : (isHighContrast ? "outline" : "secondary")}
+            variant={status === BranchStatus.IN ? "destructive" : hcVariant(isHighContrast ?? false)}
             size="sm"
             onClick={() => onCircuitAction(branch.Number, circuitNum)}
             disabled={buttonDisabled || isPaused}

@@ -10,56 +10,27 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button";
-import { StatusIndicator } from "@/components/ui/status-indicator";
 import { GeneratorUnitsTable } from "@/components/tables/unit-table";
-import { Substation, UnitStatus, SubstationCategory } from "@/lib/types";
+import { SubstationCategory } from "@/lib/types";
 import { GenerationTypeConfig, LoadTypeConfig } from "@/lib/config";
 import { TimeController } from "@/components/controls";
-import { GameEngine } from "@/lib/engine"; 
-import { PersonStanding, Timer, Bell, Lightbulb } from "lucide-react";
-import { cn } from "@/lib/utils";
-import { Badge } from "@/components/ui/badge";
+import { GameEngine } from "@/lib/engine";
+import { PersonStanding, Bell, Lightbulb } from "lucide-react";
+import {
+  LoadExample,
+  GeneratorExample,
+  LineExample,
+  LegendRow,
+  FrequencyDisplay,
+  mockSubInService,
+  mockSubOutOfService,
+  mockSubStartup,
+} from "@/components/modals/help-examples";
 
 interface HelpModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }
-
-// NOTE: The 'width' and 'height' for the <Image> components below are placeholders.
-// For optimal performance and to avoid layout shift, please replace them with the
-// actual dimensions of your image files. The paths also assume your 'Figs'
-// directory is in the 'public' folder.
- 
-const mockSubBase: Substation = {
-  Name: "Help Substation",
-  Number: "0",
-  Latitude: 0,
-  Longitude: 0,
-  Units: 1,
-  Category: SubstationCategory.Thermal,
-  Pmax: 100,
-  Pmin: 20,
-  FixedCost: 500,
-  FuelCost: 50,
-  StartTime: 60,
-  Ramp: 5,
-  U: []
-};
- 
-const mockSubInService: Substation = {
-  ...mockSubBase,
-  U: [{ Status: UnitStatus.IN, P: 65, Pset: 65, P0: 65, Status0: UnitStatus.IN, StatusCount: 0 }]
-};
- 
-const mockSubOutOfService: Substation = {
-  ...mockSubBase,
-  U: [{ Status: UnitStatus.DIS, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 0 }]
-};
- 
-const mockSubStartup: Substation = {
-  ...mockSubBase,
-  U: [{ Status: UnitStatus.STARTUP, P: 0, Pset: 0, P0: 0, Status0: UnitStatus.DIS, StatusCount: 30 }]
-};
 
 export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   const [currentPage, setCurrentPage] = useState(0);
@@ -67,12 +38,10 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   // State for the toy time controller
   const [toyIsPaused, setToyIsPaused] = useState(true);
   const [toyIsFastForward, setToyIsFastForward] = useState(false);
-  const [toyTimeStep, setToyTimeStep] = useState(Math.floor(0.25 * GameEngine.GAME_DURATION)); // Start at 25%
+  const [toyTimeStep, setToyTimeStep] = useState(Math.floor(0.25 * GameEngine.GAME_DURATION));
 
-  // Calculate progress for the UI from the time step
   const toyProgress = (toyTimeStep / GameEngine.GAME_DURATION) * 100;
 
-  // Calculate a fake time string based on the toy time step
   const h = Math.floor(toyTimeStep / 60) + 1;
   const m = toyTimeStep % 60;
   const toyTimeStr = `${h}:${m < 10 ? "0" + m : m} PM`;
@@ -80,8 +49,6 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   const handleToggleToyPause = () => {
     setToyIsPaused(prevIsPaused => {
       const nextIsPaused = !prevIsPaused;
-      // If the user is pausing the game, we should always turn off fast-forward
-      // to ensure resuming starts at normal speed.
       if (nextIsPaused) {
         setToyIsFastForward(false);
       }
@@ -92,119 +59,12 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   const handleToggleToyFastForward = () => {
     setToyIsFastForward(prev => {
       if (prev) {
-        return false; // Go back to normal
+        return false;
       } else {
-        setToyIsPaused(false); // FF implies playing
+        setToyIsPaused(false);
         return true;
       }
     });
-  };
-
-  const LoadExample = ({ inService }: { inService: boolean }) => {
-    const radius = 24;
-    const center = 28;
-    const strokeWidth = 3;
-
-    // Path for a 75% pie slice to represent a connected load
-    const x = center + radius * Math.cos(-Math.PI / 2);
-    const y = center + radius * Math.sin(-Math.PI / 2);
-    const x2 = center + radius * Math.cos(Math.PI);
-    const y2 = center + radius * Math.sin(Math.PI);
-    const piePath = `M${center},${center} L${x},${y} A${radius},${radius} 0 1,1 ${x2},${y2} Z`;
-
-    return (
-      <div role="group" aria-label={inService ? "In-service load" : "Out-of-service load"} className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center w-48 h-32">
-        <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
-          <circle cx={center} cy={center} r={radius} fill="var(--background)" />
-          {inService && <path d={piePath} fill="var(--foreground)" />}
-          <circle cx={center} cy={center} r={radius} fill="none" stroke="var(--foreground)" strokeWidth={strokeWidth} />
-        </svg>
-        <p className="mt-2 text-sm">{inService ? "In-service load" : "Out-of-service load"}</p>
-      </div>
-    );
-  };
-
-  const GeneratorExample = ({ category, p, pmax, capacityLabel }: { category: SubstationCategory, p: number, pmax: number, capacityLabel: string }) => {
-    const outerRadius = 24;
-    const innerRadius = outerRadius / 1.2; // from DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR
-    const center = 28;
-    const strokeWidth = 1;
-    const genConfig = GenerationTypeConfig[category];
-    const genColor = genConfig.color;
-
-    const ratio = Math.max(0, Math.min(1, p / pmax));
-    const endAngle = -Math.PI / 2 + (Math.PI * 2 * ratio);
-    const isFullCircle = ratio >= 1;
-
-    const x = center + innerRadius * Math.cos(-Math.PI / 2);
-    const y = center + innerRadius * Math.sin(-Math.PI / 2);
-    const x2 = center + innerRadius * Math.cos(endAngle);
-    const y2 = center + innerRadius * Math.sin(endAngle);
-    const largeArcFlag = ratio > 0.5 ? 1 : 0;
-
-    const piePath = `M${center},${center} L${x},${y} A${innerRadius},${innerRadius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
-
-    return (
-      <div role="group" aria-label={`${genConfig.name} generator at ${capacityLabel}`} className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center w-48 h-32">
-        <svg width="56" height="56" viewBox="0 0 56 56" aria-hidden="true">
-          <circle cx={center} cy={center} r={outerRadius} fill={genColor} stroke={genColor} strokeWidth={strokeWidth} />
-          <circle cx={center} cy={center} r={innerRadius} fill="var(--background)" />
-          {ratio > 0 && (
-            isFullCircle
-              ? <circle cx={center} cy={center} r={innerRadius} fill={genColor} />
-              : <path d={piePath} fill={genColor} />
-          )}
-          <circle cx={center} cy={center} r={innerRadius} fill="none" stroke={genColor} strokeWidth={strokeWidth} />
-        </svg>
-        <div className="mt-2 text-sm flex items-center justify-center gap-2 whitespace-nowrap">
-          <span className="font-bold">{genConfig.name}</span>
-          <Badge variant="secondary">{capacityLabel}</Badge>
-        </div>
-      </div>
-    );
-  };
-
-  const LineExample = ({ colorClass, dashed, outOfService, label }: { colorClass: string, dashed?: boolean, outOfService?: boolean, label: string }) => (
-    <div role="group" aria-label={`Example of a ${label} transmission line`} className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center w-48 h-32">
-      <div className="w-24 h-12 flex items-center justify-center">
-        <svg width="100%" height="6" viewBox="0 0 100 6" className="overflow-visible">
-          {outOfService ? (
-            <>
-              {/* Base solid line */}
-              <line x1="0" y1="3" x2="100" y2="3" stroke="var(--foreground)" strokeWidth="4" />
-              {/* Dashed line of background color on top */}
-              <line x1="0" y1="3" x2="100" y2="3" stroke="var(--background)" strokeWidth="5" strokeDasharray="5, 5" />
-            </>
-          ) : (
-            <line x1="0" y1="3" x2="100" y2="3" className={colorClass} strokeWidth="4" strokeDasharray={dashed ? "8, 4" : "none"} />
-          )}
-        </svg>
-      </div>
-      <p className="mt-2 text-sm">{label}</p>
-    </div>
-  );
-
-  const LegendRow = ({ icon: Icon, name, description, colorClass }: { icon: React.ElementType, name: string, description: string, colorClass: string }) => (
-    <div className="flex items-start gap-4 p-2">
-        <div className="flex-shrink-0 rounded-md h-10 w-10 flex items-center justify-center bg-muted" aria-hidden="true">
-            <Icon className={cn("h-6 w-6", colorClass)} />
-        </div>
-        <div>
-            <div className="font-bold">{name}</div>
-            <div className="text-sm text-muted-foreground">{description}</div>
-        </div>
-    </div>
-  );
-
-  const FrequencyDisplay = ({ freq, label }: { freq: number, label: string }) => {
-    const colorClass = freq < 59.7 || freq > 60.3 ? "text-destructive" : freq < 59.85 || freq > 60.15 ? "text-[var(--color-warning)]" : "text-foreground";
-    return (
-        <div className="text-center p-4 border border-white/20 rounded-lg bg-background/50 flex flex-col items-center justify-center" role="figure" aria-label={`Frequency: ${freq.toFixed(2)} Hz. Status: ${label}.`}>
-            <div className="text-xs text-muted-foreground uppercase tracking-wider font-bold">Frequency</div>
-            <div className={cn("text-2xl font-bold", colorClass)}>{freq.toFixed(2)} Hz</div>
-            <p className="mt-1 text-sm text-muted-foreground">{label}</p>
-        </div>
-    );
   };
 
   const helpPages = [
@@ -384,7 +244,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   useEffect(() => {
     if (!open || toyIsPaused) return;
 
-    const gameSpeed = toyIsFastForward ? 50 : 500; // ms per game minute, matches page.tsx
+    const gameSpeed = toyIsFastForward ? 50 : 500;
     const interval = setInterval(() => {
       setToyTimeStep(prev => (prev >= GameEngine.GAME_DURATION ? 0 : prev + 1));
     }, gameSpeed);
@@ -417,15 +277,15 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
             Page {currentPage + 1} of {totalPages}
           </span>
           <div className="flex gap-2">
-            <Button variant="outline" onClick={goToPrevPage} disabled={currentPage === 0} className="cursor-pointer">
+            <Button variant="outline" onClick={goToPrevPage} disabled={currentPage === 0}>
               Previous
             </Button>
             {currentPage < totalPages - 1 ? (
-              <Button onClick={goToNextPage} className="cursor-pointer">
+              <Button onClick={goToNextPage}>
                 Next
               </Button>
             ) : (
-              <Button onClick={() => onOpenChange(false)} className="cursor-pointer">
+              <Button onClick={() => onOpenChange(false)}>
                 Finish
               </Button>
             )}
