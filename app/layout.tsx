@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono, Share_Tech } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
-import { SidebarProvider } from "@/components/ui/sidebar";
+
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -41,17 +41,7 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <SidebarProvider
-            defaultOpen={false}
-            style={
-              {
-                "--sidebar-width": "395px",
-                "--sidebar-width-icon": "120px",
-              } as React.CSSProperties
-            }
-          >
-            {children}
-          </SidebarProvider>
+          {children}
         </ThemeProvider>
       </body>
     </html>

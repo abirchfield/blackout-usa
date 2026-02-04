@@ -1,4 +1,5 @@
-import { GameState, SubstationCategory, UnitStatus, BranchStatus, AlertHandler } from "../types";
+import { GameState, Substation, SubstationCategory, UnitStatus, BranchStatus, AlertHandler } from "../types";
+import { isDispatchableCategory } from "../utils";
 
 export function toggleUnitStatus(state: GameState, subId: string, unitIndex: number) {
   const sub = state.subs[subId];
@@ -44,28 +45,38 @@ export function setUnitSetpoint(state: GameState, subId: string, unitIndex: numb
   }
 }
 
-export function disconnectSmallestLoad(state: GameState, onAlert?: AlertHandler) {
-  let smallestLoadSub = null;
-  let minPmax = Infinity;
+function findActiveLoadSubstation(
+  state: GameState,
+  compare: 'smallest' | 'largest'
+) {
+  let bestSub = null;
+  let bestPmax = compare === 'smallest' ? Infinity : -1;
 
   for (const key in state.subs) {
     const sub = state.subs[key];
-    if (sub.Category === SubstationCategory.Load && sub.Pmax < minPmax) {
-      const hasActiveUnit = sub.U.some(u => u.Status === UnitStatus.IN);
-      if (hasActiveUnit) {
-        minPmax = sub.Pmax;
-        smallestLoadSub = sub;
-      }
+    if (sub.Category !== SubstationCategory.Load) continue;
+    const isBetter = compare === 'smallest' ? sub.Pmax < bestPmax : sub.Pmax > bestPmax;
+    if (isBetter && sub.U.some(u => u.Status === UnitStatus.IN)) {
+      bestPmax = sub.Pmax;
+      bestSub = sub;
     }
   }
+  return bestSub;
+}
 
-  if (smallestLoadSub) {
-    onAlert?.({ message: `Shedding smallest load: ${smallestLoadSub.Name}.`, critical: false });
-    for (let i = 0; i < smallestLoadSub.Units; i++) {
-      if (smallestLoadSub.U[i].Status === UnitStatus.IN) {
-        toggleUnitStatus(state, smallestLoadSub.Number, i);
-      }
+function disconnectAllUnits(state: GameState, sub: Substation) {
+  for (let i = 0; i < sub.Units; i++) {
+    if (sub.U[i].Status === UnitStatus.IN) {
+      toggleUnitStatus(state, sub.Number, i);
     }
+  }
+}
+
+export function disconnectSmallestLoad(state: GameState, onAlert?: AlertHandler) {
+  const sub = findActiveLoadSubstation(state, 'smallest');
+  if (sub) {
+    onAlert?.({ message: `Shedding smallest load: ${sub.Name}.`, critical: false });
+    disconnectAllUnits(state, sub);
   }
 }
 
@@ -97,27 +108,10 @@ export function disconnectMostLoadedLine(state: GameState, onAlert?: AlertHandle
 }
 
 export function disconnectLargestLoad(state: GameState, onAlert?: AlertHandler) {
-  let largestLoadSub = null;
-  let maxPmax = -1;
-
-  for (const key in state.subs) {
-    const sub = state.subs[key];
-    if (sub.Category === SubstationCategory.Load && sub.Pmax > maxPmax) {
-      const hasActiveUnit = sub.U.some(u => u.Status === UnitStatus.IN);
-      if (hasActiveUnit) {
-        maxPmax = sub.Pmax;
-        largestLoadSub = sub;
-      }
-    }
-  }
-
-  if (largestLoadSub) {
-    onAlert?.({ message: `Emergency load shed: Disconnecting largest load ${largestLoadSub.Name}.`, critical: true });
-    for (let i = 0; i < largestLoadSub.Units; i++) {
-      if (largestLoadSub.U[i].Status === UnitStatus.IN) {
-        toggleUnitStatus(state, largestLoadSub.Number, i);
-      }
-    }
+  const sub = findActiveLoadSubstation(state, 'largest');
+  if (sub) {
+    onAlert?.({ message: `Emergency load shed: Disconnecting largest load ${sub.Name}.`, critical: true });
+    disconnectAllUnits(state, sub);
   }
 }
 
@@ -125,13 +119,7 @@ export function rampAllGenerationUp(state: GameState, onAlert?: AlertHandler) {
   onAlert?.({ message: "Ramping all available generation to maximum.", critical: false });
   for (const key in state.subs) {
     const sub = state.subs[key];
-    const isDispatchable = sub.Category === SubstationCategory.Thermal ||
-                           sub.Category === SubstationCategory.Nuclear ||
-                           sub.Category === SubstationCategory.GasCombinedCycle ||
-                           sub.Category === SubstationCategory.GasTurbine ||
-                           sub.Category === SubstationCategory.CoalFiredSteam;
-
-    if (isDispatchable) {
+    if (isDispatchableCategory(sub.Category)) {
       const pmax_unit = sub.Pmax / sub.Units;
       for (let i = 0; i < sub.Units; i++) {
         if (sub.U[i].Status === UnitStatus.IN) {

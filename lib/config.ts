@@ -134,7 +134,32 @@ export const LoadTypeConfig: Record<LoadCategoryType, {
 // Physics and Simulation Constants
 export const PhysicsConfig = {
   BASE_FREQUENCY: 60.0,
+  BASE_MVA: 100.0,
   FREQUENCY_BLACKOUT_THRESHOLD: 40.0,
+  // UI display thresholds
+  FREQUENCY_WARNING_LOW: 59.7,
+  FREQUENCY_WARNING_HIGH: 60.3,
+  RESERVES_CRITICAL_MW: 50,
+  RESERVES_WARNING_MW: 500,
+  // Frequency droop model
+  FREQUENCY_DROOP: 0.2,
+  FREQUENCY_ADJUSTMENT_THRESHOLD_MW: 500,
+  MIN_GENERATION_FOR_FREQ_STABILITY_MW: 5,
+  // Contingency: frequency trip thresholds
+  FREQ_TRIP_CRITICAL_LOW: 57,
+  FREQ_TRIP_CRITICAL_HIGH: 63,
+  PROB_TRIP_FREQ_CRITICAL: 0.05,
+  FREQ_TRIP_HIGH_LOW: 59,
+  FREQ_TRIP_HIGH_HIGH: 61,
+  PROB_TRIP_FREQ_HIGH: 0.01,
+  FREQ_TRIP_NORMAL_LOW: 59.3,
+  FREQ_TRIP_NORMAL_HIGH: 60.7,
+  PROB_TRIP_FREQ_NORMAL: 0.001,
+  // Contingency: overload trip thresholds
+  OVERLOAD_TRIP_CRITICAL_MULTIPLIER: 1.5,
+  PROB_TRIP_OVERLOAD_CRITICAL: 0.05,
+  OVERLOAD_TRIP_NORMAL_MULTIPLIER: 1.2,
+  PROB_TRIP_OVERLOAD_NORMAL: 0.01,
 };
 
 // View and Map Constants
@@ -157,16 +182,6 @@ export const ViewConfig = {
   ZOOM_SENSITIVITY_MAX: 2.0,
   ZOOM_SENSITIVITY_STEP: 0.1,
 };
-
-// Shared radius calculation used by both canvas drawer and event handler.
-// Keeps hover detection and visual rendering perfectly in sync.
-export function getDynamicSubstationRadius(scaleX: number, referenceScale: number, isHover: boolean): number {
-  const baseRadius = isHover ? ViewConfig.BASE_SUBSTATION_RADIUS_HOVER : ViewConfig.BASE_SUBSTATION_RADIUS_NORMAL;
-  const maxRadius = isHover ? ViewConfig.MAX_SUBSTATION_RADIUS_HOVER : ViewConfig.MAX_SUBSTATION_RADIUS;
-  const scaleFactor = Math.sqrt(scaleX / referenceScale);
-  const radius = baseRadius * scaleFactor;
-  return Math.max(ViewConfig.MIN_SUBSTATION_RADIUS, Math.min(radius, maxRadius));
-}
 
 // Drawing and Style Constants for SVG Renderer
 export const DrawingConfig = {
@@ -191,6 +206,12 @@ export const DrawingConfig = {
   BRANCH_OVERLOAD_CRITICAL_THRESHOLD_DRAW: 1.2,
   BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL: 1.5,
 
+  // Zoom padding: fraction of viewport used for map at minimum zoom (0.9 = 10% margin)
+  MIN_ZOOM_PADDING: 0.9,
+
+  // Pan margin: fraction of the map dimensions the user can pan past the map edges
+  PAN_MARGIN: 0.25,
+
   // Labels
   LABEL_DISTANCE: 15,
   LABEL_OFFSET_X: 15,
@@ -198,11 +219,17 @@ export const DrawingConfig = {
   LABEL_OUTLINE_WIDTH: 3,
 };
 
+export const FONT_SIZE_MAP: Record<string, string> = {
+  sm: '14px',
+  base: '16px',
+  lg: '18px',
+  xl: '20px',
+};
+
 export const defaultAppSettings: AppSettings = {
   viewMode: 'map',
   animationsEnabled: true,
   renderMapLabels: true,
-  showDetailsInSidebar: false,
   zoomSensitivity: ViewConfig.ZOOM_SENSITIVITY_DEFAULT,
   keyBindings: defaultKeyBindings,
   isHighContrast: false,

@@ -144,10 +144,12 @@ export interface InputState {
   dragorigX: number;
   dragorigY: number;
   hoverBranch: Branch | null;
+  hoverCircuit: 1 | 2 | null;
   hoverSub: Substation | null;
 }
 
 export interface SimulationState {
+  _v: number; // Mutation version — incremented on game ticks and user actions
   t: number;
   day: number;
   frequency: number;
@@ -188,7 +190,6 @@ export interface AppSettings {
   viewMode: 'map' | 'tabular';
   animationsEnabled: boolean;
   renderMapLabels: boolean;
-  showDetailsInSidebar: boolean;
   zoomSensitivity: number;
   keyBindings: KeyBindings;
   isHighContrast: boolean;
@@ -216,3 +217,4 @@ export type SimulationAction =
   | { type: 'DISCONNECT_MOST_LOADED_LINE' }
   | { type: 'EMERGENCY_LOAD_SHED' }
   | { type: 'RAMP_ALL_GENERATION' };
+

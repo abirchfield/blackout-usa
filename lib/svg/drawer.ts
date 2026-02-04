@@ -1,5 +1,6 @@
 import { Branch, GameState, Substation, BranchStatus, UnitStatus, SubstationCategory } from "../types";
-import { DrawingConfig, getDynamicSubstationRadius } from "../config";
+import { DrawingConfig } from "../config";
+import { getDynamicSubstationRadius } from "../utils";
 import { IGridDrawer } from "../interfaces";
 import { activeCase } from "@/data/cases";
 
@@ -13,12 +14,12 @@ const STR_GENERATOR_OUTLINE_WIDTH_PLUS_2 = String(DrawingConfig.GENERATOR_OUTLIN
 const STR_SUBSTATION_BORDER_WIDTH = String(DrawingConfig.SUBSTATION_BORDER_WIDTH);
 const STR_LABEL_OUTLINE_WIDTH = String(DrawingConfig.LABEL_OUTLINE_WIDTH);
 
-// Flow animation: JS-driven offset with zoom-scaled dash patterns.
-// Speed in screen px/ms (constant regardless of zoom).
-const FLOW_SPEED_NORMAL = 32 / 1067; // ~0.03 px/ms
-const FLOW_SPEED_FAST = 32 / 356;    // ~0.09 px/ms
-const FLOW_SCALE_MIN = 0.7;
-const FLOW_SCALE_MAX = 2.0;
+// Flow animation: world-unit dash patterns on flow-fg (no non-scaling-stroke).
+// The SVG transform scales them to screen automatically — no per-zoom CSS updates.
+// Dash cycle = 0.64 world units (0.2 dash + 0.44 gap at reference zoom ≈ 10+22 screen px).
+const FLOW_DASH_CYCLE = 0.64;
+const FLOW_SPEED_NORMAL = FLOW_DASH_CYCLE / 1067; // ~0.0006 world units/ms
+const FLOW_SPEED_FAST = FLOW_DASH_CYCLE / 356;    // ~0.0018 world units/ms
 
 // Map SubstationCategory enum to short CSS-friendly strings for data-category attribute
 const CATEGORY_CSS: Record<string, string> = {
@@ -35,7 +36,6 @@ const CATEGORY_CSS: Record<string, string> = {
 interface CircuitElements {
   group: SVGGElement;
   baseLine: SVGLineElement;
-  flowBg: SVGLineElement;
   flowFg: SVGLineElement;
 }
 
@@ -48,12 +48,13 @@ interface BranchElements {
 interface SubstationElements {
   group: SVGGElement;
   innerGroup: SVGGElement;
-  outerRingBg?: SVGCircleElement;
-  outerRing?: SVGCircleElement;
-  background: SVGCircleElement;
+  outerRingBg?: SVGElement;
+  outerRing?: SVGElement;
+  background: SVGElement;   // circle for generators, rect for loads
   piePath: SVGPathElement;
-  border: SVGCircleElement;
+  border: SVGElement;       // circle for generators, rect for loads
   label: SVGTextElement;
+  isLoad: boolean;
   // Pie arc path cache
   cachedPieR: number;
   cachedPieFill: number;
@@ -102,9 +103,16 @@ export class SvgDrawer implements IGridDrawer {
   private flowOffset: number = 0;
   private hoverFlowOffset: number = 0;
   private lastFrameTime: number = 0;
-  private lastFlowScale: number = 1;
   private lastWrittenOffset: number = -1;
   private lastHoverBranchKey: string | null = null;
+  private lastHoverCircuit: 1 | 2 | null = null;
+
+  // Dirty tracking: skip heavy per-element sync when nothing changed
+  private lastSyncV: number = -1;
+  private lastSyncHoverBranch: Branch | null = null;
+  private lastSyncHoverSub: Substation | null = null;
+  private lastSyncLabels: boolean = true;
+  private lastSyncAnim: boolean = true;
 
   // Cached per-substation label offsets (computed once from branch topology)
   private labelOffsets: Map<string, { x: number; y: number }> = new Map();
@@ -161,9 +169,28 @@ export class SvgDrawer implements IGridDrawer {
 
     this.ensureBorder(state);
     this.ensureLabelOffsets(state);
-    this.syncBranches(state);
-    this.syncSubstations(state);
-    this.updateHoverLabel(state);
+
+    // Skip heavy per-element sync when nothing relevant changed.
+    // Between game ticks (500ms normal), ~29/30 rAF frames can skip entirely.
+    // Pan-only frames also skip (world transform handles translation).
+    const needsSync =
+      state._v !== this.lastSyncV ||
+      state.scaleX !== this.lastScaleX ||
+      state.hoverBranch !== this.lastSyncHoverBranch ||
+      state.hoverSub !== this.lastSyncHoverSub ||
+      state.renderMapLabels !== this.lastSyncLabels ||
+      state.animationsEnabled !== this.lastSyncAnim;
+
+    if (needsSync) {
+      this.syncBranches(state);
+      this.syncSubstations(state);
+      this.updateHoverLabel(state);
+      this.lastSyncV = state._v;
+      this.lastSyncHoverBranch = state.hoverBranch;
+      this.lastSyncHoverSub = state.hoverSub;
+      this.lastSyncLabels = state.renderMapLabels;
+      this.lastSyncAnim = state.animationsEnabled;
+    }
   }
 
   public setInitialView(state: GameState) {
@@ -173,8 +200,10 @@ export class SvgDrawer implements IGridDrawer {
 
     const mapWidth = state.xmax - state.xmin;
     const mapHeight = state.ymax - state.ymin;
-    const scaleToFitX = width / mapWidth;
-    const scaleToFitY = height / mapHeight;
+    // Add padding so the map doesn't fill the viewport edge-to-edge at minimum zoom
+    const padding = DrawingConfig.MIN_ZOOM_PADDING;
+    const scaleToFitX = (width * padding) / mapWidth;
+    const scaleToFitY = (height * padding) / mapHeight;
     const initialScale = Math.min(scaleToFitX, scaleToFitY);
 
     state.scaleX = initialScale;
@@ -250,30 +279,11 @@ export class SvgDrawer implements IGridDrawer {
     const dt = Math.min(this.lastFrameTime > 0 ? now - this.lastFrameTime : 0, 100);
     this.lastFrameTime = now;
 
-    // Zoom-dependent flow scale: dampened sqrt so dash patterns resize gently with zoom.
-    // At reference zoom flowScale=1 (32px cycle). Clamped to keep packets legible at extremes.
-    const zoomRatio = state.scaleX / activeCase.mapConfig.initialView.scale;
-    const flowScale = Math.max(FLOW_SCALE_MIN, Math.min(FLOW_SCALE_MAX, Math.sqrt(zoomRatio)));
-
-    // When zoom changes, rescale offsets so dashes hold their visual position,
-    // then update the dash-pattern CSS custom properties.
-    if (flowScale !== this.lastFlowScale) {
-      const ratio = flowScale / this.lastFlowScale;
-      this.flowOffset *= ratio;
-      this.hoverFlowOffset *= ratio;
-
-      const dashBg = `${(12 * flowScale).toFixed(1)} ${(20 * flowScale).toFixed(1)}`;
-      const dashFg = `${(10 * flowScale).toFixed(1)} ${(22 * flowScale).toFixed(1)}`;
-      this.branchesLayer.style.setProperty("--flow-dash-bg", dashBg);
-      this.branchesLayer.style.setProperty("--flow-dash-fg", dashFg);
-      this.lastFlowScale = flowScale;
-    }
-
-    // Accumulate flow offset when playing
+    // Accumulate flow offset in world units when playing (no zoom dependence)
     if (state.animationsEnabled && !isPaused && dt > 0) {
       const speed = isFastForward ? FLOW_SPEED_FAST : FLOW_SPEED_NORMAL;
       this.flowOffset += speed * dt;
-      if (this.flowOffset > 10000) this.flowOffset -= 10000;
+      if (this.flowOffset > 640) this.flowOffset -= 640;
     }
 
     // Only write to DOM when the offset actually changed
@@ -282,15 +292,16 @@ export class SvgDrawer implements IGridDrawer {
       this.lastWrittenOffset = this.flowOffset;
     }
 
-    // Handle hover-during-pause: animate only the hovered branch via local override
+    // Handle hover-during-pause: animate only the hovered circuit via local override
     const hoverBranchKey = (isPaused && state.hoverBranch) ? state.hoverBranch.Number : null;
-    if (hoverBranchKey !== this.lastHoverBranchKey) {
-      // Remove override from previous hovered branch
+    const hoverCircuit = (isPaused && state.hoverBranch) ? state.hoverCircuit : null;
+    if (hoverBranchKey !== this.lastHoverBranchKey || hoverCircuit !== this.lastHoverCircuit) {
+      // Remove override from previous hovered circuit
       if (this.lastHoverBranchKey) {
         const prevElems = this.branchElements.get(this.lastHoverBranchKey);
         if (prevElems) {
-          prevElems.circuit1.group.style.removeProperty("--flow-offset");
-          prevElems.circuit2?.group.style.removeProperty("--flow-offset");
+          if (this.lastHoverCircuit !== 2) prevElems.circuit1.group.style.removeProperty("--flow-offset");
+          if (this.lastHoverCircuit !== 1) prevElems.circuit2?.group.style.removeProperty("--flow-offset");
         }
       }
       // Sync hover offset to current global offset when starting hover
@@ -298,17 +309,22 @@ export class SvgDrawer implements IGridDrawer {
         this.hoverFlowOffset = this.flowOffset;
       }
       this.lastHoverBranchKey = hoverBranchKey;
+      this.lastHoverCircuit = hoverCircuit;
     }
 
     // Accumulate hover offset independently when paused
     if (isPaused && hoverBranchKey && state.animationsEnabled && dt > 0) {
       this.hoverFlowOffset += FLOW_SPEED_NORMAL * dt;
-      if (this.hoverFlowOffset > 10000) this.hoverFlowOffset -= 10000;
+      if (this.hoverFlowOffset > 640) this.hoverFlowOffset -= 640;
       const elems = this.branchElements.get(hoverBranchKey);
       if (elems) {
         const hoverStr = String(this.hoverFlowOffset);
-        elems.circuit1.group.style.setProperty("--flow-offset", hoverStr);
-        elems.circuit2?.group.style.setProperty("--flow-offset", hoverStr);
+        if (hoverCircuit === 1 || hoverCircuit === null) {
+          elems.circuit1.group.style.setProperty("--flow-offset", hoverStr);
+        }
+        if ((hoverCircuit === 2 || hoverCircuit === null) && elems.circuit2) {
+          elems.circuit2.group.style.setProperty("--flow-offset", hoverStr);
+        }
       }
     }
   }
@@ -316,14 +332,16 @@ export class SvgDrawer implements IGridDrawer {
   // --- World Transform ---
 
   private updateWorldTransform(state: GameState) {
-    const width = this.container.offsetWidth;
-    const height = this.container.offsetHeight;
+    // Use cached dimensions (updated by resizeCanvas() before each draw)
+    const width = this.lastWidth;
+    const height = this.lastHeight;
     if (width === 0 || height === 0) return;
 
     const mapWidth = state.xmax - state.xmin;
     const mapHeight = state.ymax - state.ymin;
-    const scaleToFitX = width / mapWidth;
-    const scaleToFitY = height / mapHeight;
+    const padding = DrawingConfig.MIN_ZOOM_PADDING;
+    const scaleToFitX = (width * padding) / mapWidth;
+    const scaleToFitY = (height * padding) / mapHeight;
     state.scale_min = Math.min(scaleToFitX, scaleToFitY);
 
     // Clamp current scale to [scale_min, scale_max] — handles resize making scale_min larger
@@ -347,35 +365,36 @@ export class SvgDrawer implements IGridDrawer {
   }
 
   private applyViewBounds(state: GameState) {
-    const width = this.container.offsetWidth;
-    const height = this.container.offsetHeight;
+    const width = this.lastWidth;
+    const height = this.lastHeight;
     if (width === 0 || height === 0) return;
 
     const viewWidth = width / state.scaleX;
     const viewHeight = height / state.scaleY;
     const mapWidth = state.xmax - state.xmin;
     const mapHeight = state.ymax - state.ymin;
+    const marginX = mapWidth * DrawingConfig.PAN_MARGIN;
+    const marginY = mapHeight * DrawingConfig.PAN_MARGIN;
 
-    // X axis: x0 is the left edge of the viewport in world coords.
-    // The viewport spans [x0, x0 + viewWidth].
-    if (viewWidth >= mapWidth) {
-      // Viewport wider than map — center the map horizontally
-      state.x0 = state.xmin - (viewWidth - mapWidth) / 2;
+    const xmin = state.xmin - marginX;
+    const xmax = state.xmax + marginX;
+    const ymin = state.ymin - marginY;
+    const ymax = state.ymax + marginY;
+    const totalW = xmax - xmin;
+    const totalH = ymax - ymin;
+
+    if (viewWidth >= totalW) {
+      state.x0 = xmin - (viewWidth - totalW) / 2;
     } else {
-      // Viewport narrower — clamp so map edges aren't exposed
-      if (state.x0 < state.xmin) state.x0 = state.xmin;
-      if (state.x0 + viewWidth > state.xmax) state.x0 = state.xmax - viewWidth;
+      if (state.x0 < xmin) state.x0 = xmin;
+      if (state.x0 + viewWidth > xmax) state.x0 = xmax - viewWidth;
     }
 
-    // Y axis: y0 is the top edge in world coords (y increases upward in world space).
-    // The viewport spans [y0 - viewHeight, y0].
-    if (viewHeight >= mapHeight) {
-      // Viewport taller than map — center the map vertically
-      state.y0 = state.ymax + (viewHeight - mapHeight) / 2;
+    if (viewHeight >= totalH) {
+      state.y0 = ymax + (viewHeight - totalH) / 2;
     } else {
-      // Viewport shorter — clamp so map edges aren't exposed
-      if (state.y0 > state.ymax) state.y0 = state.ymax;
-      if (state.y0 - viewHeight < state.ymin) state.y0 = state.ymin + viewHeight;
+      if (state.y0 > ymax) state.y0 = ymax;
+      if (state.y0 - viewHeight < ymin) state.y0 = ymin + viewHeight;
     }
   }
 
@@ -494,22 +513,13 @@ export class SvgDrawer implements IGridDrawer {
   // --- Branches ---
 
   private syncBranches(state: GameState) {
-    const stateKeys = new Set(Object.keys(state.branches));
-
-    // Remove branches no longer in state
-    for (const [key, elems] of this.branchElements) {
-      if (!stateKeys.has(key)) {
-        this.clearCircuitCache(elems.circuit1);
-        if (elems.circuit2) this.clearCircuitCache(elems.circuit2);
-        elems.group.remove();
-        this.branchElements.delete(key);
-      }
-    }
-
     const normalRadius = this.getDynamicBranchRadius(state, false);
     const hoverRadius = this.getDynamicBranchRadius(state, true);
 
-    for (const key of stateKeys) {
+    // Update existing + create new (avoids Set/Object.keys allocation)
+    let branchCount = 0;
+    for (const key in state.branches) {
+      branchCount++;
       const branch = state.branches[key];
       if (!branch.sub1 || !branch.sub2) continue;
 
@@ -520,38 +530,55 @@ export class SvgDrawer implements IGridDrawer {
       }
 
       const isHover = branch === state.hoverBranch;
-      const radius = isHover ? hoverRadius : normalRadius;
-      this.updateBranchElements(state, branch, elems, radius);
+      this.updateBranchElements(state, branch, elems, normalRadius,
+        isHover ? hoverRadius : normalRadius, isHover ? state.hoverCircuit : null);
+    }
+
+    // Remove stale elements only if counts diverge
+    if (this.branchElements.size > branchCount) {
+      for (const [key, elems] of this.branchElements) {
+        if (!(key in state.branches)) {
+          this.clearCircuitCache(elems.circuit1);
+          if (elems.circuit2) this.clearCircuitCache(elems.circuit2);
+          elems.group.remove();
+          this.branchElements.delete(key);
+        }
+      }
     }
   }
 
   private clearCircuitCache(circuit: CircuitElements) {
     this.clearCacheForElement(circuit.baseLine);
-    this.clearCacheForElement(circuit.flowBg);
     this.clearCacheForElement(circuit.flowFg);
   }
 
   private createCircuitGroup(): CircuitElements {
     const group = this.createEl("g", { class: "circuit" }) as SVGGElement;
     const baseLine = this.createEl("line", { class: "base" }) as SVGLineElement;
-    const flowBg = this.createEl("line", { class: "flow-bg" }) as SVGLineElement;
     const flowFg = this.createEl("line", { class: "flow-fg" }) as SVGLineElement;
     group.appendChild(baseLine);
-    group.appendChild(flowBg);
     group.appendChild(flowFg);
-    return { group, baseLine, flowBg, flowFg };
+    return { group, baseLine, flowFg };
   }
 
   private createBranchElements(branch: Branch): BranchElements {
     const group = this.createEl("g", { "data-branch-id": branch.Number }) as SVGGElement;
 
+    // Pre-compute half the world-unit line length for dash-pattern centering.
+    // Substations are static, so this never changes.
+    const dx = branch.sub2!.Longitude - branch.sub1!.Longitude;
+    const dy = branch.sub2!.Latitude - branch.sub1!.Latitude;
+    const halfLenStr = String(Math.sqrt(dx * dx + dy * dy) / 2);
+
     const circuit1 = this.createCircuitGroup();
+    circuit1.group.style.setProperty("--half-len", halfLenStr);
     group.appendChild(circuit1.group);
 
     const elems: BranchElements = { group, circuit1 };
 
     if (branch.Circuits === 2) {
       const circuit2 = this.createCircuitGroup();
+      circuit2.group.style.setProperty("--half-len", halfLenStr);
       group.appendChild(circuit2.group);
       elems.circuit2 = circuit2;
     }
@@ -560,7 +587,10 @@ export class SvgDrawer implements IGridDrawer {
     return elems;
   }
 
-  private updateBranchElements(state: GameState, branch: Branch, elems: BranchElements, radius: number) {
+  private updateBranchElements(
+    state: GameState, branch: Branch, elems: BranchElements,
+    normalRadius: number, hoverRadius: number, hoverCircuit: 1 | 2 | null,
+  ) {
     const s1 = branch.sub1!;
     const s2 = branch.sub2!;
     const powerFlowsForward = branch.P >= 0;
@@ -570,10 +600,14 @@ export class SvgDrawer implements IGridDrawer {
     this.setAttr(elems.group, "data-overload", overloadLevel);
 
     if (branch.Circuits === 2) {
-      this.updateCircuit(state, branch, branch.Status1, s1, s2, radius, powerFlowsForward, -1, elems.circuit1);
-      this.updateCircuit(state, branch, branch.Status2, s1, s2, radius, powerFlowsForward, 1, elems.circuit2!);
+      const r1 = hoverCircuit === 1 ? hoverRadius : normalRadius;
+      const r2 = hoverCircuit === 2 ? hoverRadius : normalRadius;
+      // Always use normalRadius for positioning so circuits don't shift when hovered
+      this.updateCircuit(state, branch, branch.Status1, s1, s2, r1, normalRadius, powerFlowsForward, -1, hoverCircuit === 1, elems.circuit1);
+      this.updateCircuit(state, branch, branch.Status2, s1, s2, r2, normalRadius, powerFlowsForward, 1, hoverCircuit === 2, elems.circuit2!);
     } else {
-      this.updateCircuit(state, branch, branch.Status1, s1, s2, radius, powerFlowsForward, 0, elems.circuit1);
+      const isHovered = hoverCircuit !== null;
+      this.updateCircuit(state, branch, branch.Status1, s1, s2, hoverRadius, normalRadius, powerFlowsForward, 0, isHovered, elems.circuit1);
       if (elems.circuit2) {
         this.setAttr(elems.circuit2.baseLine, "visibility", "hidden");
       }
@@ -582,9 +616,9 @@ export class SvgDrawer implements IGridDrawer {
 
   private updateCircuit(
     state: GameState, branch: Branch, status: string,
-    s1: Substation, s2: Substation, radius: number,
+    s1: Substation, s2: Substation, radius: number, positionRadius: number,
     powerFlowsForward: boolean, offsetMultiplier: number,
-    circuit: CircuitElements,
+    isHovered: boolean, circuit: CircuitElements,
   ) {
     let x1 = s1.Longitude, y1 = s1.Latitude;
     let x2 = s2.Longitude, y2 = s2.Latitude;
@@ -594,7 +628,8 @@ export class SvgDrawer implements IGridDrawer {
       const dy = y2 - y1;
       const dist = Math.sqrt(dx * dx + dy * dy);
       if (dist > 0) {
-        const totalOffset = radius * DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR / state.scaleX;
+        // Use positionRadius (always normalRadius) so circuits don't shift when hovered
+        const totalOffset = positionRadius * DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR / state.scaleX;
         const offset = (totalOffset / 2) * offsetMultiplier;
         const perpX = -dy / dist * offset;
         const perpY = dx / dist * offset;
@@ -603,7 +638,7 @@ export class SvgDrawer implements IGridDrawer {
       }
     }
 
-    // Set coordinates on all 3 lines (geometry only)
+    // Set coordinates on base line and flow overlay
     const sx1 = String(x1), sy1 = String(y1), sx2 = String(x2), sy2 = String(y2);
     this.setAttr(circuit.baseLine, "x1", sx1);
     this.setAttr(circuit.baseLine, "y1", sy1);
@@ -611,24 +646,27 @@ export class SvgDrawer implements IGridDrawer {
     this.setAttr(circuit.baseLine, "y2", sy2);
     this.setAttr(circuit.baseLine, "visibility", "visible");
 
-    this.setAttr(circuit.flowBg, "x1", sx1);
-    this.setAttr(circuit.flowBg, "y1", sy1);
-    this.setAttr(circuit.flowBg, "x2", sx2);
-    this.setAttr(circuit.flowBg, "y2", sy2);
     this.setAttr(circuit.flowFg, "x1", sx1);
     this.setAttr(circuit.flowFg, "y1", sy1);
     this.setAttr(circuit.flowFg, "x2", sx2);
     this.setAttr(circuit.flowFg, "y2", sy2);
 
-    // Set stroke-width (geometry, depends on zoom)
+    // Set stroke-width: base line uses non-scaling-stroke (screen px),
+    // flow-fg uses world units (no non-scaling-stroke, scaled by SVG transform).
     const radiusStr = String(radius);
-    const flowWidthStr = String(radius * DrawingConfig.POWER_FLOW_LINE_WIDTH_FACTOR);
+    const flowWidthStr = String(radius * DrawingConfig.POWER_FLOW_LINE_WIDTH_FACTOR / state.scaleX);
     this.setAttr(circuit.baseLine, "stroke-width", radiusStr);
-    this.setAttr(circuit.flowBg, "stroke-width", flowWidthStr);
     this.setAttr(circuit.flowFg, "stroke-width", flowWidthStr);
 
     // Set data-status (CSS handles colors, dash patterns, visibility)
     this.setAttr(circuit.group, "data-status", status);
+
+    // Set hover state for CSS color highlight
+    if (isHovered) {
+      circuit.group.setAttribute("data-hovered", "");
+    } else {
+      circuit.group.removeAttribute("data-hovered");
+    }
 
     // Set animation state: data-animated + direction class
     if (status === BranchStatus.IN) {
@@ -675,23 +713,7 @@ export class SvgDrawer implements IGridDrawer {
   // --- Substations ---
 
   private syncSubstations(state: GameState) {
-    const stateKeys = new Set(Object.keys(state.subs));
     const scaleChanged = state.scaleX !== this.lastScaleX;
-
-    // Remove substations no longer in state
-    for (const [key, elems] of this.substationElements) {
-      if (!stateKeys.has(key)) {
-        this.clearCacheForElement(elems.background);
-        this.clearCacheForElement(elems.piePath);
-        this.clearCacheForElement(elems.border);
-        this.clearCacheForElement(elems.label);
-        this.clearCacheForElement(elems.innerGroup);
-        if (elems.outerRingBg) this.clearCacheForElement(elems.outerRingBg);
-        if (elems.outerRing) this.clearCacheForElement(elems.outerRing);
-        elems.group.remove();
-        this.substationElements.delete(key);
-      }
-    }
 
     const normalR = getDynamicSubstationRadius(state.scaleX, activeCase.mapConfig.initialView.scale, false);
     const hoverR = getDynamicSubstationRadius(state.scaleX, activeCase.mapConfig.initialView.scale, true);
@@ -707,7 +729,10 @@ export class SvgDrawer implements IGridDrawer {
     const normalOuterRBgStr = String(normalOuterR + 1);
     const hoverOuterRBgStr = String(hoverOuterR + 1);
 
-    for (const key of stateKeys) {
+    // Update existing + create new (avoids Set/Object.keys allocation)
+    let subCount = 0;
+    for (const key in state.subs) {
+      subCount++;
       const sub = state.subs[key];
       let elems = this.substationElements.get(key);
       if (!elems) {
@@ -724,11 +749,29 @@ export class SvgDrawer implements IGridDrawer {
       this.updateSubstationElements(sub, elems, state, isHover, scaleChanged, counterScaleTransform, r, rStr, outerRStr, outerRBgStr);
     }
 
+    // Remove stale elements only if counts diverge
+    if (this.substationElements.size > subCount) {
+      for (const [key, elems] of this.substationElements) {
+        if (!(key in state.subs)) {
+          this.clearCacheForElement(elems.background);
+          this.clearCacheForElement(elems.piePath);
+          this.clearCacheForElement(elems.border);
+          this.clearCacheForElement(elems.label);
+          this.clearCacheForElement(elems.innerGroup);
+          if (elems.outerRingBg) this.clearCacheForElement(elems.outerRingBg);
+          if (elems.outerRing) this.clearCacheForElement(elems.outerRing);
+          elems.group.remove();
+          this.substationElements.delete(key);
+        }
+      }
+    }
+
     this.lastScaleX = state.scaleX;
   }
 
   private createSubstationElements(sub: Substation): SubstationElements {
     const categoryCss = CATEGORY_CSS[sub.Category] || "load";
+    const isLoad = sub.Category === SubstationCategory.Load;
     const group = this.createEl("g", {
       "data-sub-id": sub.Number,
       "data-category": categoryCss,
@@ -740,15 +783,25 @@ export class SvgDrawer implements IGridDrawer {
     }) as SVGGElement;
     group.appendChild(innerGroup);
 
-    const isGenerator = sub.Category !== SubstationCategory.Load;
+    const isGenerator = !isLoad;
     const offset = this.labelOffsets.get(sub.Number) || { x: DrawingConfig.LABEL_OFFSET_X, y: DrawingConfig.LABEL_OFFSET_Y };
+
+    // Loads use rect elements (square shape); generators use circle elements
+    const background = isLoad
+      ? this.createEl("rect", { class: "sub-bg" })
+      : this.createEl("circle", { class: "sub-bg" });
+    const border = isLoad
+      ? this.createEl("rect", { class: "sub-border", "stroke-width": STR_SUBSTATION_BORDER_WIDTH })
+      : this.createEl("circle", { class: "sub-border", "stroke-width": isGenerator ? STR_GENERATOR_OUTLINE_WIDTH : STR_SUBSTATION_BORDER_WIDTH });
+
     const elems: SubstationElements = {
       group,
       innerGroup,
-      background: this.createEl("circle", { class: "sub-bg" }) as SVGCircleElement,
+      background,
       piePath: this.createEl("path", { class: "sub-pie", visibility: "hidden" }) as SVGPathElement,
-      border: this.createEl("circle", { class: "sub-border", "stroke-width": isGenerator ? STR_GENERATOR_OUTLINE_WIDTH : STR_SUBSTATION_BORDER_WIDTH }) as SVGCircleElement,
+      border,
       label: this.createEl("text", { "stroke-width": STR_LABEL_OUTLINE_WIDTH }) as SVGTextElement,
+      isLoad,
       cachedPieR: -1,
       cachedPieFill: -1,
       cachedPiePath: "",
@@ -766,10 +819,20 @@ export class SvgDrawer implements IGridDrawer {
         class: "outer-ring",
         "stroke-width": STR_GENERATOR_OUTLINE_WIDTH,
       }) as SVGCircleElement;
-
-      innerGroup.appendChild(elems.outerRingBg);
-      innerGroup.appendChild(elems.outerRing);
+    } else {
+      // Loads get the same outer ring treatment but with rects (squares)
+      elems.outerRingBg = this.createEl("rect", {
+        class: "outer-ring-bg",
+        "stroke-width": STR_GENERATOR_OUTLINE_WIDTH_PLUS_2,
+      });
+      elems.outerRing = this.createEl("rect", {
+        class: "outer-ring",
+        "stroke-width": STR_GENERATOR_OUTLINE_WIDTH,
+      });
     }
+
+    innerGroup.appendChild(elems.outerRingBg);
+    innerGroup.appendChild(elems.outerRing);
 
     innerGroup.appendChild(elems.background);
     innerGroup.appendChild(elems.piePath);
@@ -805,15 +868,42 @@ export class SvgDrawer implements IGridDrawer {
       elems.group.removeAttribute("data-tripped");
     }
 
-    // Outer ring radii (generators only)
-    if (isGenerator) {
+    // Outer ring and shape dimensions
+    if (elems.isLoad) {
+      // Outer ring: slightly larger square for contrast border
+      const outerR = r * DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR;
+      const outerRBg = outerR + 1;
+      const outerSizeStr = String(outerR * 2);
+      const outerBgSizeStr = String(outerRBg * 2);
+      const negOuterRStr = String(-outerR);
+      const negOuterRBgStr = String(-outerRBg);
+      this.setAttr(elems.outerRingBg!, "x", negOuterRBgStr);
+      this.setAttr(elems.outerRingBg!, "y", negOuterRBgStr);
+      this.setAttr(elems.outerRingBg!, "width", outerBgSizeStr);
+      this.setAttr(elems.outerRingBg!, "height", outerBgSizeStr);
+      this.setAttr(elems.outerRing!, "x", negOuterRStr);
+      this.setAttr(elems.outerRing!, "y", negOuterRStr);
+      this.setAttr(elems.outerRing!, "width", outerSizeStr);
+      this.setAttr(elems.outerRing!, "height", outerSizeStr);
+
+      // Inner square: background and border
+      const sizeStr = String(r * 2);
+      const negRStr = String(-r);
+      this.setAttr(elems.background, "x", negRStr);
+      this.setAttr(elems.background, "y", negRStr);
+      this.setAttr(elems.background, "width", sizeStr);
+      this.setAttr(elems.background, "height", sizeStr);
+      this.setAttr(elems.border, "x", negRStr);
+      this.setAttr(elems.border, "y", negRStr);
+      this.setAttr(elems.border, "width", sizeStr);
+      this.setAttr(elems.border, "height", sizeStr);
+    } else {
+      // Generator: circles
       this.setAttr(elems.outerRingBg!, "r", outerRBgStr);
       this.setAttr(elems.outerRing!, "r", outerRStr);
+      this.setAttr(elems.background, "r", rStr);
+      this.setAttr(elems.border, "r", rStr);
     }
-
-    // Background and border radii
-    this.setAttr(elems.background, "r", rStr);
-    this.setAttr(elems.border, "r", rStr);
 
     // Pie chart: compute fill ratio based on substation type
     const Pmax = isGenerator ? sub.Pmax : sub.Pmax * state.fr_load;
@@ -821,9 +911,9 @@ export class SvgDrawer implements IGridDrawer {
 
     if (Pmax > 0 && clampedP > 0 && !allTripped) {
       const fillRatio = clampedP / Pmax;
-      const arcPath = this.getCachedPieArcPath(elems, r, fillRatio);
-      if (arcPath) {
-        this.setAttr(elems.piePath, "d", arcPath);
+      const piePath = this.getCachedPiePath(elems, r, fillRatio);
+      if (piePath) {
+        this.setAttr(elems.piePath, "d", piePath);
         this.setAttr(elems.piePath, "visibility", "visible");
       } else {
         this.setAttr(elems.piePath, "visibility", "hidden");
@@ -844,17 +934,20 @@ export class SvgDrawer implements IGridDrawer {
     }
   }
 
-  private getCachedPieArcPath(elems: SubstationElements, r: number, fillRatio: number): string {
+  private getCachedPiePath(elems: SubstationElements, r: number, fillRatio: number): string {
     if (elems.cachedPieR === r && elems.cachedPieFill === fillRatio) {
       return elems.cachedPiePath;
     }
-    const path = this.createPieArcPath(r, fillRatio);
+    const path = elems.isLoad
+      ? this.createLoadPiePath(r, fillRatio)
+      : this.createPieArcPath(r, fillRatio);
     elems.cachedPieR = r;
     elems.cachedPieFill = fillRatio;
     elems.cachedPiePath = path;
     return path;
   }
 
+  /** Circular pie wedge for generator substations (fills clockwise from 12 o'clock). */
   private createPieArcPath(r: number, fillRatio: number): string {
     if (fillRatio < 0.01) return "";
 
@@ -872,13 +965,30 @@ export class SvgDrawer implements IGridDrawer {
     return `M 0 0 L 0 ${startY} A ${r} ${r} 0 ${largeArc} 1 ${endX} ${endY} Z`;
   }
 
+  /** Rectangular fill for load substations (fills from bottom to top). */
+  private createLoadPiePath(r: number, fillRatio: number): string {
+    if (fillRatio < 0.01) return "";
+
+    if (fillRatio >= 0.99) {
+      return `M ${-r} ${-r} L ${r} ${-r} L ${r} ${r} L ${-r} ${r} Z`;
+    }
+
+    const topY = r - 2 * r * fillRatio;
+    return `M ${-r} ${r} L ${-r} ${topY} L ${r} ${topY} L ${r} ${r} Z`;
+  }
+
   private getSubstationPower(sub: Substation): number {
-    return sub.U.reduce((acc, unit) => acc + unit.P, 0);
+    let p = 0;
+    for (let i = 0; i < sub.U.length; i++) p += sub.U[i].P;
+    return p;
   }
 
   private isSubstationTripped(sub: Substation): boolean {
     if (sub.Units === 0) return false;
-    return sub.U.every((unit) => unit.Status === UnitStatus.TRIP);
+    for (let i = 0; i < sub.U.length; i++) {
+      if (sub.U[i].Status !== UnitStatus.TRIP) return false;
+    }
+    return true;
   }
 
   // --- Hover Label ---

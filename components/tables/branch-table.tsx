@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import {
   Table,
   TableBody,
@@ -43,6 +44,12 @@ const getBranchIndicator = (branch: Branch) => {
 };
 
 export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
+  const sortedBranches = useMemo(() => {
+    if (!branches) return [];
+    return Object.values(branches)
+      .sort((a, b) => `${a.sub1?.Name}-${a.sub2?.Name}`.localeCompare(`${b.sub1?.Name}-${b.sub2?.Name}`));
+  }, [branches]);
+
   return (
     <div>
       <Table>
@@ -54,9 +61,8 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {branches && Object.values(branches).length > 0 ? (
-            Object.values(branches)
-              .sort((a, b) => `${a.sub1?.Name}-${a.sub2?.Name}`.localeCompare(`${b.sub1?.Name}-${b.sub2?.Name}`))
+          {sortedBranches.length > 0 ? (
+            sortedBranches
               .map(branch => {
                 const totalRating = branch.Pmax * branch.Circuits;
                 const loading = totalRating > 0 ? (Math.abs(branch.P) / totalRating) * 100 : 0;

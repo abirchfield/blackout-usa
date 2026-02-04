@@ -4,6 +4,15 @@ import { GameStatistics, Alert, Hint, Substation, Branch, ResultDetails, Simulat
 import { KeyBindings } from '../key-bindings';
 import { createInitialGameStatistics } from '../logic/grid-data';
 
+function shallowEqual(a: object, b: object): boolean {
+  const keysA = Object.keys(a);
+  if (keysA.length !== Object.keys(b).length) return false;
+  for (const key of keysA) {
+    if ((a as never)[key] !== (b as never)[key]) return false;
+  }
+  return true;
+}
+
 interface UseGameEngineProps {
   theme: string | undefined;
   keyBindings: KeyBindings;
@@ -96,7 +105,7 @@ export function useGameEngine({
             lastGameStepTime = timestamp;
 
             const newStats = engineRef.current.getDashboardStats();
-            setStats(newStats);
+            setStats(prev => shallowEqual(prev, newStats) ? prev : newStats);
 
             if (isDayOver) {
               const results = engineRef.current.getResultsForDay(newStats.day, newStats.totalCost);

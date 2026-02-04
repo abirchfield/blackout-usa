@@ -1,4 +1,4 @@
-import { IScenario } from "@/lib/types";
+import { IScenario, Substation, Branch } from "@/lib/types";
 import { texasCase } from "./texas/case";
 
 // --- Case Definition Types ---
@@ -9,8 +9,8 @@ export interface MapConfig {
 }
 
 export interface GridData {
-    subs: Record<string, Record<string, unknown>>;
-    branches: Record<string, Record<string, unknown>>;
+    subs: Record<string, Substation>;
+    branches: Record<string, Branch>;
     borders: number[][];
     nsubs: number;
 }

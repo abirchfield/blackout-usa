@@ -306,6 +306,7 @@
   --color-gen-solar: #facc15;
   --color-gen-load: #6b7280;
   --color-power-flow: #4ade80;
+  --color-line-hover: #60a5fa;
   --color-tripped: #FF0000;
 }
 
@@ -319,10 +320,19 @@ svg.grid-map {
   vector-effect: non-scaling-stroke;
   pointer-events: none;
 }
+/* flow-fg uses world-unit dash patterns — opt out of non-scaling-stroke */
+#branches-layer line.flow-fg {
+  vector-effect: initial;
+}
 
 /* Base line default color */
 .circuit .base {
   stroke: var(--foreground);
+}
+
+/* Hovered circuit: base line uses a distinct blue (differs from green flow packets) */
+.circuit[data-hovered] .base {
+  stroke: var(--color-line-hover);
 }
 
 /* Overload styling on base line: distinct colors and line patterns per level */
@@ -336,55 +346,48 @@ svg.grid-map {
 
 /* --- Circuit Status Styling --- */
 
-/* DIS: base line stays default, flow-bg shows disconnected dash */
-.circuit[data-status="DIS"] .flow-bg {
-  stroke: var(--background);
+/* DIS: dashed base line to indicate disconnected */
+.circuit[data-status="DIS"] .base {
   stroke-dasharray: 5,5;
-  visibility: visible;
 }
 .circuit[data-status="DIS"] .flow-fg {
   visibility: hidden;
 }
 
-/* TRIP: base line is red dashed, flow lines hidden */
+/* TRIP: red dashed base line, flow hidden */
 .circuit[data-status="TRIP"] .base {
   stroke: var(--color-tripped) !important;
   stroke-dasharray: 5,5;
 }
-.circuit[data-status="TRIP"] .flow-bg,
 .circuit[data-status="TRIP"] .flow-fg {
   visibility: hidden;
 }
 
-/* --- Power Flow Animation (JS-driven offset, zoom-scaled dash patterns) --- */
+/* --- Power Flow Animation (world-unit dash pattern, JS-driven offset) --- */
 
-/* Forward-flowing circuits: offset moves dashes forward */
-.circuit.flow-forward[data-animated] .flow-bg,
+/* flow-fg lives in world coordinates (no non-scaling-stroke) so the dash
+   pattern scales naturally with the SVG transform — no per-zoom CSS updates.
+   --half-len is the world-unit half-length (set once per circuit).
+   --flow-offset is the accumulated animation offset in world units. */
+
+/* Forward-flowing circuits */
 .circuit.flow-forward[data-animated] .flow-fg {
-  stroke-dashoffset: calc(-1 * var(--flow-offset, 0));
+  stroke-dashoffset: calc(var(--half-len, 0) - var(--flow-offset, 0));
 }
-/* Reverse-flowing circuits: offset moves dashes backward */
-.circuit.flow-reverse[data-animated] .flow-bg,
+/* Reverse-flowing circuits */
 .circuit.flow-reverse[data-animated] .flow-fg {
-  stroke-dashoffset: var(--flow-offset, 0);
+  stroke-dashoffset: calc(var(--half-len, 0) + var(--flow-offset, 0));
 }
 
-/* flow-bg: eraser that clears behind each packet */
-.circuit[data-animated] .flow-bg {
-  stroke: var(--background);
-  stroke-dasharray: var(--flow-dash-bg, 12 20);
-  visibility: visible;
-}
-/* flow-fg: bright packet with round caps for a smoother, pill-shaped look */
+/* flow-fg: bright packet with round caps over the static base line */
 .circuit[data-animated] .flow-fg {
   stroke: var(--color-power-flow);
-  stroke-dasharray: var(--flow-dash-fg, 10 22);
+  stroke-dasharray: 0.2 0.44;
   stroke-linecap: round;
   visibility: visible;
 }
 
-/* Non-animated IN circuits: flow lines hidden */
-.circuit[data-status="IN"]:not([data-animated]) .flow-bg,
+/* Non-animated IN circuits: flow line hidden */
 .circuit[data-status="IN"]:not([data-animated]) .flow-fg {
   visibility: hidden;
 }
@@ -415,10 +418,13 @@ svg.grid-map {
   font-size: 15px;
 }
 
-/* --- Substation Background Circles --- */
+/* --- Substation Backgrounds --- */
 .sub-bg {
   fill: var(--background);
 }
+/* Load substations: inner background matches canvas (like generators),
+   the gray color comes from the outer ring */
+
 
 /* --- Substation Pie Chart Wedge --- */
 .sub-pie {
@@ -430,12 +436,16 @@ svg.grid-map {
   fill: none;
 }
 
-/* Load border and pie default color */
+/* Load border, pie, and outer ring color (gray) */
 [data-category="load"] .sub-border {
-  stroke: var(--foreground);
+  stroke: var(--color-gen-load);
 }
 [data-category="load"] .sub-pie {
-  fill: var(--foreground);
+  fill: var(--color-gen-load);
+}
+[data-category="load"] .outer-ring {
+  stroke: var(--color-gen-load);
+  fill: var(--color-gen-load);
 }
 
 /* Generator category colors: border (stroke-only), pie (fill-only), outer ring (filled) */

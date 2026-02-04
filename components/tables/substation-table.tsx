@@ -1,5 +1,6 @@
 "use client"
 
+import { useMemo } from "react"
 import {
   Table,
   TableBody,
@@ -10,23 +11,20 @@ import {
 } from "@/components/ui/table"
 import { Substation, SubstationCategory } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { GenerationTypeConfig } from "@/lib/config"
 import { StatusIndicator } from "@/components/ui/status-indicator"
+import { GenerationTypeIcon } from "@/components/modals/substation-modal"
 
 interface SubstationsListProps {
   subs?: Record<string, Substation>;
   onSubstationSelect: (sub: Substation) => void;
 }
 
-const GenerationTypeIcon = ({ category, ...props }: { category: string } & React.ComponentProps<"svg">) => {
-  const config = GenerationTypeConfig[category as SubstationCategory] || GenerationTypeConfig[SubstationCategory.Thermal];
-  const Icon = config.icon;
-  return (
-    <Icon className={`w-3.5 h-3.5 ${config.tailwind.text}`} {...props} />
-  );
-};
-
 export function SubstationsList({ subs, onSubstationSelect }: SubstationsListProps) {
+  const sortedSubs = useMemo(() => {
+    if (!subs) return [];
+    return Object.values(subs).sort((a, b) => a.Name.localeCompare(b.Name));
+  }, [subs]);
+
   return (
     <div>
       <Table>
@@ -39,9 +37,8 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
           </TableRow>
         </TableHeader>
         <TableBody>
-          {subs && Object.values(subs).length > 0 ? (
-            Object.values(subs)
-              .sort((a, b) => a.Name.localeCompare(b.Name))
+          {sortedSubs.length > 0 ? (
+            sortedSubs
               .map(sub => {
                 const totalPower = sub.U.reduce((acc, unit) => acc + unit.P, 0);
                 return (
@@ -80,7 +77,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                       <div className="flex items-center justify-end gap-1.5">
                         <span>{totalPower.toFixed(0)} MW</span>
                         <span className="sr-only">{sub.Category}</span>
-                        <GenerationTypeIcon category={sub.Category} aria-hidden="true" />
+                        <GenerationTypeIcon category={sub.Category} className="w-3.5 h-3.5" aria-hidden="true" />
                       </div>
                     </TableCell>
                   </TableRow>

@@ -1,41 +1,54 @@
 import { SimulationState, GameState, BranchStatus, UnitStatus, SubstationCategory, AlertHandler } from "../types";
+import { PhysicsConfig } from "../config";
 
 // --- Topology Constants ---
 const ROOT_BUS_NAME = "Bryan";
 const ROOT_ISLAND_ID = 0;
 const UNASSIGNED_ISLAND_ID = -1;
 
-// --- Frequency Tripping Constants ---
-const FREQ_TRIP_CRITICAL_LOW = 57;
-const FREQ_TRIP_CRITICAL_HIGH = 63;
-const PROB_TRIP_FREQ_CRITICAL = 0.05;
-const FREQ_TRIP_HIGH_LOW = 59;
-const FREQ_TRIP_HIGH_HIGH = 61;
-const PROB_TRIP_FREQ_HIGH = 0.01;
-const FREQ_TRIP_NORMAL_LOW = 59.3;
-const FREQ_TRIP_NORMAL_HIGH = 60.7;
-const PROB_TRIP_FREQ_NORMAL = 0.001;
+// --- Frequency Tripping Constants (from PhysicsConfig) ---
+const FREQ_TRIP_CRITICAL_LOW = PhysicsConfig.FREQ_TRIP_CRITICAL_LOW;
+const FREQ_TRIP_CRITICAL_HIGH = PhysicsConfig.FREQ_TRIP_CRITICAL_HIGH;
+const PROB_TRIP_FREQ_CRITICAL = PhysicsConfig.PROB_TRIP_FREQ_CRITICAL;
+const FREQ_TRIP_HIGH_LOW = PhysicsConfig.FREQ_TRIP_HIGH_LOW;
+const FREQ_TRIP_HIGH_HIGH = PhysicsConfig.FREQ_TRIP_HIGH_HIGH;
+const PROB_TRIP_FREQ_HIGH = PhysicsConfig.PROB_TRIP_FREQ_HIGH;
+const FREQ_TRIP_NORMAL_LOW = PhysicsConfig.FREQ_TRIP_NORMAL_LOW;
+const FREQ_TRIP_NORMAL_HIGH = PhysicsConfig.FREQ_TRIP_NORMAL_HIGH;
+const PROB_TRIP_FREQ_NORMAL = PhysicsConfig.PROB_TRIP_FREQ_NORMAL;
 
-// --- Overload Tripping Constants ---
-const OVERLOAD_TRIP_CRITICAL_MULTIPLIER = 1.5;
-const PROB_TRIP_OVERLOAD_CRITICAL = 0.05;
-const OVERLOAD_TRIP_NORMAL_MULTIPLIER = 1.2;
-const PROB_TRIP_OVERLOAD_NORMAL = 0.01;
+// --- Overload Tripping Constants (from PhysicsConfig) ---
+const OVERLOAD_TRIP_CRITICAL_MULTIPLIER = PhysicsConfig.OVERLOAD_TRIP_CRITICAL_MULTIPLIER;
+const PROB_TRIP_OVERLOAD_CRITICAL = PhysicsConfig.PROB_TRIP_OVERLOAD_CRITICAL;
+const OVERLOAD_TRIP_NORMAL_MULTIPLIER = PhysicsConfig.OVERLOAD_TRIP_NORMAL_MULTIPLIER;
+const PROB_TRIP_OVERLOAD_NORMAL = PhysicsConfig.PROB_TRIP_OVERLOAD_NORMAL;
 
 /**
  * Detects islands in the grid and trips units disconnected from the root bus.
  * Uses iterative flood-fill from the "Bryan" root bus.
  */
 export function updateGridTopology(state: SimulationState, onAlert?: AlertHandler) {
+  let rootFound = false;
   for (const key in state.subs) {
     const sub = state.subs[key];
     sub.island = UNASSIGNED_ISLAND_ID;
-    if (sub.Name === ROOT_BUS_NAME) sub.island = ROOT_ISLAND_ID;
+    if (sub.Name === ROOT_BUS_NAME) {
+      sub.island = ROOT_ISLAND_ID;
+      rootFound = true;
+    }
   }
 
+  if (!rootFound) {
+    console.error(`Root bus "${ROOT_BUS_NAME}" not found in substations. Island detection will not work correctly.`);
+    return;
+  }
+
+  const MAX_ITERATIONS = state.nsubs || Object.keys(state.subs).length;
+  let iterations = 0;
   let changed_something = true;
-  while (changed_something) {
+  while (changed_something && iterations < MAX_ITERATIONS) {
     changed_something = false;
+    iterations++;
     for (const key in state.branches) {
       const br = state.branches[key];
       if (br.Status1 !== BranchStatus.IN && (br.Status2 !== BranchStatus.IN || br.Circuits === 1)) continue;
