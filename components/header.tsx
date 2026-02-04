@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { HelpCircle, LogOut, PersonStanding, Play, Pause, FastForward, Bell, Lightbulb, Menu, X } from "lucide-react"
+import { HelpCircle, LogOut, PersonStanding, Play, Pause, FastForward, Bell, Lightbulb, FileText, Menu, X } from "lucide-react"
 import { Button } from "@/components/ui/button"
 
 interface AppHeaderProps {
@@ -14,6 +14,7 @@ interface AppHeaderProps {
   onToggleFastForward: () => void;
   onAlertsClick: () => void;
   onHintsClick: () => void;
+  onBriefingClick: () => void;
   alertsCount: number;
   hintsCount: number;
   controlsDisabled?: boolean;
@@ -21,8 +22,22 @@ interface AppHeaderProps {
   isHighContrast?: boolean;
 }
 
-export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPaused, isFastForward, onTogglePause, onToggleFastForward, onAlertsClick, onHintsClick, alertsCount, hintsCount, controlsDisabled, isBlackout, isHighContrast }: AppHeaderProps) {
+function TimeControls({ isPaused, isFastForward, onTogglePause, onToggleFastForward, controlsDisabled, isHighContrast }: Pick<AppHeaderProps, 'isPaused' | 'isFastForward' | 'onTogglePause' | 'onToggleFastForward' | 'controlsDisabled' | 'isHighContrast'>) {
+  return (
+    <>
+      <Button variant="ghost" size="icon" onClick={onTogglePause} aria-label={isPaused ? "Resume game" : "Pause game"} disabled={controlsDisabled}>
+        {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
+      </Button>
+      <Button variant={isFastForward ? (isHighContrast ? "outline" : "secondary") : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
+        <FastForward className={`h-5 w-5 ${isFastForward ? "fill-current" : ""}`} />
+      </Button>
+    </>
+  );
+}
+
+export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPaused, isFastForward, onTogglePause, onToggleFastForward, onAlertsClick, onHintsClick, onBriefingClick, alertsCount, hintsCount, controlsDisabled, isBlackout, isHighContrast }: AppHeaderProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const timeControlProps = { isPaused, isFastForward, onTogglePause, onToggleFastForward, controlsDisabled, isHighContrast };
 
   return (
     <header className="bg-background flex items-center justify-between border-b px-4 py-3 relative" role="banner" aria-label="Main application header">
@@ -34,12 +49,7 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
           </h1>
           {/* Desktop Controls */}
           <div className="hidden md:flex items-center gap-1 border-l ml-2 pl-2">
-            <Button variant="ghost" size="icon" onClick={onTogglePause} aria-label={isPaused ? "Resume game" : "Pause game"} disabled={controlsDisabled}>
-              {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
-            </Button>
-            <Button variant={isFastForward ? (isHighContrast ? "outline" : "secondary") : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
-              <FastForward className={`h-5 w-5 ${isFastForward ? "fill-current" : ""}`} />
-            </Button>
+            <TimeControls {...timeControlProps} />
             <Button variant="ghost" size="icon" onClick={onAlertsClick} className="relative" aria-label={`View alerts, ${alertsCount} new notifications`} disabled={controlsDisabled}>
               <Bell className="h-5 w-5" />
               {alertsCount > 0 && (
@@ -57,6 +67,9 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
                 </span>
               )}
             </Button>
+            <Button variant="ghost" size="icon" onClick={onBriefingClick} aria-label="View briefing" disabled={controlsDisabled}>
+              <FileText className="h-5 w-5" />
+            </Button>
           </div>
         </div>
       </div>
@@ -65,12 +78,7 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
       <div className="flex justify-end items-center gap-2">
         {/* Mobile Time Controls */}
         <div className="flex md:hidden items-center gap-1">
-          <Button variant="ghost" size="icon" onClick={onTogglePause} aria-label={isPaused ? "Resume game" : "Pause game"} disabled={controlsDisabled}>
-            {isPaused ? <Play className="h-5 w-5 fill-current" /> : <Pause className="h-5 w-5 fill-current" />}
-          </Button>
-          <Button variant={isFastForward ? (isHighContrast ? "outline" : "secondary") : "ghost"} size="icon" onClick={onToggleFastForward} aria-label={isFastForward ? "Disable fast forward" : "Enable fast forward"} disabled={isPaused || controlsDisabled}>
-            <FastForward className={`h-5 w-5 ${isFastForward ? "fill-current" : ""}`} />
-          </Button>
+          <TimeControls {...timeControlProps} />
         </div>
         <nav aria-label="Utility links" className="hidden md:flex items-center justify-end gap-2 flex-nowrap">
           <div role="group">
@@ -114,6 +122,10 @@ export function AppHeader({ onAccessibilityClick, onHelpClick, onQuitClick, isPa
                   <span className="relative inline-flex rounded-full h-2 w-2 bg-amber-500"></span>
                 </span>
               )}
+            </Button>
+            <Button variant="ghost" onClick={() => { onBriefingClick(); setIsMenuOpen(false); }} className="justify-start" disabled={controlsDisabled}>
+              <FileText className="mr-2 h-4 w-4" aria-hidden="true" />
+              Briefing
             </Button>
              <Button variant="ghost" onClick={() => { onAccessibilityClick(); setIsMenuOpen(false); }} className="justify-start">
                 <PersonStanding className="mr-2 h-4 w-4" aria-hidden="true" />

@@ -36,8 +36,6 @@ interface AccessibilityModalProps {
   onRenderMapLabelsChange?: (enabled: boolean) => void;
   keyBindings?: KeyBindings;
   onKeyBindingsChange?: (bindings: KeyBindings) => void;
-  showDetailsInSidebar?: boolean;
-  onShowDetailsInSidebarChange?: (enabled: boolean) => void;
   zoomSensitivity?: number;
   onZoomSensitivityChange?: (value: number) => void;
   fontSize?: 'sm' | 'base' | 'lg' | 'xl';
@@ -57,8 +55,6 @@ export function AccessibilityModal({
   onRenderMapLabelsChange,
   keyBindings,
   onKeyBindingsChange,
-  showDetailsInSidebar,
-  onShowDetailsInSidebarChange,
   zoomSensitivity,
   onZoomSensitivityChange,
   fontSize,
@@ -193,24 +189,6 @@ export function AccessibilityModal({
                     aria-label="Zoom speed"
                   />
                 </div>
-              </div>
-            )}
-          </div>
-
-          {/* Layout Section */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium border-b pb-2">Layout</h3>
-            {showDetailsInSidebar !== undefined && onShowDetailsInSidebarChange && (
-              <div className="grid grid-cols-[1fr_auto] items-center gap-x-4">
-                <Label htmlFor="sidebar-details-toggle-modal" className="text-base font-normal">
-                  Show Substations in Sidebar
-                </Label>
-                <Switch
-                  id="sidebar-details-toggle-modal"
-                  checked={showDetailsInSidebar}
-                  onCheckedChange={onShowDetailsInSidebarChange}
-                  className="justify-self-end"
-                />
               </div>
             )}
           </div>

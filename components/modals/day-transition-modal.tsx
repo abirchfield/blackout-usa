@@ -21,6 +21,7 @@ interface DayTransitionModalProps {
   gameStatistics: GameStatistics;
   isHighContrast: boolean;
   onStartDay: () => void;
+  onClose: () => void;
   onReplayDay: (day: number) => void;
   onNextDay: (day: number) => void;
 }
@@ -34,18 +35,20 @@ export function DayTransitionModal({
   gameStatistics,
   isHighContrast,
   onStartDay,
+  onClose,
   onReplayDay,
   onNextDay,
 }: DayTransitionModalProps) {
   const isOpen = isDayTransition || isDayFinished;
   if (!isOpen) return null;
+  const isDayInProgress = gameStatistics.day === targetDay && gameStatistics.timeStep > 0;
 
   return (
     <Dialog open={isOpen}>
       <DialogContent
         className="sm:max-w-lg font-share-tech"
-        onPointerDownOutside={(e) => e.preventDefault()}
-        onEscapeKeyDown={(e) => e.preventDefault()}
+        onPointerDownOutside={(e) => { if (!isDayInProgress) e.preventDefault(); else onClose(); }}
+        onEscapeKeyDown={(e) => { if (!isDayInProgress) e.preventDefault(); else onClose(); }}
       >
         {isDayFinished && dayResultDetails ? (
           <>
@@ -92,9 +95,15 @@ export function DayTransitionModal({
                   <p>{currentBriefing.points[0]}</p>
                 )}
               </div>
-              <Button onClick={onStartDay} className="w-full text-lg py-6">
-                Start Day {targetDay}
-              </Button>
+              {isDayInProgress ? (
+                <Button onClick={onClose} variant="secondary" className="w-full text-lg py-6">
+                  Continue
+                </Button>
+              ) : (
+                <Button onClick={onStartDay} className="w-full text-lg py-6">
+                  Start Day {targetDay}
+                </Button>
+              )}
             </div>
           </>
         ) : null}

@@ -13,6 +13,7 @@ import { PhysicsConfig, ViewConfig } from "./config";
 
 function createInitialSimulationState(): SimulationState {
   return {
+    _v: 0,
     t: 0,
     day: 1,
     frequency: PhysicsConfig.BASE_FREQUENCY,
@@ -37,6 +38,7 @@ function createInitialInputState(): InputState {
     dragorigX: 0,
     dragorigY: 0,
     hoverBranch: null,
+    hoverCircuit: null,
     hoverSub: null,
   };
 }
@@ -216,6 +218,7 @@ export class GameEngine {
   }
 
   public dispatch(action: SimulationAction) {
+    this.state._v++;
     switch (action.type) {
       case 'TOGGLE_UNIT':
         toggleUnitStatus(this.state, action.subId, action.unitIndex);
@@ -253,6 +256,8 @@ export class GameEngine {
   }
 
   private runGameStep(advanceTime = true): boolean {
+    this.state._v++;
+
     if (this.state.t >= GameEngine.GAME_DURATION) {
       this.state.Ybus = null;
       return true; // Day finished

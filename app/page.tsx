@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { GameEngine } from "@/lib/engine";
 import { AccessibilityModal } from "@/components/modals/accessibility-modal";
 import { KeyBindings, defaultKeyBindings } from "@/lib/key-bindings";
-import { defaultAppSettings } from "@/lib/config";
+import { defaultAppSettings, FONT_SIZE_MAP } from "@/lib/config";
 import { PersonStanding, ExternalLink } from "lucide-react";
 
 // In a static export (`next export`), links to pages need to point to the
@@ -80,13 +80,7 @@ export default function WelcomePage() {
 
   useEffect(() => {
     const root = document.documentElement;
-    const sizeMap: Record<string, string> = {
-      sm: '14px',
-      base: '16px',
-      lg: '18px',
-      xl: '20px',
-    };
-    root.style.fontSize = sizeMap[fontSize] || '16px';
+    root.style.fontSize = FONT_SIZE_MAP[fontSize] || '16px';
   }, [fontSize]);
 
   useEffect(() => {

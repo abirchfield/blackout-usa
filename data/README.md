@@ -166,4 +166,4 @@ npm run build
 
 ## Known Issues / Planned Changes
 
-- **Square load substation icons:** Load substations on the canvas map should be drawn as squares instead of circles to visually distinguish them from generators. This change is high priority and affects `drawLoadSubstation()` in `lib/canvas/drawer.ts`.
+- **Square load substation icons:** Load substations on the canvas map should be drawn as squares instead of circles to visually distinguish them from generators. This change is high priority and affects `drawLoadSubstation()` in `lib/svg/drawer.ts`.

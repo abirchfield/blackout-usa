@@ -1,4 +1,5 @@
 import { SimulationState, SubstationCategory, UnitStatus, Substation, Unit } from "../types";
+import { getAvailableCapacity, isUnitInactive, isVariableRenewable } from "../utils";
 import { PhysicsConfig } from "../config";
 
 const POWER_BALANCE_ALPHA_MIN = -1;
@@ -6,9 +7,9 @@ const POWER_BALANCE_ALPHA_MAX = 1;
 const POWER_BALANCE_MAX_ITERATIONS = 10;
 
 const BASE_FREQUENCY = PhysicsConfig.BASE_FREQUENCY;
-const FREQUENCY_ADJUSTMENT_DROOP = 0.2;
-const FREQUENCY_ADJUSTMENT_THRESHOLD = 500;
-const MIN_GENERATION_BASE_FOR_FREQ_STABILITY = 5;
+const FREQUENCY_ADJUSTMENT_DROOP = PhysicsConfig.FREQUENCY_DROOP;
+const FREQUENCY_ADJUSTMENT_THRESHOLD = PhysicsConfig.FREQUENCY_ADJUSTMENT_THRESHOLD_MW;
+const MIN_GENERATION_BASE_FOR_FREQ_STABILITY = PhysicsConfig.MIN_GENERATION_FOR_FREQ_STABILITY_MW;
 
 export function calculateUnitTempset(u: Unit, sub: Substation): number {
   const pmax = sub.Pmax / sub.Units;
@@ -23,6 +24,26 @@ export function calculateUnitTempset(u: Unit, sub: Substation): number {
   return Math.min(u.P + sub.Ramp, Math.max(u.P - sub.Ramp, psetForCalc));
 }
 
+/** Calculate the target power output for a single generator unit given alpha scaling. No state mutations. */
+export function calculateUnitDispatch(u: Unit, sub: Substation, alpha: number, frWind: number, frSolar: number): number {
+  const pmax = sub.Pmax / sub.Units;
+  const pmin = sub.Pmin / sub.Units;
+  const tempset = calculateUnitTempset(u, sub);
+
+  if (u.Status === UnitStatus.SHUTDOWN) {
+    return Math.max(u.P - sub.Ramp, 0);
+  } else if (isVariableRenewable(sub.Category)) {
+    const pavail = getAvailableCapacity(pmax, sub.Category, frWind, frSolar);
+    const effectiveSet = Math.min(tempset, pavail);
+    return Math.max(0, Math.min(pavail, u.P + sub.Ramp, effectiveSet + alpha * pmax));
+  } else {
+    if (u.Status === UnitStatus.IN || (u.Status === UnitStatus.STARTUP && u.StatusCount >= sub.StartTime)) {
+      return Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
+    }
+  }
+  return 0;
+}
+
 export function calculatePowerBalance(state: SimulationState) {
   let PL = 0, PGSET = 0, PGMIN = 0, PGMAX = 0;
   for (const key in state.subs) {
@@ -34,21 +55,15 @@ export function calculatePowerBalance(state: SimulationState) {
       u.StatusCount += 1;
 
       let tempset = calculateUnitTempset(u, sub);
-      if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) continue;
+      if (isUnitInactive(u.Status)) continue;
       if (sub.Category === SubstationCategory.Load) {
         PL += pmax * state.fr_load;
       } else if (u.Status === UnitStatus.SHUTDOWN) {
         PGMIN += Math.max(0, u.P - sub.Ramp);
         PGMAX += Math.max(0, u.P - sub.Ramp);
         PGSET += Math.max(0, u.P - sub.Ramp);
-      } else if (sub.Category === SubstationCategory.Wind) {
-        const pavail = pmax * state.fr_wind;
-        if (tempset > pavail) tempset = pavail;
-        PGMIN += Math.max(u.P - sub.Ramp, 0);
-        PGMAX += Math.min(u.P + sub.Ramp, pavail);
-        PGSET += tempset;
-      } else if (sub.Category === SubstationCategory.Solar) {
-        const pavail = pmax * state.fr_solar;
+      } else if (isVariableRenewable(sub.Category)) {
+        const pavail = getAvailableCapacity(pmax, sub.Category, state.fr_wind, state.fr_solar);
         if (tempset > pavail) tempset = pavail;
         PGMIN += Math.max(u.P - sub.Ramp, 0);
         PGMAX += Math.min(u.P + sub.Ramp, pavail);
@@ -79,7 +94,7 @@ export function dispatchGeneration(state: SimulationState, PL: number): number {
       const u = sub.U[iu];
       if (sub.Category === SubstationCategory.Load && u.Status === UnitStatus.IN) {
         u.P = (sub.Pmax / sub.Units) * state.fr_load;
-      } else if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) {
+      } else if (isUnitInactive(u.Status)) {
         u.P = 0;
       }
     }
@@ -94,32 +109,8 @@ export function dispatchGeneration(state: SimulationState, PL: number): number {
       if (sub.Category === SubstationCategory.Load) continue;
       for (let iu = 0; iu < sub.Units; ++iu) {
         const u = sub.U[iu];
-        if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) continue;
-
-        const pmax = sub.Pmax / sub.Units;
-        const pmin = sub.Pmin / sub.Units;
-
-        let tempset = calculateUnitTempset(u, sub);
-        let tryp = 0;
-
-        if (u.Status === UnitStatus.SHUTDOWN) {
-          tryp = Math.max(u.P - sub.Ramp, 0);
-        } else if (sub.Category === SubstationCategory.Wind) {
-          const pavail = pmax * state.fr_wind;
-          if (tempset > pavail) tempset = pavail;
-          tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, tempset + alpha * pmax));
-        } else if (sub.Category === SubstationCategory.Solar) {
-          const pavail = pmax * state.fr_solar;
-          if (tempset > pavail) tempset = pavail;
-          tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, tempset + alpha * pmax));
-        } else { // Thermal, Nuclear
-          if (u.Status === UnitStatus.STARTUP && u.StatusCount >= sub.StartTime) {
-            tryp = Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
-          } else if (u.Status === UnitStatus.IN) {
-            tryp = Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
-          }
-        }
-        PBAL -= tryp;
+        if (isUnitInactive(u.Status)) continue;
+        PBAL -= calculateUnitDispatch(u, sub, alpha, state.fr_wind, state.fr_solar);
       }
     }
     if (PBAL > 0) alpha0 = alpha;

@@ -1,33 +1,28 @@
 import { SimulationState, AlertHandler, HintHandler, Briefing, UnitStatus, BranchStatus, IScenario, ResultDetails } from "@/lib/types";
+import { evaluateResults } from "@/lib/utils";
 
-function evaluateResults(totalCost: number, record: number, good: number, okay: number): ResultDetails {
-    const costM = (totalCost / 1000000);
-    if (costM < record) {
-        return {
-            performance: 'record',
-            costM: costM.toFixed(2),
-            message: `Amazing!! This is better than the prior record, $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
-        };
-    } else if (costM < good) {
-        return {
-            performance: 'good',
-            costM: costM.toFixed(2),
-            message: `Great job! The record for this scenario is $${record.toFixed(2)}M.<br/>Super job managing the grid today and keeping costs low`
-        };
-    } else if (costM < okay) {
-        return {
-            performance: 'okay',
-            costM: costM.toFixed(2),
-            message: `Not too bad. We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
-        };
-    } else {
-        return {
-            performance: 'bad',
-            costM: costM.toFixed(2),
-            message: `That's too high! We would hope to keep the cost under $${good.toFixed(2)}M for this scenario.<br/>Feel free to give it another try`
-        };
-    }
+// --- Shared Weather Helpers ---
+
+function initWeather(state: SimulationState) {
+    state.fr_load = 0.83;
+    state.fr_wind = 0.48;
+    state.fr_solar = 1.00;
 }
+
+function updateLoadCurve(state: SimulationState) {
+    if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
+    else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
+}
+
+function updateSolarFadeout(state: SimulationState) {
+    if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
+}
+
+function updateWindRamp(state: SimulationState) {
+    if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
+}
+
+// --- Scenario Data ---
 
 const HURRICANE_RESTORATIONS: [number, string, string][] = [
     [30, "15", 'all-u-3'], [50, "35", 'b2'], [70, "8", 'all'], [90, "33", 'b1'], [110, "59", 'b1'], [130, "5", 'all'], [150, "5", 'b1'], [170, "43", 'b1'], [190, "25", 'all-u-2'], [200, "15", 'all-u-8-from-3'], [230, "16", 'all-u-5-from-2'], [250, "10", 'b1'], [270, "25", 'all-u-4-from-2'], [300, "21", 'all-u-4-from-1'], [360, "14", 'all-u-2'], [390, "30", 'b1'], [420, "2", 'all-u-5-from-3'], [430, "14", 'all-u-4-from-2'], [440, "15", 'b1'], [450, "20", 'b1'], [460, "16", 'b1'], [490, "29", 'b1'], [500, "50", 'b1'], [520, "21", 'b1'], [540, "36", 'b1'],
@@ -48,9 +43,7 @@ class Day1Scenario implements IScenario {
     };
 
     start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
-        state.fr_load = 0.83;
-        state.fr_wind = 0.48;
-        state.fr_solar = 1.00;
+        initWeather(state);
         onHint?.({ message: "The McCamey Solar PV plant in West Texas is currently disconnected. You might as well start up all 3 units at that plant to get more, low-cost energy." });
         onHint?.({ message: "The Mission Gas Turbine plant in South Texas has very high costs. Try shutting down 1-3 of these units while you still have plenty of reserves." });
         onHint?.({ message: "You are going to need more reserves in the evening once the solar has gone down and the load is higher." });
@@ -59,9 +52,8 @@ class Day1Scenario implements IScenario {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     update(state: SimulationState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
-        if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
-        else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
-        if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
+        updateLoadCurve(state);
+        updateSolarFadeout(state);
         if (state.fr_wind < .53 && state.fr_wind > .43) {
             if (Math.random() < .25) state.fr_wind += 0.0001;
             else if (Math.random() < 0.333) state.fr_wind -= 0.0001;
@@ -89,23 +81,20 @@ class Day2Scenario implements IScenario {
     };
 
     start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
-        state.fr_load = 0.83;
-        state.fr_wind = 0.48;
-        state.fr_solar = 1.00;
+        initWeather(state);
         onHint?.({ message: "Watch the East-West lines. If they turn yellow or orange start shutting down western generation" }, true);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     update(state: SimulationState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
-        if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
-        else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
-        if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
-        if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
+        updateLoadCurve(state);
+        updateSolarFadeout(state);
+        updateWindRamp(state);
 
         if (state.t === 90) {
             state.branches["26"].Status1 = BranchStatus.TRIP;
             state.branches["26"].Status2 = BranchStatus.TRIP;
-            onAlert?.({ message: `Maintenance requires tripping both Abiline - Ft Worth lines`, critical: false });
+            onAlert?.({ message: `Maintenance requires tripping both Abilene - Ft Worth lines`, critical: false });
             state.Ybus = null;
         }
     }
@@ -130,18 +119,15 @@ class Day3Scenario implements IScenario {
     };
 
     start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
-        state.fr_load = 0.83;
-        state.fr_wind = 0.48;
-        state.fr_solar = 1.00;
+        initWeather(state);
         onHint?.({ message: "No hints for Day 3: You can do this!" }, true);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     update(state: SimulationState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
-        if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
-        else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
-        if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
-        if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
+        updateLoadCurve(state);
+        updateSolarFadeout(state);
+        updateWindRamp(state);
 
         if (state.t > 240) {
             const tbranches = ["1", "2", "3", "4", "26", "27"];
@@ -181,26 +167,24 @@ class Day4Scenario implements IScenario {
     };
 
     start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
-        state.fr_load = 0.83;
-        state.fr_wind = 0.48;
-        state.fr_solar = 1.00;
+        initWeather(state);
         onHint?.({ message: "Things can happen really fast when there is rapid loss of generation. Stay vigilent!" }, true);
     }
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     update(state: SimulationState, onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
-        if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
-        else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
-        if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
-        if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
+        updateLoadCurve(state);
+        updateSolarFadeout(state);
+        updateWindRamp(state);
 
-        const outages = [[90, "2", 3], [120, "2", 4], [75, "2", 1], [350, "2", 0], [410, "2", 1], [190, "24", 3], [220, "24", 4], [375, "24", 1], [50, "24", 0], [210, "24", 1], [400, "31", 1], [300, "4", 0], [300, "4", 1],[300, "4", 2],[300, "4", 3], [250, "26", 1], [290, "28", 0], [330, "20", 0], [335, "20", 1], [340, "20", 2], [360, "20", 3], [390, "20", 4], [100, "21", 2], [150, "21", 1], [180, "21", 0]];
-        for (const outage of outages) {
-            if (state.t === outage[0]) {
-                const sub = state.subs[outage[1] as string];
-                const u = sub.U[outage[2] as number];
+        const outages: [number, string, number][] = [[90, "2", 3], [120, "2", 4], [75, "2", 1], [350, "2", 0], [410, "2", 1], [190, "24", 3], [220, "24", 4], [375, "24", 1], [50, "24", 0], [210, "24", 1], [400, "31", 1], [300, "4", 0], [300, "4", 1],[300, "4", 2],[300, "4", 3], [250, "26", 1], [290, "28", 0], [330, "20", 0], [335, "20", 1], [340, "20", 2], [360, "20", 3], [390, "20", 4], [100, "21", 2], [150, "21", 1], [180, "21", 0]];
+        for (const [time, subId, unitIdx] of outages) {
+            if (state.t === time) {
+                const sub = state.subs[subId];
+                if (!sub || unitIdx >= sub.U.length) continue;
+                const u = sub.U[unitIdx];
                 u.Status = UnitStatus.TRIP;
-                onAlert?.({ message: `${sub.Name} unit #${(outage[2] as number) + 1} trips due to cold weather`, critical: true });
+                onAlert?.({ message: `${sub.Name} unit #${unitIdx + 1} trips due to cold weather`, critical: true });
             }
         }
     }
@@ -225,9 +209,7 @@ class Day5Scenario implements IScenario {
 
 
     start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void {
-        state.fr_load = 0.83;
-        state.fr_wind = 0.48;
-        state.fr_solar = 1.00;
+        initWeather(state);
 
         let i;
         for (i=0;i<5;++i) state.subs["2"].U[i].Status = UnitStatus.TRIP;
@@ -271,28 +253,35 @@ class Day5Scenario implements IScenario {
 
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     update(state: SimulationState, _onAlert: AlertHandler | undefined, _onHint: HintHandler | undefined): void {
-        if (state.t < 360) state.fr_load = 0.83 + 0.0002777 * state.t;
-        else state.fr_load = 0.93 - 0.0008333 * (state.t - 360);
-        if (state.t >= 240) state.fr_solar = Math.max(0, 1 - (state.t - 240) / 120);
-        if (state.t < 180) state.fr_wind = 0.48 + 0.0028 * state.t;
+        updateLoadCurve(state);
+        updateSolarFadeout(state);
+        updateWindRamp(state);
 
         this.restorations.forEach(([time, id, target]) => {
-            if (state.t === time) {
-                if (typeof target === 'string' && target.startsWith('b')) { // Branch
-                    const br = state.branches[id];
-                    if (target === 'b1' && br.Status1 === BranchStatus.TRIP) br.Status1 = BranchStatus.DIS;
-                    if (target === 'b2' && br.Status2 === BranchStatus.TRIP) br.Status2 = BranchStatus.DIS;
-                } else { // Substation units
-                    const sub = state.subs[id];
-                    if (target === 'all') sub.U.forEach(u => { if(u.Status === UnitStatus.TRIP) u.Status = UnitStatus.DIS });
-                    else if (typeof target === 'string' && target.includes('-u-')) {
-                        const parts = target.split('-u-');
-                        const count = parseInt(parts[1]);
-                        let startIdx = 0;
-                        if (target.includes('-from-')) {
-                            startIdx = parseInt(target.split('-from-')[1]);
-                        }
-                        for (let i = startIdx; i < (startIdx + count); i++) if(sub.U[i]?.Status === UnitStatus.TRIP) sub.U[i].Status = UnitStatus.DIS;
+            if (state.t !== time) return;
+
+            if (target.startsWith('b')) {
+                // Branch restoration: 'b1' or 'b2'
+                const br = state.branches[id];
+                if (!br) return;
+                if (target === 'b1' && br.Status1 === BranchStatus.TRIP) br.Status1 = BranchStatus.DIS;
+                if (target === 'b2' && br.Status2 === BranchStatus.TRIP) br.Status2 = BranchStatus.DIS;
+            } else {
+                // Substation unit restoration: 'all', 'all-u-N', or 'all-u-N-from-M'
+                const sub = state.subs[id];
+                if (!sub) return;
+
+                if (target === 'all') {
+                    sub.U.forEach(u => { if (u.Status === UnitStatus.TRIP) u.Status = UnitStatus.DIS; });
+                } else {
+                    const countMatch = target.match(/^all-u-(\d+)/);
+                    const fromMatch = target.match(/-from-(\d+)/);
+                    if (!countMatch) return;
+                    const count = parseInt(countMatch[1], 10);
+                    const startIdx = fromMatch ? parseInt(fromMatch[1], 10) : 0;
+                    const endIdx = Math.min(startIdx + count, sub.U.length);
+                    for (let i = startIdx; i < endIdx; i++) {
+                        if (sub.U[i].Status === UnitStatus.TRIP) sub.U[i].Status = UnitStatus.DIS;
                     }
                 }
             }

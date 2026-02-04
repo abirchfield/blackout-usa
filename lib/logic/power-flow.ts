@@ -1,12 +1,14 @@
 import * as math from "mathjs";
 import { GameState, BranchStatus, SubstationCategory, UnitStatus } from "../types";
-import { calculateUnitTempset } from "./dispatch";
+import { isUnitInactive } from "../utils";
+import { calculateUnitDispatch } from "./dispatch";
+import { PhysicsConfig } from "../config";
 
 // Constants specific to Power Flow
-const POWER_FLOW_BASE_MW = 100.0;
+const POWER_FLOW_BASE_MW = PhysicsConfig.BASE_MVA;
 const REFERENCE_BUS_NUMBER_STR = "6";
 const REFERENCE_BUS_ADMITTANCE = 10000;
-const GENERATION_SHUTDOWN_THRESHOLD_MW = 1;
+const GENERATION_SHUTDOWN_THRESHOLD_MW = 1; // Below this MW, a shutting-down unit transitions to DIS
 
 /**
  * Solves the DC Power Flow for the current state.
@@ -43,47 +45,27 @@ function calculatePowerInjectionVector(state: GameState, alpha: number): math.Ma
 
     for (let iu = 0; iu < sub.Units; ++iu) {
       const u = sub.U[iu];
-      if (u.Status === UnitStatus.DIS || u.Status === UnitStatus.TRIP) {
+      if (isUnitInactive(u.Status)) {
         u.P = 0;
         continue;
       }
 
-      const pmax = sub.Pmax / sub.Units;
-      const pmin = sub.Pmin / sub.Units;
-
-      const tempset = calculateUnitTempset(u, sub);
-
-      let tryp = 0;
-
       if (sub.Category === SubstationCategory.Load) {
         subPower -= u.P; // Loads consume power (negative injection)
         continue;
-      } else if (u.Status === UnitStatus.SHUTDOWN) {
-        tryp = Math.max(u.P - sub.Ramp, 0);
-        if (tryp <= GENERATION_SHUTDOWN_THRESHOLD_MW) u.Status = UnitStatus.DIS;
-      } else if (sub.Category === SubstationCategory.Wind) {
-        const pavail = pmax * state.fr_wind;
-        const effectiveSet = Math.min(tempset, pavail);
-        tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, effectiveSet + alpha * pmax));
-      } else if (sub.Category === SubstationCategory.Solar) {
-        const pavail = pmax * state.fr_solar;
-        const effectiveSet = Math.min(tempset, pavail);
-        tryp = Math.max(0, Math.min(pavail, u.P + sub.Ramp, effectiveSet + alpha * pmax));
-      } else { // Thermal, Nuclear
-        if (u.Status === UnitStatus.IN || (u.Status === UnitStatus.STARTUP && u.StatusCount >= sub.StartTime)) {
-          tryp = Math.max(pmin, Math.min(pmax, u.P + sub.Ramp, tempset + alpha * pmax));
-        }
       }
 
-      // Startup Logic
+      const tryp = calculateUnitDispatch(u, sub, alpha, state.fr_wind, state.fr_solar);
+
+      // Handle state transitions that only apply during actual power flow (not dry-run dispatch)
+      if (u.Status === UnitStatus.SHUTDOWN && tryp <= GENERATION_SHUTDOWN_THRESHOLD_MW) {
+        u.Status = UnitStatus.DIS;
+      }
       if (u.Status === UnitStatus.STARTUP) {
-        if (u.StatusCount >= sub.StartTime) {
-          if (tryp >= pmin) {
-            u.Status = UnitStatus.IN;
-            if (pmin > 0) u.Pset = pmin;
-          }
-        } else {
-          tryp = 0;
+        const pmin = sub.Pmin / sub.Units;
+        if (u.StatusCount >= sub.StartTime && tryp >= pmin) {
+          u.Status = UnitStatus.IN;
+          if (pmin > 0) u.Pset = pmin;
         }
       }
 

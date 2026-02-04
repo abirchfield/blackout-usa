@@ -1,4 +1,5 @@
 import { GameState, GameMetrics, GameStatistics, SubstationCategory, LoadCategoryType, BranchStatus, UnitStatus } from "../types";
+import { getAvailableCapacity, isVariableRenewable } from "../utils";
 import { activeCase } from "@/data/cases";
 import { PhysicsConfig } from "../config";
 
@@ -79,7 +80,7 @@ export function resetToDefaults(state: GameState) {
       u.Status = u.Status0;
       u.P = u.Pset = u.P0;
       u.StatusCount = 0;
-      if (sub.Category === SubstationCategory.Solar || sub.Category === SubstationCategory.Wind) {
+      if (isVariableRenewable(sub.Category)) {
         u.Pset = sub.Pmax / sub.Units;
       }
     }
@@ -145,12 +146,10 @@ export function updateMetrics(state: GameState) {
         }
         if (u.Status === UnitStatus.IN) {
           let unitReserve = 0;
-          if (sub.Category === SubstationCategory.Wind) {
-            unitReserve = (pmax_unit * state.fr_wind) - u.P;
-            state.metrics.reservesWind += unitReserve;
-          } else if (sub.Category === SubstationCategory.Solar) {
-            unitReserve = (pmax_unit * state.fr_solar) - u.P;
-            state.metrics.reservesSolar += unitReserve;
+          if (isVariableRenewable(sub.Category)) {
+            unitReserve = getAvailableCapacity(pmax_unit, sub.Category, state.fr_wind, state.fr_solar) - u.P;
+            if (sub.Category === SubstationCategory.Wind) state.metrics.reservesWind += unitReserve;
+            else state.metrics.reservesSolar += unitReserve;
           } else if (sub.Category === SubstationCategory.Nuclear) {
             unitReserve = pmax_unit - u.P;
             state.metrics.reservesNuclear += unitReserve;
