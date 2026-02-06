@@ -1,7 +1,7 @@
 import { type ClassValue, clsx } from "clsx"
 import { twMerge } from "tailwind-merge"
-import { SubstationCategory, UnitStatus, ResultDetails } from "./types";
-import { ViewConfig } from "./config";
+import { SubstationCategory, UnitStatus, ResultDetails, Branch, BranchStatus, Substation } from "./types";
+import { ViewConfig, DrawingConfig } from "./config";
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
@@ -36,7 +36,19 @@ export function getLoadingBarColor(loading: number): string {
   return loading > 100 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-status-in)]';
 }
 
+/** Formats a game tick value as a clock time string (e.g. "1:00 PM"). */
+export function formatGameTime(t: number): string {
+  const h = Math.floor(t / 60) + 1;
+  const m = t - (h - 1) * 60;
+  return `${h}:${m < 10 ? "0" + m : m} PM`;
+}
+
 // --- Domain Helpers ---
+
+/** Returns per-unit Pmax and Pmin for a substation. */
+export function getUnitLimits(sub: Substation): { pmax: number; pmin: number } {
+  return { pmax: sub.Pmax / sub.Units, pmin: sub.Pmin / sub.Units };
+}
 
 /** Returns true for generator categories that can be dispatched (thermal-like plants). */
 export function isDispatchableCategory(category: SubstationCategory): boolean {
@@ -71,6 +83,56 @@ export function getDynamicSubstationRadius(scaleX: number, referenceScale: numbe
   const scaleFactor = Math.sqrt(scaleX / referenceScale);
   const radius = baseRadius * scaleFactor;
   return Math.max(ViewConfig.MIN_SUBSTATION_RADIUS, Math.min(radius, maxRadius));
+}
+
+/** Clamp view origin (x0, y0) so the map stays within viewport bounds with margin. */
+export function clampViewBounds(
+  state: { x0: number; y0: number; scaleX: number; scaleY: number; xmin: number; xmax: number; ymin: number; ymax: number },
+  width: number,
+  height: number,
+) {
+  if (width === 0 || height === 0) return;
+
+  const viewWidth = width / state.scaleX;
+  const viewHeight = height / state.scaleY;
+  const mapWidth = state.xmax - state.xmin;
+  const mapHeight = state.ymax - state.ymin;
+  const marginX = mapWidth * DrawingConfig.PAN_MARGIN;
+  const marginY = mapHeight * DrawingConfig.PAN_MARGIN;
+
+  const xmin = state.xmin - marginX;
+  const xmax = state.xmax + marginX;
+  const ymin = state.ymin - marginY;
+  const ymax = state.ymax + marginY;
+  const totalW = xmax - xmin;
+  const totalH = ymax - ymin;
+
+  if (viewWidth >= totalW) {
+    state.x0 = xmin - (viewWidth - totalW) / 2;
+  } else {
+    if (state.x0 < xmin) state.x0 = xmin;
+    if (state.x0 + viewWidth > xmax) state.x0 = xmax - viewWidth;
+  }
+
+  if (viewHeight >= totalH) {
+    state.y0 = ymax + (viewHeight - totalH) / 2;
+  } else {
+    if (state.y0 > ymax) state.y0 = ymax;
+    if (state.y0 - viewHeight < ymin) state.y0 = ymin + viewHeight;
+  }
+}
+
+/** Compute branch overload info: active circuit count, total capacity, and overload ratio. */
+export function getBranchOverloadInfo(branch: Branch): { activeCircuits: number; capacity: number; overloadRatio: number } {
+  let activeCircuits: number;
+  if (branch.Circuits === 1) {
+    activeCircuits = branch.Status1 === BranchStatus.IN ? 1 : 0;
+  } else {
+    activeCircuits = (branch.Status1 === BranchStatus.IN ? 1 : 0) + (branch.Status2 === BranchStatus.IN ? 1 : 0);
+  }
+  const capacity = activeCircuits * branch.Pmax;
+  const overloadRatio = capacity > 0 ? Math.abs(branch.P) / capacity : Infinity;
+  return { activeCircuits, capacity, overloadRatio };
 }
 
 /** Evaluates scenario results based on cost thresholds. */

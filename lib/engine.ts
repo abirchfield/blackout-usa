@@ -1,322 +1,252 @@
-import { GameStatistics, GameState, SimulationState, InputState, InteractionHandler, AlertHandler, HintHandler, Briefing, SubstationCategory, IScenario, ResultDetails, SimulationAction } from "./types";
-import { SvgDrawer } from "./svg/drawer";
-import { SvgHandler } from "./svg/handler";
-import { IGridDrawer, IGridHandler } from "./interfaces";
-import { activeCase } from "@/data/cases";
-import { defaultKeyBindings, KeyBindings } from "./key-bindings";
-import { solvePowerFlow } from "./logic/power-flow";
-import { calculatePowerBalance, dispatchGeneration, updateFrequency } from "./logic/dispatch";
-import { updateGridTopology, handleContingencies } from "./logic/grid-analysis";
-import { updateMetrics, loadInitialData, resetToDefaults, createInitialGameMetrics } from "./logic/grid-data";
-import { toggleUnitStatus, toggleBranchCircuitStatus, setUnitSetpoint, disconnectSmallestLoad, disconnectMostLoadedLine, disconnectLargestLoad, rampAllGenerationUp } from "./logic/operator";
-import { PhysicsConfig, ViewConfig } from "./config";
+import { GameState, GridCase, StatsSnapshot, InteractionHandler, AlertHandler, Alert, HintHandler, Hint, Briefing, IScenario, ResultDetails, SimulationAction, EngineSettings } from "./types";
 
-function createInitialSimulationState(): SimulationState {
-  return {
-    _v: 0,
-    t: 0,
-    day: 1,
-    frequency: PhysicsConfig.BASE_FREQUENCY,
-    subs: {},
-    branches: {},
-    borders: [],
-    nsubs: 0,
-    Ybus: null,
-    Yinv: null,
-    metrics: createInitialGameMetrics(),
-    fr_load: 1,
-    fr_wind: 1,
-    fr_solar: 1,
-  };
-}
+enum PlaybackMode { PAUSED = "PAUSED", PLAYING = "PLAYING", FAST_FORWARD = "FAST_FORWARD" }
+import { GridModel, IGridModel } from "./model/grid-model";
+import { GridView, IGridView } from "./view/grid-view";
+import { defaultKeyBindings, GameAction } from "./key-bindings";
+import { emptyMetrics } from "./model/grid-data";
+import { BASE_FREQUENCY } from "./model/constants";
+import { ViewConfig } from "./config";
 
-function createInitialInputState(): InputState {
-  return {
-    inDrag: false,
-    dragstartX: 0,
-    dragstartY: 0,
-    dragorigX: 0,
-    dragorigY: 0,
-    hoverBranch: null,
-    hoverCircuit: null,
-    hoverSub: null,
-  };
-}
+const TICK_SPEED_NORMAL_MS = 500;
+const TICK_SPEED_FAST_MS = 50;
+import { formatGameTime } from "./utils";
 
 export class GameEngine {
-  private drawer: IGridDrawer;
-  private handler?: IGridHandler;
+  // --- Core ---
+  private readonly gridCase: GridCase;
+  private view: IGridView;
+  private model: IGridModel;
+  public state!: GameState;
+
+  // --- Day lifecycle ---
   private currentScenario: IScenario | null = null;
-  private animationFrameId?: number;
-  private isViewInitialized = false;
-  public static readonly GAME_DURATION = 600;
-  private isBlackout = false;
+  private _dayPhase: 'briefing' | 'playing' | 'results' = 'briefing';
+  private _targetDay = 1;
+  private _dayTransitionId = 0;
+  private _lastResults: ResultDetails | null = null;
+  private _lastResultStats: StatsSnapshot | null = null;
+  private _isBlackout = false;
 
-  // Simulation State (formerly G)
-  public state: GameState = {
-    // Game Loop Vars
-    ...createInitialSimulationState(),
-    ...createInitialInputState(),
+  // --- Playback ---
+  private _playback: PlaybackMode = PlaybackMode.PAUSED;
+  private _modalPaused = false;
+  private rafId?: number;
 
-    // View State
-    xmax: activeCase.mapConfig.bounds.xMax,
-    xmin: activeCase.mapConfig.bounds.xMin,
-    ymax: activeCase.mapConfig.bounds.yMax,
-    ymin: activeCase.mapConfig.bounds.yMin,
-    scale_max: ViewConfig.ZOOM_LIMIT_MAX,
-    scale_min: 0, // Will be set dynamically by drawer
-    scaleX: activeCase.mapConfig.initialView.scale,
-    scaleY: activeCase.mapConfig.initialView.scale,
-    x0: activeCase.mapConfig.initialView.x0,
-    y0: activeCase.mapConfig.initialView.y0,
-    theme: 'dark',
-    animationsEnabled: true,
-    renderMapLabels: true,
-    zoomSensitivity: ViewConfig.ZOOM_SENSITIVITY_DEFAULT,
-    debug_draw_map_bounds: false,
-    keyBindings: defaultKeyBindings,
+  // --- Alerts & Hints ---
+  private _nextAlertId = 0;
+  private _nextHintId = 0;
+  private _alerts: Alert[] = [];
+  private _hints: Hint[] = [];
+  private readonly alertHandler: AlertHandler = (a, reset) => {
+    const entry: Alert = { id: this._nextAlertId++, time: formatGameTime(this.state.t), ...a };
+    this._alerts = reset ? [entry] : [entry, ...this._alerts];
+    this.notify();
+  };
+  private readonly hintHandler: HintHandler = (h, reset) => {
+    const entry: Hint = { id: this._nextHintId++, time: formatGameTime(this.state.t), ...h };
+    this._hints = reset ? [entry] : [entry, ...this._hints];
+    this.notify();
   };
 
-  constructor(element: HTMLDivElement, options: { interactive?: boolean } = { interactive: true }) {
-    const svgDrawer = new SvgDrawer(element);
-    this.drawer = svgDrawer;
+  // --- Subscriptions ---
+  private listeners = new Set<() => void>();
+  private cachedStats: StatsSnapshot | null = null;
+  private statsVersion = -1;
 
-    if (options.interactive !== false) {
-      const svgHandler = new SvgHandler(svgDrawer.svgElement, this.state);
-      svgHandler.onResetView = () => { this.isViewInitialized = false; };
-      svgHandler.onDispatch = this.dispatch.bind(this);
-      this.handler = svgHandler;
+  // --- Getters ---
+  get dayPhase() { return this._dayPhase; }
+  get targetDay() { return this._targetDay; }
+  get dayTransitionId() { return this._dayTransitionId; }
+  get lastResults() { return this._lastResults; }
+  get lastResultStats() { return this._lastResultStats; }
+  get currentBriefing(): Briefing | null { return this.gridCase.scenarios[this._targetDay]?.briefing || null; }
+  get isBlackout() { return this._isBlackout; }
+  get isPaused() { return this._playback === PlaybackMode.PAUSED || this._modalPaused; }
+  get userPaused() { return this._playback === PlaybackMode.PAUSED; }
+  set userPaused(v: boolean) { this._playback = v ? PlaybackMode.PAUSED : PlaybackMode.PLAYING; this.notify(); }
+  get isFastForward() { return this._playback === PlaybackMode.FAST_FORWARD; }
+  get alerts() { return this._alerts; }
+  get hints() { return this._hints; }
+
+  constructor(element: HTMLDivElement, gridCase: GridCase, options: { interactive?: boolean } = { interactive: true }) {
+    this.gridCase = gridCase;
+    const { bounds, initialView } = gridCase.mapConfig;
+
+    this.state = {
+      // SimState
+      _vSim: 0, t: 0, day: 1, frequency: BASE_FREQUENCY,
+      subs: {}, branches: {}, borders: [], nsubs: 0,
+      referenceBus: "1", refIdx: -1, Ybus: null, Yinv: null,
+      metrics: emptyMetrics(), frLoad: 1, frWind: 1, frSolar: 1,
+      // InputState
+      inDrag: false, dragStartX: 0, dragStartY: 0, dragOrigX: 0, dragOrigY: 0,
+      hoverBranch: null, hoverCircuit: null, hoverSub: null,
+      // ViewState
+      xmax: bounds.xMax, xmin: bounds.xMin, ymax: bounds.yMax, ymin: bounds.yMin,
+      scaleMax: ViewConfig.ZOOM_LIMIT_MAX, scaleMin: 0,
+      scaleX: initialView.scale, scaleY: initialView.scale, referenceScale: initialView.scale,
+      x0: initialView.x0, y0: initialView.y0,
+      theme: 'dark', animationsEnabled: true, renderMapLabels: true,
+      zoomSensitivity: ViewConfig.ZOOM_SENSITIVITY_DEFAULT, keyBindings: defaultKeyBindings,
+    };
+
+    this.view = new GridView(element, options.interactive !== false);
+    this.view.init(this.state, {
+      onDispatch: this.dispatch.bind(this),
+      onTogglePause: () => this.togglePause(),
+      onToggleFastForward: () => this.toggleFastForward(),
+    });
+
+    this.model = new GridModel();
+    this.model.init(this.state, gridCase.gridData, gridCase.referenceBus);
+  }
+
+  // --- Subscriptions ---
+
+  subscribe = (listener: () => void): (() => void) => {
+    this.listeners.add(listener);
+    return () => { this.listeners.delete(listener); };
+  };
+
+  private notify() { for (const l of this.listeners) l(); }
+
+  getStats(): StatsSnapshot {
+    if (this.state._vSim === this.statsVersion && this.cachedStats) return this.cachedStats;
+    this.cachedStats = { ...this.model.getStats(), blackout: this._isBlackout };
+    this.statsVersion = this.state._vSim;
+    return this.cachedStats;
+  }
+
+  // --- Day Lifecycle ---
+
+  navigateToDay(day: number) {
+    this._targetDay = day;
+    this._dayPhase = 'briefing';
+    this._playback = PlaybackMode.PAUSED;
+    this._dayTransitionId++;
+    this.notify();
+  }
+
+  beginDay() {
+    this.clearAlerts();
+    this.startDay(this._targetDay);
+    this.step(false);
+    this._playback = PlaybackMode.PLAYING;
+    this._dayPhase = 'playing';
+    this._dayTransitionId++;
+    this.notify();
+  }
+
+  advanceToNextDay() {
+    const totalDays = Object.keys(this.gridCase.scenarios).length;
+    this.navigateToDay(this._targetDay < totalDays ? this._targetDay + 1 : 1);
+  }
+
+  getBriefingForDay(day: number): Briefing | null {
+    return this.gridCase.scenarios[day]?.briefing || null;
+  }
+
+  // --- Playback ---
+
+  togglePause() {
+    this._playback = this._playback === PlaybackMode.PAUSED ? PlaybackMode.PLAYING : PlaybackMode.PAUSED;
+    this.notify();
+  }
+
+  toggleFastForward() {
+    this._playback = this._playback === PlaybackMode.FAST_FORWARD ? PlaybackMode.PLAYING : PlaybackMode.FAST_FORWARD;
+    this.notify();
+  }
+
+  setModalPaused(v: boolean) {
+    if (this._modalPaused !== v) { this._modalPaused = v; this.notify(); }
+  }
+
+  // --- Alerts & Hints ---
+
+  dismissAlert(id: number) { this._alerts = this._alerts.filter(a => a.id !== id); this.notify(); }
+  dismissAllAlerts() { this._alerts = []; this.notify(); }
+  dismissHint(id: number) { this._hints = this._hints.filter(h => h.id !== id); this.notify(); }
+  dismissAllHints() { this._hints = []; this.notify(); }
+  clearAlerts() { this._alerts = []; this._hints = []; this.notify(); }
+
+  // --- View Delegation ---
+
+  reparent(container: HTMLDivElement) { this.view.reparent(container); }
+  performAction(action: GameAction) { this.view.performAction(action); }
+  applySettings(s: EngineSettings) { this.view.applySettings(s); }
+  set onInteract(handler: InteractionHandler | undefined) { this.view.onInteract = handler; }
+  draw() { this.view.draw(this.isPaused, this.isFastForward); }
+
+  // --- Simulation ---
+
+  dispatch(action: SimulationAction) {
+    this.model.dispatch(action, this.alertHandler);
+    this.notify();
+  }
+
+  step(advanceTime = true) {
+    const result = this.model.tick(advanceTime, this.alertHandler, this.hintHandler);
+    if (result.blackout) {
+      this.alertHandler({ message: "Grid frequency collapsed, leading to a blackout. You've been fired.", critical: true });
+      this._isBlackout = true;
     }
-
-    this.init();
+    if (result.dayComplete) { this.completeDayWithResults(); return; }
+    this.notify();
   }
 
-  public destroy() {
-    if (this.animationFrameId) {
-      cancelAnimationFrame(this.animationFrameId);
+  // --- Lifecycle ---
+
+  startLoop() {
+    if (this.rafId) return;
+    let lastGameStepTime = 0;
+    const loop = (timestamp: number) => {
+      if (!this.isPaused) {
+        const speed = this.isFastForward ? TICK_SPEED_FAST_MS : TICK_SPEED_NORMAL_MS;
+        if (timestamp - lastGameStepTime > speed) { this.step(); lastGameStepTime = timestamp; }
+      }
+      this.draw();
+      this.rafId = requestAnimationFrame(loop);
+    };
+    this.rafId = requestAnimationFrame(loop);
+  }
+
+  destroy() {
+    if (this.rafId) { cancelAnimationFrame(this.rafId); this.rafId = undefined; }
+    this.listeners.clear();
+    this.view.destroy();
+  }
+
+  startDay(day: number) {
+    this._isBlackout = false;
+    this.currentScenario = this.gridCase.scenarios[day] || null;
+    if (!this.currentScenario) {
+      this.alertHandler({ message: `Scenario for Day ${day} is not defined.`, critical: true }, true);
     }
-    this.handler?.destroy();
-    this.drawer.destroy();
-    this.handler = undefined;
+    this.model.startDay(day, this.currentScenario, this.alertHandler, this.hintHandler);
+    this.notify();
   }
 
-  set onInteract(handler: InteractionHandler | undefined) {
-    if (this.handler) {
-      this.handler.onInteract = handler;
-    }
+  private completeDayWithResults() {
+    const stats = this.getStats();
+    this._lastResults = this.getResultsForDay(this.state.day, stats.totalCost);
+    this._lastResultStats = stats;
+    this._dayPhase = 'results';
+    this._playback = PlaybackMode.PAUSED;
+    this._dayTransitionId++;
+    this.notify();
   }
 
-  get onInteract() {
-    return this.handler?.onInteract;
-  }
-
-  public getHandler(): IGridHandler | undefined {
-    return this.handler;
-  }
-
-  public setOnTogglePause(handler: () => void) {
-    if (this.handler) {
-      this.handler.onTogglePause = handler;
-    }
-  }
-
-  public setOnToggleFastForward(handler: () => void) {
-    if (this.handler) {
-      this.handler.onToggleFastForward = handler;
-    }
-  }
-
-  public onAlert?: AlertHandler;
-  public onHint?: HintHandler;
-
-  public setTheme(theme: 'light' | 'dark') {
-    if (this.state.theme !== theme) {
-      this.state.theme = theme;
-      this.draw(); // Redraw with the new theme
-    }
-  }
-
-  public setAnimationsEnabled(enabled: boolean) {
-    this.state.animationsEnabled = enabled;
-  }
-
-  public setRenderMapLabels(enabled: boolean) {
-    this.state.renderMapLabels = enabled;
-  }
-
-  public setZoomSensitivity(sensitivity: number) {
-    this.state.zoomSensitivity = sensitivity;
-  }
-
-  public setKeyBindings(bindings: KeyBindings) {
-    this.state.keyBindings = bindings;
-  }
-
-  private init() {
-    loadInitialData(this.state);
-  }
-
-  public setDefaults(resetView = true) {
-    resetToDefaults(this.state);
-    if (resetView) {
-      this.isViewInitialized = false;
-    }
-  }
-
-  public startDay(day: number) {
-    this.setDefaults(false); // Don't reset view when starting a new day
-    this.state.day = day;
-    this.isBlackout = false;
-
-    this.currentScenario = activeCase.scenarios[day] || null;
-    if (this.currentScenario) {
-      this.currentScenario.start(this.state, this.onAlert, this.onHint);
-    } else {
-      this.onAlert?.({ message: `Scenario for Day ${day} is not defined.`, critical: true }, true);
-    }
-
-    // Common setup for all days after day-specific changes
-    for (const key in this.state.subs) {
-        const sub = this.state.subs[key];
-        for (let iu = 0 ; iu < sub.Units; ++iu) {
-            const u = sub.U[iu];
-            const pmax = sub.Pmax / sub.Units;
-            if (sub.Category === SubstationCategory.Wind) {
-                u.P = pmax * this.state.fr_wind;
-                u.Pset = pmax;
-            }
-            else if (sub.Category === SubstationCategory.Solar) {
-                u.P = pmax * this.state.fr_solar;
-                u.Pset = pmax;
-            }
-        }
-    }
-  }
-
-  public getCurrentScenarioBriefing(): Briefing | null {
-    return this.currentScenario?.briefing || null;
-  }
-
-  public getBriefingForDay(day: number): Briefing | null {
-    const scenario = activeCase.scenarios[day] || null;
-    return scenario?.briefing || null;
-  }
-
-  public getResultsForDay(day: number, totalCost: number): ResultDetails | null {
-    if (this.isBlackout) {
+  private getResultsForDay(day: number, totalCost: number): ResultDetails | null {
+    if (this._isBlackout) {
       return {
         performance: 'bad',
         costM: (totalCost / 1_000_000).toFixed(1),
         message: "The grid collapsed under your watch due to a catastrophic frequency drop. You've been relieved of your duties."
       };
     }
-    const scenario = activeCase.scenarios[day];
-    if (scenario) {
-        return scenario.getResultDetails(totalCost);
-    }
-    return null;
-  }
-
-  public dispatch(action: SimulationAction) {
-    this.state._v++;
-    switch (action.type) {
-      case 'TOGGLE_UNIT':
-        toggleUnitStatus(this.state, action.subId, action.unitIndex);
-        this.draw();
-        break;
-      case 'TOGGLE_BRANCH':
-        toggleBranchCircuitStatus(this.state, action.branchId, action.circuitNum);
-        this.draw();
-        break;
-      case 'SET_SETPOINT':
-        setUnitSetpoint(this.state, action.subId, action.unitIndex, action.value);
-        break;
-      case 'DISCONNECT_SMALLEST_LOAD':
-        disconnectSmallestLoad(this.state, this.onAlert);
-        break;
-      case 'DISCONNECT_MOST_LOADED_LINE':
-        disconnectMostLoadedLine(this.state, this.onAlert);
-        break;
-      case 'EMERGENCY_LOAD_SHED':
-        disconnectLargestLoad(this.state, this.onAlert);
-        break;
-      case 'RAMP_ALL_GENERATION':
-        rampAllGenerationUp(this.state, this.onAlert);
-        break;
-    }
-  }
-
-  public update(steps = 1, advanceTime = true): boolean {
-    for (let i = 0; i < steps; i++) {
-      if (this.runGameStep(advanceTime)) {
-        return true; // Day is over
-      }
-    }
-    return false; // Day is not over
-  }
-
-  private runGameStep(advanceTime = true): boolean {
-    this.state._v++;
-
-    if (this.state.t >= GameEngine.GAME_DURATION) {
-      this.state.Ybus = null;
-      return true; // Day finished
-    }
-
-    if (advanceTime) {
-      this.state.t += 1;
-    }
-
-    this.currentScenario?.update(this.state, this.onAlert, this.onHint);
-
-    handleContingencies(this.state, this.onAlert);
-    updateGridTopology(this.state, this.onAlert);
-
-    const { PL, PGSET, PGMIN, PGMAX } = calculatePowerBalance(this.state);
-
-    updateFrequency(this.state, PL, PGMIN, PGMAX, PGSET);
-
-    // Check for blackout condition
-    if (this.state.frequency < PhysicsConfig.FREQUENCY_BLACKOUT_THRESHOLD) {
-      this.onAlert?.({ message: "Grid frequency collapsed, leading to a blackout. You've been fired.", critical: true });
-      this.isBlackout = true;
-      return true; // End the day immediately
-    }
-
-    const alpha = dispatchGeneration(this.state, PL);
-
-    solvePowerFlow(this.state, alpha);
-    updateMetrics(this.state);
-
-    return false; // Day not finished
-  }
-
-  public draw(isPaused?: boolean, isFastForward?: boolean) {
-    this.drawer.resizeCanvas();
-
-    if (!this.isViewInitialized && this.drawer.isCanvasReady()) {
-      this.drawer.setInitialView(this.state);
-      this.isViewInitialized = true;
-    }
-    // On resize, updateWorldTransform (called inside draw) will recalculate
-    // scale_min, clamp scale, and apply view bounds — no need to reset the view.
-    this.drawer.draw(this.state, isPaused ?? true, isFastForward ?? false);
-  }
-
-  public getDashboardStats(): GameStatistics {
-    const h = Math.floor(this.state.t / 60) + 1;
-    const m = (this.state.t - (h - 1) * 60);
-    const timeStr = `${h}:${m < 10 ? "0" + m : m} PM`;
-
-    return {
-      ...this.state.metrics,
-      day: this.state.day,
-      timeStr,
-      timeStep: this.state.t,
-      frequency: this.state.frequency,
-      fr_wind: this.state.fr_wind,
-      fr_solar: this.state.fr_solar,
-      blackout: this.isBlackout,
-    } as GameStatistics & { blackout: boolean };
+    return this.gridCase.scenarios[day]?.getResultDetails(totalCost) ?? null;
   }
 }
+

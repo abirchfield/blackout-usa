@@ -70,6 +70,10 @@
   --color-status-dis: oklch(0.7 0 0); /* gray-400 */
   --color-status-startup: oklch(0.62 0.13 85); /* yellow-700, for light mode contrast */
   --color-status-trip: oklch(0.63 0.3 29); /* true red */
+  /* UI Semantic Colors */
+  --color-alert: oklch(0.637 0.237 25.331); /* red-500 - notifications, errors */
+  --color-alert-emphasis: oklch(0.577 0.245 27.325); /* red-600 - blackout text */
+  --color-hint: oklch(0.769 0.188 70.08); /* amber-500 - hints */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -109,6 +113,10 @@
   --color-status-dis: oklch(0.7 0 0); /* gray-400 */
   --color-status-startup: oklch(0.85 0.2 85);   /* yellow-400 */
   --color-status-trip: oklch(0.63 0.3 29); /* true red */
+  /* UI Semantic Colors */
+  --color-alert: oklch(0.704 0.191 22.216); /* red-400 - notifications, errors */
+  --color-alert-emphasis: oklch(0.637 0.237 25.331); /* red-500 - blackout text */
+  --color-hint: oklch(0.828 0.189 84.429); /* amber-400 - hints */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
@@ -148,6 +156,10 @@
   --color-status-dis: oklch(0 0 0); /* Black */
   --color-status-startup: oklch(0.5 0.15 80); /* Dark Yellow/Brown */
   --color-status-trip: oklch(0.6 0.3 15); /* Red */
+  /* UI Semantic Colors */
+  --color-alert: oklch(0.6 0.3 15); /* Red - matches destructive */
+  --color-alert-emphasis: oklch(0.5 0.3 15); /* Darker Red */
+  --color-hint: oklch(0.5 0.15 80); /* Dark Yellow/Brown */
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0 0 0);
   --sidebar-primary: oklch(0 0 0);
@@ -187,6 +199,10 @@
   --color-status-dis: oklch(1 0 0); /* White */
   --color-status-startup: oklch(0.95 0.2 85); /* Bright Yellow */
   --color-status-trip: oklch(0.9 0.2 30); /* Bright Yellow-Red */
+  /* UI Semantic Colors */
+  --color-alert: oklch(0.9 0.2 30); /* Bright Yellow-Red - matches destructive */
+  --color-alert-emphasis: oklch(0.95 0.25 30); /* Brighter Red */
+  --color-hint: oklch(0.95 0.2 85); /* Bright Yellow */
   --sidebar: oklch(0 0 0);
   --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: oklch(1 0 0);
@@ -243,17 +259,25 @@
   font-family: var(--font-share-tech), sans-serif;
 }
 
-/* Custom slider thumb style for the PowerSlider component. */
-/* This is needed to make the thumb visible when its range is made transparent. */
-/* This selector is more specific to override the default component styles. */
-.power-slider-wrapper [role="slider"] {
-  @apply border-2 border-background bg-foreground;
+/* PowerSlider component styles */
+/* Make the slider track transparent so the actual output bar shows through */
+.power-slider [data-slot="slider-track"] {
+  @apply bg-transparent;
 }
 
-/* Custom slider track style for the PowerSlider component. */
-/* This adds a border to make the track visible in all themes, especially high-contrast. */
-.power-slider-wrapper [data-radix-slider-track] {
-  @apply border border-border;
+/* Make the range fill transparent - we show actual output with a separate bar */
+.power-slider [data-slot="slider-range"] {
+  @apply bg-transparent;
+}
+
+/* Style the thumb to be more visible and distinct */
+.power-slider [data-slot="slider-thumb"] {
+  @apply border-2 border-primary bg-background shadow-md size-5;
+}
+
+/* Ensure thumb is always clickable */
+.power-slider [data-slot="slider-thumb"]:not(:disabled) {
+  @apply cursor-grab active:cursor-grabbing;
 }
 
 /* --- High Contrast Tab Styles --- */
@@ -315,6 +339,12 @@ svg.grid-map {
   background-color: var(--background);
 }
 
+/* Layer containment: changes within a layer don't trigger style recalc in siblings */
+#branches-layer,
+#substations-layer {
+  contain: layout style;
+}
+
 /* --- Branch Lines: static properties via CSS --- */
 #branches-layer line {
   vector-effect: non-scaling-stroke;
@@ -371,11 +401,11 @@ svg.grid-map {
    --flow-offset is the accumulated animation offset in world units. */
 
 /* Forward-flowing circuits */
-.circuit.flow-forward[data-animated] .flow-fg {
+.circuit[data-flow-dir="flow-forward"][data-animated] .flow-fg {
   stroke-dashoffset: calc(var(--half-len, 0) - var(--flow-offset, 0));
 }
 /* Reverse-flowing circuits */
-.circuit.flow-reverse[data-animated] .flow-fg {
+.circuit[data-flow-dir="flow-reverse"][data-animated] .flow-fg {
   stroke-dashoffset: calc(var(--half-len, 0) + var(--flow-offset, 0));
 }
 
@@ -411,10 +441,10 @@ svg.grid-map {
 }
 
 /* Hover font size */
-#substations-layer .hovered text {
+#substations-layer [data-hovered] text {
   font-size: 20px;
 }
-#substations-layer [data-sub-id]:not(.hovered) text {
+#substations-layer [data-sub-id]:not([data-hovered]) text {
   font-size: 15px;
 }
 

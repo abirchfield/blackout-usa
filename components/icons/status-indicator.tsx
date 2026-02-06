@@ -1,7 +1,7 @@
 "use client";
 
 import { UnitStatus, BranchStatus, SubstationCategory } from "@/lib/types";
-import { StatusConfig } from "@/lib/config";
+import { StatusConfig } from "@/components/theme";
 
 interface StatusIndicatorProps {
   status: UnitStatus | BranchStatus;
@@ -20,11 +20,11 @@ export function StatusIndicator({ status, category, power = 0, pmax = 1, classNa
   if (category === SubstationCategory.Load) {
     switch (status) {
       case UnitStatus.IN:
-        indicatorClassName = 'bg-green-500';
+        indicatorClassName = 'bg-[var(--color-status-in)]';
         if (!title) title = 'In-Service';
         break;
       case UnitStatus.TRIP:
-        indicatorClassName = 'bg-red-500';
+        indicatorClassName = 'bg-[var(--color-status-trip)]';
         if (!title) title = 'Tripped';
         break;
       case UnitStatus.DIS:

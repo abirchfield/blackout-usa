@@ -5,9 +5,10 @@ import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { GameEngine } from "@/lib/engine";
+import { activeCase } from "@/data/cases";
 import { AccessibilityModal } from "@/components/modals/accessibility-modal";
 import { useAppSettings } from "@/lib/hooks/use-app-settings";
-import { useModalManager } from "@/lib/hooks/use-modal-manager";
+import { useModals } from "@/lib/hooks/use-modals";
 import { PersonStanding, ExternalLink } from "lucide-react";
 
 const isStaticExport = process.env.NODE_ENV === 'production';
@@ -16,7 +17,7 @@ export default function WelcomePage() {
   const svgContainerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const { resolvedTheme } = useTheme();
-  const modals = useModalManager();
+  const modals = useModals();
   const { settings, updateSettings } = useAppSettings({ renderMapLabels: false });
 
   const gameUrl = isStaticExport ? './game.html' : '/game';
@@ -26,23 +27,24 @@ export default function WelcomePage() {
     let animationFrameId: number;
 
     if (svgContainerRef.current && !engineRef.current) {
-      const engine = new GameEngine(svgContainerRef.current, { interactive: false });
+      const engine = new GameEngine(svgContainerRef.current, activeCase, { interactive: false });
       engineRef.current = engine;
 
-      engine.setKeyBindings(settings.keyBindings);
+      engine.applySettings({ keyBindings: settings.keyBindings });
+      engine.userPaused = false;
       engine.startDay(1);
-      engine.update(1, false);
+      engine.step(false);
 
       const animate = () => {
         if (engineRef.current) {
-          engine.setTheme((resolvedTheme as 'light' | 'dark') || 'dark');
-          engine.draw(false, false);
+          engine.applySettings({ theme: (resolvedTheme as 'light' | 'dark') || 'dark' });
+          engine.draw();
         }
         animationFrameId = requestAnimationFrame(animate);
       };
 
       const handleResize = () => {
-        engineRef.current?.draw(false, false);
+        engineRef.current?.draw();
       };
 
       animate();
@@ -59,16 +61,12 @@ export default function WelcomePage() {
 
   // Sync settings to engine
   useEffect(() => {
-    engineRef.current?.setAnimationsEnabled(settings.animationsEnabled);
-  }, [settings.animationsEnabled]);
-
-  useEffect(() => {
-    engineRef.current?.setRenderMapLabels(settings.renderMapLabels);
-  }, [settings.renderMapLabels]);
-
-  useEffect(() => {
-    engineRef.current?.setKeyBindings(settings.keyBindings);
-  }, [settings.keyBindings]);
+    engineRef.current?.applySettings({
+      animationsEnabled: settings.animationsEnabled,
+      renderMapLabels: settings.renderMapLabels,
+      keyBindings: settings.keyBindings,
+    });
+  }, [settings.animationsEnabled, settings.renderMapLabels, settings.keyBindings]);
 
   return (
     <main className="relative flex min-h-screen flex-col lg:flex-row items-center justify-center p-4 lg:p-8 font-share-tech gap-8">

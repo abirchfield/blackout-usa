@@ -1,10 +1,12 @@
 "use client";
 
+/** Reusable game widgets: PowerSlider (unit setpoint control), LoadUnitDetails (load info).
+ *  Used by modals and table views. */
 import { Button } from "@/components/ui/button"
 import { Slider } from "@/components/ui/slider";
 import { Substation, Unit, UnitStatus, LoadCategoryType } from "@/lib/types"
-import { LoadTypeConfig, StatusConfig } from "@/lib/config"
-import { Power, Play, Pause, FastForward } from "lucide-react"
+import { LoadTypeConfig, StatusConfig } from "@/components/theme"
+import { Power } from "lucide-react"
 import { cn } from "@/lib/utils"
 import React from "react";
 
@@ -69,7 +71,9 @@ export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: Lo
 // --- Setpoint Controls ---
 
 /**
- * Renders a slider for power control with an overlay showing actual output.
+ * Renders a slider for power control with visual feedback for setpoint and actual output.
+ * - Setpoint: Controlled by the slider thumb (what you're requesting)
+ * - Actual: Shown as a filled bar (current output, may lag behind setpoint)
  */
 export const PowerSlider = ({
   setpoint,
@@ -88,71 +92,41 @@ export const PowerSlider = ({
 }) => {
   const outputPercentage = pmax > 0 ? (actual / pmax) * 100 : 0;
 
-  // This is a trick to override the CSS variable for the range fill
-  // used by the shadcn/ui Slider. We make it transparent so we can
-  // show our own "actual output" bar underneath.
-  const sliderStyle = {
-    '--primary': 'transparent', // Hides the default blue range fill.
-  } as React.CSSProperties;
-
   return (
-    <div className={cn("w-full", !disabled ? "cursor-pointer" : "cursor-not-allowed")}>
-      <div className="relative flex h-5 w-full items-center power-slider-wrapper">
-        <div className="w-full" style={sliderStyle}>
-          <Slider value={[setpoint]} onValueChange={onValueChange} onValueCommit={onValueCommit} min={0} max={pmax} step={1} disabled={disabled} />
+    <div className={cn("w-full flex items-center gap-2", disabled && "opacity-60")}>
+      <div className="relative flex-1 h-6 flex items-center">
+        {/* Actual output bar - shown underneath */}
+        <div
+          className="absolute inset-y-0 left-0 flex items-center w-full pointer-events-none"
+          title={`Actual Output: ${actual.toFixed(0)} MW`}
+        >
+          <div className="h-1.5 w-full rounded-full bg-muted overflow-hidden">
+            <div
+              className="h-full rounded-full bg-primary/70 transition-all duration-300"
+              style={{ width: `${outputPercentage}%` }}
+            />
+          </div>
         </div>
-        <div className="pointer-events-none absolute top-1/2 h-2 w-full -translate-y-1/2" title={`Actual Output: ${actual.toFixed(0)} MW`}>
-          <div className="h-full rounded-full bg-primary/80 border border-primary-foreground/30" style={{ width: `${outputPercentage}%` }} />
+        {/* Slider control - on top with higher z-index */}
+        <div className="relative z-10 w-full">
+          <Slider
+            value={[setpoint]}
+            onValueChange={onValueChange}
+            onValueCommit={onValueCommit}
+            min={0}
+            max={pmax}
+            step={1}
+            disabled={disabled}
+            aria-label={`Setpoint: ${setpoint.toFixed(0)} MW, Actual: ${actual.toFixed(0)} MW`}
+            className="power-slider"
+          />
         </div>
       </div>
+      {/* Numeric setpoint display */}
+      <span className="text-xs font-mono text-muted-foreground w-12 text-right tabular-nums">
+        {setpoint.toFixed(0)} MW
+      </span>
     </div>
   );
 };
 
-// --- Time Controls ---
-
-interface TimeControllerProps {
-  progress: number;
-  isPaused: boolean;
-  isFastForward: boolean;
-  onTogglePause: () => void;
-  onToggleFastForward: () => void;
-}
-
-export function TimeController({
-  progress,
-  isPaused,
-  isFastForward,
-  onTogglePause,
-  onToggleFastForward
-}: TimeControllerProps) {
-  return (
-      <div className="flex items-center gap-3 w-full">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={onTogglePause}
-          aria-label={isPaused ? "Resume" : "Pause"}
-          className="h-6 w-6 cursor-pointer shrink-0"
-        >
-          {isPaused ? <Play className="h-4 w-4 fill-current" /> : <Pause className="h-4 w-4 fill-current" />}
-        </Button>
-        <div className="flex-1 h-2 bg-secondary rounded-full overflow-hidden" title={`Day Progress: ${progress.toFixed(0)}%`}>
-          <div
-            className="h-full bg-primary transition-all duration-300 ease-linear"
-            style={{ width: `${progress}%` }}
-          />
-        </div>
-        <Button
-          variant={isFastForward ? "secondary" : "ghost"}
-          size="icon"
-          onClick={onToggleFastForward}
-          aria-label={isFastForward ? "Normal Speed" : "Fast Forward"}
-          className="h-6 w-6 cursor-pointer shrink-0"
-          disabled={isPaused}
-        >
-          <FastForward className={`h-4 w-4 ${isFastForward ? "fill-current" : ""}`} />
-        </Button>
-      </div>
-  )
-}

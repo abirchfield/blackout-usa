@@ -3,7 +3,7 @@
 import { RotateCw, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { hcVariant } from "@/lib/utils";
-import { DayResults } from "@/components/day-results";
+import { DayResults } from "@/components/game/day-results";
 import {
   Dialog,
   DialogContent,
@@ -14,11 +14,11 @@ import {
 import { Briefing, ResultDetails, GameStatistics } from "@/lib/types";
 
 interface DayTransitionModalProps {
-  isDayTransition: boolean;
-  isDayFinished: boolean;
+  open: boolean;
+  mode: 'briefing' | 'results';
   targetDay: number;
-  currentBriefing: Briefing | null;
-  dayResultDetails: ResultDetails | null;
+  briefing: Briefing | null | undefined;
+  resultDetails: ResultDetails | null | undefined;
   gameStatistics: GameStatistics;
   isHighContrast: boolean;
   onStartDay: () => void;
@@ -28,11 +28,11 @@ interface DayTransitionModalProps {
 }
 
 export function DayTransitionModal({
-  isDayTransition,
-  isDayFinished,
+  open,
+  mode,
   targetDay,
-  currentBriefing,
-  dayResultDetails,
+  briefing,
+  resultDetails,
   gameStatistics,
   isHighContrast,
   onStartDay,
@@ -40,32 +40,40 @@ export function DayTransitionModal({
   onReplayDay,
   onNextDay,
 }: DayTransitionModalProps) {
-  const isOpen = isDayTransition || isDayFinished;
-  if (!isOpen) return null;
+  if (!open) return null;
+
+  // Check if day is in progress (user can close briefing to continue)
   const isDayInProgress = gameStatistics.day === targetDay && gameStatistics.timeStep > 0;
 
+  // Determine if modal should be dismissible
+  // Results modal is never dismissible (must choose replay or next)
+  // Briefing is only dismissible if day is already in progress
+  const canDismiss = mode === 'briefing' && isDayInProgress;
+
   return (
-    <Dialog open={isOpen}>
+    <Dialog open={open}>
       <DialogContent
+        id="day-transition-modal"
         className="sm:max-w-lg font-share-tech"
-        onPointerDownOutside={(e) => { if (!isDayInProgress) e.preventDefault(); else onClose(); }}
-        onEscapeKeyDown={(e) => { if (!isDayInProgress) e.preventDefault(); else onClose(); }}
+        showCloseButton={canDismiss}
+        onPointerDownOutside={(e) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
+        onEscapeKeyDown={(e) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
       >
-        {isDayFinished && dayResultDetails ? (
+        {mode === 'results' && resultDetails ? (
           <>
             <DialogHeader className="sr-only">
               <DialogTitle>Day {gameStatistics.day} Results</DialogTitle>
               <DialogDescription>Review your performance for this day.</DialogDescription>
             </DialogHeader>
             <div className="space-y-6">
-              <DayResults stats={gameStatistics} day={gameStatistics.day} resultDetails={dayResultDetails} />
+              <DayResults stats={gameStatistics} day={gameStatistics.day} resultDetails={resultDetails} />
               <div className="grid grid-cols-2 gap-3 pt-2">
                 <Button
                   onClick={() => onReplayDay(gameStatistics.day)}
                   variant={hcVariant(isHighContrast)}
                   className="flex items-center justify-center gap-2"
                 >
-                  <RotateCw className="h-4 w-4" />
+                  <RotateCw className="h-4 w-4" aria-hidden="true" />
                   <span>Replay Today</span>
                 </Button>
                 <Button
@@ -73,12 +81,12 @@ export function DayTransitionModal({
                   className="flex items-center justify-center gap-2"
                 >
                   <span>Next Day</span>
-                  <ArrowRight className="h-4 w-4" />
+                  <ArrowRight className="h-4 w-4" aria-hidden="true" />
                 </Button>
               </div>
             </div>
           </>
-        ) : currentBriefing ? (
+        ) : briefing ? (
           <>
             <DialogHeader>
               <DialogTitle className="text-2xl">Day {targetDay} Briefing</DialogTitle>
@@ -86,14 +94,14 @@ export function DayTransitionModal({
             </DialogHeader>
             <div className="space-y-6">
               <div className="bg-muted/20 p-4 rounded-lg border border-border text-sm">
-                {currentBriefing.isList ? (
+                {briefing.isList ? (
                   <ul className="list-disc pl-4 space-y-2">
-                    {currentBriefing.points.map((point, index) => (
+                    {briefing.points.map((point, index) => (
                       <li key={index}>{point}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p>{currentBriefing.points[0]}</p>
+                  <p>{briefing.points[0]}</p>
                 )}
               </div>
               {isDayInProgress ? (

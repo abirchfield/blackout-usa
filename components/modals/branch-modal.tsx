@@ -1,5 +1,6 @@
 "use client";
 
+import { useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -7,95 +8,78 @@ import {
   DialogTitle,
   DialogDescription
 } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
-import { Branch } from "@/lib/types"
+import { Badge } from "@/components/ui/badge"
+import { Branch, BranchStatus } from "@/lib/types"
 import { CircuitTable } from "../tables/circuit-table"
-import { LinesIcon } from "@/components/ui/lines-icon"
+import { LinesIcon } from "@/components/icons/lines-icon"
+import { useSimTick, useBranch, useUserPaused, useDispatch } from "@/lib/hooks/use-store";
 
 interface BranchModalContentProps {
   branch: Branch;
   onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
   isPaused?: boolean;
   isHighContrast?: boolean;
-  showTitle?: boolean; // Used to hide title when content is embedded in another component
 }
 
-export function BranchModalContent({ branch, onCircuitAction, isPaused, isHighContrast, showTitle = true }: BranchModalContentProps) {
+export function BranchModalContent({ branch, onCircuitAction, isPaused, isHighContrast }: BranchModalContentProps) {
   const fromSub = branch.sub1?.Name || branch.FromSub;
   const toSub = branch.sub2?.Name || branch.ToSub;
+  const flowDirection = branch.P >= 0 ? `${fromSub} → ${toSub}` : `${toSub} → ${fromSub}`;
+
+  // Calculate total rating and loading
+  const inServiceCircuits = (branch.Status1 === BranchStatus.IN ? 1 : 0) + (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN ? 1 : 0);
+  const totalRating = branch.Pmax * inServiceCircuits;
+  const loading = totalRating > 0 ? (Math.abs(branch.P) / totalRating) * 100 : 0;
 
   return (
     <>
-      {showTitle && (
-        <div className="flex flex-col space-y-1.5 text-center sm:text-left mb-4">
-          <h2 className="text-3xl font-bold leading-none tracking-tight">Line: {fromSub} to {toSub}</h2>
-          <p className="text-sm text-muted-foreground">
-            Total Flow: {Math.abs(branch.P).toFixed(0)} MW
-          </p>
-        </div>
-      )}
+      <div className="text-sm text-muted-foreground mb-2 space-y-1.5">
+        <p>
+          Power flow: <Badge variant="secondary" className="font-mono">{Math.abs(branch.P).toFixed(0)} MW</Badge> ({flowDirection})
+        </p>
+        <p>
+          Line loading: <Badge variant={loading > 100 ? "destructive" : "outline"} className="font-mono">{loading.toFixed(0)}%</Badge> of {totalRating.toFixed(0)} MW capacity
+        </p>
+      </div>
       <CircuitTable branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} />
-    </>
-  );
-}
-
-// --- Reusable Detail View for Sidebar ---
-interface BranchDetailViewProps {
-  branch: Branch;
-  onClose: () => void;
-  onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
-  isPaused?: boolean;
-  isHighContrast?: boolean;
-}
-
-export function BranchDetailView({ branch, onClose, onCircuitAction, isPaused, isHighContrast }: BranchDetailViewProps) {
-  const fromSub = branch.sub1?.Name || branch.FromSub;
-  const toSub = branch.sub2?.Name || branch.ToSub;
-
-  return (
-    <>
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <h3 className="text-lg font-bold flex items-center gap-2">
-          <LinesIcon className="h-7 w-7" aria-hidden="true" />
-          <span className="truncate" title={`Line: ${fromSub} to ${toSub}`}>{`Line: ${fromSub} to ${toSub}`}</span>
-        </h3>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close details">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <p className="text-sm text-muted-foreground mb-4">
-        Total Flow: {Math.abs(branch.P).toFixed(0)} MW ({branch.P >= 0 ? `${fromSub} to ${toSub}` : `${toSub} to ${fromSub}`})
-      </p>
-      <div className="overflow-y-auto flex-1 min-w-0">
-        <BranchModalContent branch={branch} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} showTitle={false} />
-      </div>
     </>
   );
 }
 
 // --- Branch Modal Component ---
 interface BranchModalProps {
-  branch: Branch | null;
+  open: boolean;
+  branchId: string | undefined;
   onClose: () => void;
-  onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
-  isPaused?: boolean;
   isHighContrast?: boolean;
 }
 
-export function BranchModal({ branch, onClose, onCircuitAction, isPaused, isHighContrast }: BranchModalProps) {
-  if (!branch) return null;
+export function BranchModal({ open, branchId, onClose, isHighContrast }: BranchModalProps) {
+  useSimTick();
+  const branch = useBranch(branchId);
+  const isPaused = useUserPaused();
+  const dispatch = useDispatch();
+
+  const onCircuitAction = useCallback((bid: string, circuit: 1 | 2) => {
+    dispatch({ type: 'TOGGLE_BRANCH', branchId: bid, circuitNum: circuit });
+  }, [dispatch]);
+
+  if (!open || !branch) return null;
+
+  const fromSub = branch.sub1?.Name || branch.FromSub;
+  const toSub = branch.sub2?.Name || branch.ToSub;
 
   return (
-    <Dialog open={!!branch} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl font-share-tech">
-        {/* The DialogTitle and DialogDescription are now inside BranchModalContent,
-            but we need a sr-only version here to satisfy accessibility requirements of the Dialog. */}
-        <DialogHeader className="sr-only">
-          <DialogTitle>Line: {branch.sub1?.Name || branch.FromSub} to {branch.sub2?.Name || branch.ToSub}</DialogTitle>
-          <DialogDescription>Controls and details for the transmission line.</DialogDescription>
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent id="branch-modal" className="sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <LinesIcon className="h-5 w-5 flex-shrink-0" aria-hidden="true" />
+            <span className="text-lg font-semibold leading-none tracking-tight">{fromSub} — {toSub}</span>
+          </DialogTitle>
+          <DialogDescription className="sr-only">Controls and details for this transmission line.</DialogDescription>
         </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
+        <div role="region" aria-label="Line Controls" className="max-h-[70vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
           <BranchModalContent
             branch={branch}
             onCircuitAction={onCircuitAction}

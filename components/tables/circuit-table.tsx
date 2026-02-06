@@ -4,7 +4,7 @@ import { Branch, BranchStatus } from "@/lib/types";
 import { getLoadingBarColor, hcVariant } from "@/lib/utils";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { StatusIndicator } from "@/components/ui/status-indicator";
+import { StatusIndicator } from "@/components/icons/status-indicator";
 
 interface CircuitRecordProps {
   branch: Branch;

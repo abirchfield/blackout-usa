@@ -1,11 +1,11 @@
 "use client";
 
 import { Substation, Unit, UnitStatus } from "@/lib/types";
-import { Timer, Power } from "lucide-react";
+import { Timer, Power, X } from "lucide-react";
 import { cn, hcVariant } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { PowerSlider } from "@/components/controls";
-import { StatusConfig } from "@/lib/config";
+import { PowerSlider } from "@/components/game/controls";
+import { StatusConfig } from "@/components/theme";
 
 export interface ColumnConfig {
   unit?: boolean;
@@ -41,6 +41,7 @@ interface GeneratorUnitDetailsProps {
   unit: Unit;
   index: number;
   onUnitAction: (subId: string, unitIndex: number) => void;
+  onAbortTransition?: (subId: string, unitIndex: number) => void;
   onSetSetpoint: (subId: string, unitIndex: number, newSetpoint: number) => void;
   setpointValue: number;
   onSetpointChange: (index: number, value: number) => void;
@@ -54,6 +55,7 @@ export function GeneratorUnitDetails({
   unit,
   index,
   onUnitAction,
+  onAbortTransition,
   onSetSetpoint,
   setpointValue,
   onSetpointChange,
@@ -140,7 +142,13 @@ export function GeneratorUnitDetails({
             {formattedStartupTime}
           </time>
         );
-        actionButtonElement = <Button variant="secondary" size="icon" disabled={true} aria-label={`Unit ${index + 1} is starting up`} className="animate-pulse"><Power className="h-5 w-5" aria-hidden="true" /></Button>;
+        actionButtonElement = onAbortTransition ? (
+          <Button variant="outline" size="icon" onClick={() => onAbortTransition(sub.Number, index)} disabled={isPaused} aria-label={`Abort startup of Unit ${index + 1}`} className="border-[var(--color-status-startup)] text-[var(--color-status-startup)] hover:bg-[var(--color-status-startup)]/10">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        ) : (
+          <Button variant="secondary" size="icon" disabled={true} aria-label={`Unit ${index + 1} is starting up`} className="animate-pulse"><Power className="h-5 w-5" aria-hidden="true" /></Button>
+        );
         break;
       case UnitStatus.SHUTDOWN:
         controlElement = <PowerSlider {...sliderProps} disabled={true} />;
@@ -156,7 +164,13 @@ export function GeneratorUnitDetails({
             {formattedShutdownTime}
           </time>
         );
-        actionButtonElement = <Button variant="destructive" size="icon" disabled={true} aria-label={`Unit ${index + 1} is shutting down`} className="animate-pulse"><Power className="h-5 w-5" aria-hidden="true" /></Button>;
+        actionButtonElement = onAbortTransition ? (
+          <Button variant="outline" size="icon" onClick={() => onAbortTransition(sub.Number, index)} disabled={isPaused} aria-label={`Abort shutdown of Unit ${index + 1}`} className="border-destructive text-destructive hover:bg-destructive/10">
+            <X className="h-4 w-4" aria-hidden="true" />
+          </Button>
+        ) : (
+          <Button variant="destructive" size="icon" disabled={true} aria-label={`Unit ${index + 1} is shutting down`} className="animate-pulse"><Power className="h-5 w-5" aria-hidden="true" /></Button>
+        );
         break;
     }
   }
@@ -192,6 +206,7 @@ export function GeneratorUnitDetails({
 interface GeneratorUnitsTableProps {
   sub: Substation;
   onUnitAction: (subId: string, unitIndex: number) => void;
+  onAbortTransition?: (subId: string, unitIndex: number) => void;
   onSetSetpoint: (subId: string, unitIndex: number, newSetpoint: number) => void;
   setpoints: Record<number, number>;
   onSetpointChange: (index: number, value: number) => void;
@@ -204,6 +219,7 @@ interface GeneratorUnitsTableProps {
 export function GeneratorUnitsTable({
   sub,
   onUnitAction,
+  onAbortTransition,
   onSetSetpoint,
   setpoints,
   onSetpointChange,
@@ -218,12 +234,12 @@ export function GeneratorUnitsTable({
     <table className="w-full text-sm table-fixed">
       <thead className={cn("text-xs text-muted-foreground", stickyHeader && "sticky top-0 bg-background z-10")}>
         <tr className="border-b border-border/50">
-          {columnConfig.unit && <th className="p-2 text-center font-semibold w-[10%]">#</th>}
-          {columnConfig.status && <th className="p-2 text-center font-semibold w-[15%]">Status</th>}
-          {columnConfig.output && <th className="p-2 text-left font-semibold w-[40%]">Setpoint</th>}
-          {columnConfig.actual && <th className="p-2 text-right font-semibold w-[15%]">Output</th>}
-          {columnConfig.time && <th className="p-2 text-right font-semibold w-[10%]"><Timer className="h-4 w-4 inline" role="img" aria-label="Time to change state" /></th>}
-          {columnConfig.action && <th className="p-2 text-center font-semibold w-[10%]">Action</th>}
+          {columnConfig.unit && <th className="p-2 text-center font-semibold w-[6%]">#</th>}
+          {columnConfig.status && <th className="p-2 text-center font-semibold w-[8%]">Status</th>}
+          {columnConfig.output && <th className="p-2 text-left font-semibold w-[46%]">Setpoint</th>}
+          {columnConfig.actual && <th className="p-2 text-right font-semibold w-[16%]">Output</th>}
+          {columnConfig.time && <th className="p-2 text-right font-semibold w-[12%]"><Timer className="h-4 w-4 inline" role="img" aria-label="Time to change state" /></th>}
+          {columnConfig.action && <th className="p-2 text-center font-semibold w-[12%]">Action</th>}
         </tr>
       </thead>
       <tbody>
@@ -234,6 +250,7 @@ export function GeneratorUnitsTable({
             unit={unit}
             index={index}
             onUnitAction={onUnitAction}
+            onAbortTransition={onAbortTransition}
             onSetSetpoint={onSetSetpoint}
             setpointValue={setpoints[index] ?? 0}
             onSetpointChange={onSetpointChange}
