@@ -1,11 +1,11 @@
 "use client"
 
-import React, { useMemo } from "react"
+import { memo, useMemo } from "react"
 import { GameStatistics, SubstationCategory, LoadCategoryType } from "@/lib/types"
-import { GenerationTypeConfig, LoadTypeConfig, PhysicsConfig } from "@/lib/config"
+import { GenerationTypeConfig, LoadTypeConfig, UIThresholds } from "@/components/theme"
 import { cn, fmtMoneyAuto, fmtPowerAuto } from "@/lib/utils"
 
-export const KeyStats = React.memo(function KeyStats({ stats, className }: { stats: GameStatistics, className?: string }) {
+export const KeyStats = memo(function KeyStats({ stats, className }: { stats: GameStatistics, className?: string }) {
   const s = stats;
   const totalGeneration = s.windGen + s.solarGen + s.thermalGen + s.nuclearGen;
 
@@ -13,7 +13,7 @@ export const KeyStats = React.memo(function KeyStats({ stats, className }: { sta
     <div className={cn("grid grid-cols-3 gap-4", className)} role="group" aria-label="Key game statistics">
       <div>
         <div id="freq-label" className="text-[0.65rem] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Frequency</div>
-        <div id="dash-freq" className={`text-2xl sm:text-3xl font-bold tabular-nums ${s.frequency < PhysicsConfig.FREQUENCY_WARNING_LOW || s.frequency > PhysicsConfig.FREQUENCY_WARNING_HIGH ? "text-destructive" : "text-sidebar-foreground"}`} aria-labelledby="freq-label">{s.frequency.toFixed(2)} <span className="text-base text-sidebar-foreground/60">Hz</span></div>
+        <div id="dash-freq" className={`text-2xl sm:text-3xl font-bold tabular-nums ${s.frequency < UIThresholds.FREQUENCY_WARNING_LOW || s.frequency > UIThresholds.FREQUENCY_WARNING_HIGH ? "text-destructive" : "text-sidebar-foreground"}`} aria-labelledby="freq-label">{s.frequency.toFixed(2)} <span className="text-base text-sidebar-foreground/60">Hz</span></div>
       </div>
       <div>
         <div id="tgen-label" className="text-[0.65rem] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Gen.</div>
@@ -21,13 +21,13 @@ export const KeyStats = React.memo(function KeyStats({ stats, className }: { sta
       </div>
       <div>
         <div id="reserve-label" className="text-[0.65rem] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Reserves</div>
-        <div id="dash-reserve" className={`text-2xl sm:text-3xl font-bold tabular-nums ${s.reserves < PhysicsConfig.RESERVES_CRITICAL_MW ? "text-destructive" : s.reserves < PhysicsConfig.RESERVES_WARNING_MW ? "text-[var(--color-warning)]" : "text-sidebar-foreground"}`} aria-labelledby="reserve-label">{fmtPowerAuto(s.reserves)}</div>
+        <div id="dash-reserve" className={`text-2xl sm:text-3xl font-bold tabular-nums ${s.reserves < UIThresholds.RESERVES_CRITICAL_MW ? "text-destructive" : s.reserves < UIThresholds.RESERVES_WARNING_MW ? "text-[var(--color-warning)]" : "text-sidebar-foreground"}`} aria-labelledby="reserve-label">{fmtPowerAuto(s.reserves)}</div>
       </div>
     </div>
   )
 });
 
-export const GenerationDashboard = React.memo(function GenerationDashboard({ stats }: { stats: GameStatistics }) {
+const GenerationDashboard = memo(function GenerationDashboard({ stats }: { stats: GameStatistics }) {
   const s = stats;
   const totalGeneration = s.windGen + s.solarGen + s.thermalGen + s.nuclearGen;
   const totalSystemCapacity = totalGeneration + s.reserves;
@@ -105,7 +105,7 @@ export const GenerationDashboard = React.memo(function GenerationDashboard({ sta
   );
 });
 
-export const LoadDashboard = React.memo(function LoadDashboard({ stats }: { stats: GameStatistics }) {
+const LoadDashboard = memo(function LoadDashboard({ stats }: { stats: GameStatistics }) {
   const s = stats;
   const loadMix = useMemo(() => [
     { ...LoadTypeConfig[LoadCategoryType.Residential], value: s.loadServedResidential },
@@ -157,7 +157,7 @@ export const LoadDashboard = React.memo(function LoadDashboard({ stats }: { stat
   );
 });
 
-export const EnergyDashboard = React.memo(function EnergyDashboard({ stats }: { stats: GameStatistics }) {
+export const Dashboard = memo(function Dashboard({ stats }: { stats: GameStatistics }) {
   return (
     <div className="space-y-3">
       <h4 className="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-border/50 pb-1">Generation</h4>

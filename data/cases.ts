@@ -1,27 +1,20 @@
-import { IScenario, Substation, Branch } from "@/lib/types";
-import { texasCase } from "./texas/case";
+import type { GridCase } from "@/lib/types";
+import { scenarios } from "./texas/scenarios";
+import { gridData } from "./texas/grid";
 
-// --- Case Definition Types ---
+// --- Texas Case ---
 
-export interface MapConfig {
-    bounds: { xMax: number; xMin: number; yMax: number; yMin: number };
-    initialView: { x0: number; y0: number; scale: number };
-}
-
-export interface GridData {
-    subs: Record<string, Substation>;
-    branches: Record<string, Branch>;
-    borders: number[][];
-    nsubs: number;
-}
-
-export interface CaseDefinition {
-    name: string;
-    scenarios: Record<number, IScenario>;
-    gridData: GridData;
-    mapConfig: MapConfig;
-}
+const texasCase: GridCase = {
+    name: "Texas",
+    referenceBus: "6",
+    scenarios,
+    gridData,
+    mapConfig: {
+        bounds: { xMax: -93, xMin: -107, yMax: 37, yMin: 25.5 },
+        initialView: { x0: -105, y0: 36, scale: 50 },
+    },
+};
 
 // --- Active Case ---
-// Change this single import to switch cases
-export const activeCase: CaseDefinition = texasCase;
+// Change this assignment to switch cases
+export const activeCase: GridCase = texasCase;

@@ -47,6 +47,7 @@ export interface Unit {
 export interface Substation {
   Name: string;
   Number: string;
+  idx: number; // Pre-computed 0-based index: parseInt(Number) - 1
   Category: SubstationCategory;
   LoadCategory?: LoadCategoryType;
   Units: number;
@@ -66,6 +67,8 @@ export interface Branch {
   Number: string;
   FromNum: string;
   ToNum: string;
+  fromIdx: number; // Pre-computed 0-based index: parseInt(FromNum) - 1
+  toIdx: number;   // Pre-computed 0-based index: parseInt(ToNum) - 1
   FromSub: string;
   ToSub: string;
   sub1?: Substation;
@@ -76,6 +79,7 @@ export interface Branch {
   P: number;
   Pmax: number;
   Z: number;
+  ybr: number; // Cached -1/Z, precomputed in initGrid
   dist?: number;
 }
 
@@ -111,45 +115,44 @@ export type GameStatistics = GameMetrics & {
   timeStr: string;
   timeStep: number;
   frequency: number;
-  fr_wind: number;
-  fr_solar: number;
+  frWind: number;
+  frSolar: number;
 };
+
+export type StatsSnapshot = GameStatistics & { blackout: boolean };
 
 export interface ViewState {
   xmax: number;
   xmin: number;
   ymax: number;
   ymin: number;
-  scale_max: number;
-  scale_min: number;
-  t: number;
-  day: number;
-  frequency: number;
+  scaleMax: number;
+  scaleMin: number;
   scaleX: number;
   scaleY: number;
+  referenceScale: number;
   x0: number;
   y0: number;
   theme: 'light' | 'dark';
   animationsEnabled: boolean;
   renderMapLabels: boolean;
   zoomSensitivity: number;
-  debug_draw_map_bounds: boolean;
   keyBindings: KeyBindings;
 }
 
 export interface InputState {
   inDrag: boolean;
-  dragstartX: number;
-  dragstartY: number;
-  dragorigX: number;
-  dragorigY: number;
+  dragStartX: number;
+  dragStartY: number;
+  dragOrigX: number;
+  dragOrigY: number;
   hoverBranch: Branch | null;
   hoverCircuit: 1 | 2 | null;
   hoverSub: Substation | null;
 }
 
-export interface SimulationState {
-  _v: number; // Mutation version — incremented on game ticks and user actions
+export interface SimState {
+  _vSim: number; // Version counter — game ticks, dispatch actions
   t: number;
   day: number;
   frequency: number;
@@ -157,19 +160,21 @@ export interface SimulationState {
   branches: Record<string, Branch>;
   borders: number[][];
   nsubs: number;
+  referenceBus: string; // Substation Number string used as slack bus / topology root
+  refIdx: number; // Pre-computed 0-based index of the reference bus substation
   Ybus: math.Matrix | null;
   Yinv: math.LUDecomposition | null;
   metrics: GameMetrics;
-  fr_load: number;
-  fr_wind: number;
-  fr_solar: number;
+  frLoad: number;
+  frWind: number;
+  frSolar: number;
 }
 
-export interface GameState extends SimulationState, ViewState, InputState {}
+export interface GameState extends SimState, ViewState, InputState {}
 
 export type InteractionHandler = (type: 'sub' | 'branch', data: Substation | Branch) => void;
-export type AlertHandler = (alert: Alert, reset?: boolean) => void;
-export type HintHandler = (hint: Hint, reset?: boolean) => void;
+export type AlertHandler = (alert: { message: string; critical: boolean }, reset?: boolean) => void;
+export type HintHandler = (hint: { message: string }, reset?: boolean) => void;
 
 export interface Briefing {
   title: string;
@@ -178,24 +183,24 @@ export interface Briefing {
 }
 
 export interface Alert {
+  id: number;
+  time: string;
   message: string;
   critical: boolean;
 }
 
 export interface Hint {
+  id: number;
+  time: string;
   message: string;
 }
 
-export type FontSize = 'sm' | 'base' | 'lg' | 'xl';
-
-export interface AppSettings {
-  viewMode: 'map' | 'tabular';
-  animationsEnabled: boolean;
-  renderMapLabels: boolean;
-  zoomSensitivity: number;
-  keyBindings: KeyBindings;
-  isHighContrast: boolean;
-  fontSize: FontSize;
+export interface EngineSettings {
+  theme?: 'light' | 'dark';
+  animationsEnabled?: boolean;
+  renderMapLabels?: boolean;
+  zoomSensitivity?: number;
+  keyBindings?: KeyBindings;
 }
 
 export interface ResultDetails {
@@ -204,24 +209,43 @@ export interface ResultDetails {
   message: string;
 }
 
-export interface DayFlowState {
-  targetDay: number;
-  isDayFinished: boolean;
-  resultDetails: ResultDetails | null;
-  briefing: Briefing | null;
-  isTransitioning: boolean;
-}
-
 export interface IScenario {
   readonly day: number;
   readonly briefing: Briefing;
-  start(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
-  update(state: SimulationState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
+  start(state: SimState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
+  update(state: SimState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
   getResultDetails(totalCost: number): ResultDetails;
+}
+
+// --- Case Definition Types ---
+
+export interface MapConfig {
+  bounds: { xMax: number; xMin: number; yMax: number; yMin: number };
+  initialView: { x0: number; y0: number; scale: number };
+}
+
+/** Grid topology data as loaded from generated files — enum fields are plain strings.
+ *  Type safety is enforced at the SimState boundary after initGrid enrichment. */
+export interface RawGridData {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  subs: Record<string, any>;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  branches: Record<string, any>;
+  borders: number[][];
+  nsubs: number;
+}
+
+export interface GridCase {
+  name: string;
+  referenceBus: string; // Substation Number string used as slack bus / topology root
+  scenarios: Record<number, IScenario>;
+  gridData: RawGridData;
+  mapConfig: MapConfig;
 }
 
 export type SimulationAction =
   | { type: 'TOGGLE_UNIT'; subId: string; unitIndex: number }
+  | { type: 'ABORT_UNIT_TRANSITION'; subId: string; unitIndex: number }
   | { type: 'TOGGLE_BRANCH'; branchId: string; circuitNum: 1 | 2 }
   | { type: 'SET_SETPOINT'; subId: string; unitIndex: number; value: number }
   | { type: 'DISCONNECT_SMALLEST_LOAD' }

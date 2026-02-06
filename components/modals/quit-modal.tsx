@@ -22,21 +22,34 @@ interface QuitModalProps {
 }
 
 export function QuitModal({ open, onOpenChange, day, onQuitToStart, onReplayDay, onNextDay, isHighContrast }: QuitModalProps) {
-  return ( <Dialog open={open} onOpenChange={onOpenChange}> <DialogContent className="sm:max-w-[600px] font-share-tech">
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent id="quit-modal" className="sm:max-w-lg font-share-tech">
         <DialogHeader>
           <DialogTitle className="text-3xl font-bold">Quit the game?</DialogTitle>
           <DialogDescription className="sr-only">Quit options</DialogDescription>
         </DialogHeader>
         <div role="group" aria-label="Quit actions" className="flex flex-col gap-3 py-4 text-base">
-          <Button variant="destructive" className="w-full justify-center gap-2 py-4 text-base" onClick={onQuitToStart}>
+          <Button
+            variant="destructive"
+            className="w-full justify-center gap-2 py-4 text-base"
+            onClick={onQuitToStart}
+          >
             <LogOut className="h-5 w-5" aria-hidden="true" />
             <span>Quit to Start</span>
           </Button>
-          <Button variant={hcVariant(isHighContrast ?? false)} className="w-full justify-center gap-2 py-4 text-base" onClick={() => onReplayDay(day)}>
+          <Button
+            variant={hcVariant(isHighContrast ?? false)}
+            className="w-full justify-center gap-2 py-4 text-base"
+            onClick={() => onReplayDay(day)}
+          >
             <RotateCw className="h-5 w-5" aria-hidden="true" />
             <span>Restart This Day</span>
           </Button>
-          <Button className="w-full justify-center gap-2 py-4 text-base" onClick={() => onNextDay(day)}>
+          <Button
+            className="w-full justify-center gap-2 py-4 text-base"
+            onClick={() => onNextDay(day)}
+          >
             <span>Skip to Next Day</span>
             <ArrowRight className="h-5 w-5" aria-hidden="true" />
           </Button>

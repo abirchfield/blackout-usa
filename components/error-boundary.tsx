@@ -1,5 +1,6 @@
 "use client";
 
+/** React error boundary for the game page. Shows a reload prompt on unhandled errors. */
 import React from "react";
 
 interface ErrorBoundaryProps {

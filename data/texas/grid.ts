@@ -1,6 +1,6 @@
 import borders from "./source/borders.json";
 
-export const scenario_data = {
+export const gridData = {
   "subs": {
     "1": { "Number": "1", "Name": "Abilene", "Category": "Load", "LoadCategory": "Residential", "Units": 3, "Latitude": 32.51, "Longitude": -99.66, "Pmax": 313.0, "Pmin": 0.0, "Ramp": 50.0, "StartTime": 5.0, "FixedCost": 0.0, "FuelCost": 200.0, "U": [{ "Status": "IN", "Status0": "IN", "Pset": 104.33, "P": 104.33, "P0": 104.33, "StatusCount": 0 }, { "Status": "IN", "Status0": "IN", "Pset": 104.33, "P": 104.33, "P0": 104.33, "StatusCount": 0 }, { "Status": "IN", "Status0": "IN", "Pset": 104.33, "P": 104.33, "P0": 104.33, "StatusCount": 0 }] },
     "2": { "Number": "2", "Name": "Armstrong", "Category": "Wind", "Units": 5, "Latitude": 27.0, "Longitude": -97.6, "Pmax": 544.0, "Pmin": 0.0, "Ramp": 25.0, "StartTime": 20.0, "FixedCost": 600.0, "FuelCost": 0.0, "U": [{ "Status": "IN", "Status0": "IN", "Pset": 71.0, "P": 71.0, "P0": 71.0, "StatusCount": 0 }, { "Status": "IN", "Status0": "IN", "Pset": 71.0, "P": 71.0, "P0": 71.0, "StatusCount": 0 }, { "Status": "IN", "Status0": "IN", "Pset": 71.0, "P": 71.0, "P0": 71.0, "StatusCount": 0 }, { "Status": "IN", "Status0": "IN", "Pset": 71.0, "P": 71.0, "P0": 71.0, "StatusCount": 0 }, { "Status": "IN", "Status0": "IN", "Pset": 71.0, "P": 71.0, "P0": 71.0, "StatusCount": 0 }] },

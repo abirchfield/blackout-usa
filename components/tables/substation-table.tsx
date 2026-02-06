@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/table"
 import { Substation, SubstationCategory } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { StatusIndicator } from "@/components/ui/status-indicator"
+import { StatusIndicator } from "@/components/icons/status-indicator"
 import { GenerationTypeIcon } from "@/components/modals/substation-modal"
 
 interface SubstationsListProps {

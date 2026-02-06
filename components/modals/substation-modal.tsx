@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useCallback } from "react"
 import {
   Dialog,
   DialogContent,
@@ -9,13 +9,12 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog"
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button"
-import { X } from "lucide-react"
 import { Substation, SubstationCategory } from "@/lib/types"
 import { GeneratorUnitsTable } from "../tables/unit-table";
 import { LoadUnitsTable } from "../tables/load-table";
-import { GenerationTypeConfig } from "@/lib/config";
+import { GenerationTypeConfig } from "@/components/theme";
 import { cn } from "@/lib/utils";
+import { useSimTick, useSub, useStore, useUserPaused, useDispatch } from "@/lib/hooks/use-store";
 
 export const GenerationTypeIcon = ({ category, className, ...props }: { category: string, className?: string } & React.ComponentProps<"svg">) => {
   const config = GenerationTypeConfig[category as SubstationCategory] || GenerationTypeConfig[SubstationCategory.Thermal];
@@ -25,10 +24,11 @@ export const GenerationTypeIcon = ({ category, className, ...props }: { category
   );
 };
 
-// --- Reusable Content Component ---
-interface SubstationModalContentProps {
+// --- Reusable Content Component (also used in help-examples) ---
+export interface SubstationModalContentProps {
   sub: Substation;
   onUnitAction: (subId: string, unitIndex: number) => void;
+  onAbortTransition?: (subId: string, unitIndex: number) => void;
   onSetSetpoint: (subId: string, unitIndex: number, newSetpoint: number) => void;
   frWind?: number;
   frSolar?: number;
@@ -36,7 +36,7 @@ interface SubstationModalContentProps {
   isHighContrast?: boolean;
 }
 
-export function SubstationModalContent({ sub, onUnitAction, onSetSetpoint, frWind, frSolar, isPaused, isHighContrast }: SubstationModalContentProps) {
+export function SubstationModalContent({ sub, onUnitAction, onAbortTransition, onSetSetpoint, frWind, frSolar, isPaused, isHighContrast }: SubstationModalContentProps) {
   const [setpoints, setSetpoints] = useState<Record<number, number>>({});
 
   useEffect(() => {
@@ -90,61 +90,48 @@ export function SubstationModalContent({ sub, onUnitAction, onSetSetpoint, frWin
 
   return (
     <>
-      <div className="text-sm text-muted-foreground mb-4">{getSubDescription()}</div>
+      <div className="text-sm text-muted-foreground mb-2">{getSubDescription()}</div>
       {sub.Category === SubstationCategory.Load
         ? <LoadUnitsTable sub={sub} onUnitAction={onUnitAction} isPaused={isPaused} stickyHeader={true} />
-        : <GeneratorUnitsTable sub={sub} onUnitAction={onUnitAction} onSetSetpoint={onSetSetpoint} setpoints={setpoints} onSetpointChange={handleSetpointChange} isPaused={isPaused} isHighContrast={isHighContrast} stickyHeader={true} />
+        : <GeneratorUnitsTable sub={sub} onUnitAction={onUnitAction} onAbortTransition={onAbortTransition} onSetSetpoint={onSetSetpoint} setpoints={setpoints} onSetpointChange={handleSetpointChange} isPaused={isPaused} isHighContrast={isHighContrast} stickyHeader={true} />
       }
     </>
   );
 }
 
-// --- Reusable Detail View for Sidebar ---
-interface SubstationDetailViewProps extends SubstationModalContentProps {
-  onClose: () => void;
-}
-
-export function SubstationDetailView({ sub, onClose, ...contentProps }: SubstationDetailViewProps) {
-  return (
-    <>
-      <div className="flex items-center justify-between mb-4 flex-shrink-0">
-        <h3 className="text-lg font-bold flex items-center gap-2 truncate">
-          <GenerationTypeIcon category={sub.Category} className="flex-shrink-0" aria-hidden="true" />
-          <span className="truncate" title={`${sub.Name} Substation`}>{`${sub.Name} Substation`}</span>
-        </h3>
-        <Button variant="ghost" size="icon" onClick={onClose} aria-label="Close details">
-          <X className="h-4 w-4" />
-        </Button>
-      </div>
-      <div role="region" aria-label={`${sub.Name} Controls`} className="overflow-y-auto flex-1 min-w-0">
-        <SubstationModalContent
-          sub={sub}
-          {...contentProps}
-        />
-      </div>
-    </>
-  );
-}
-
-
 // --- Substation Modal Component ---
 interface SubstationModalProps {
-  sub: Substation | null;
+  open: boolean;
+  subId: string | undefined;
   onClose: () => void;
-  onUnitAction: (subId: string, unitIndex: number) => void;
-  onSetSetpoint: (subId: string, unitIndex: number, newSetpoint: number) => void;
-  frWind?: number;
-  frSolar?: number;
-  isPaused?: boolean;
   isHighContrast?: boolean;
 }
 
-export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frWind, frSolar, isPaused, isHighContrast }: SubstationModalProps) {
-  if (!sub) return null;
+export function SubstationModal({ open, subId, onClose, isHighContrast }: SubstationModalProps) {
+  useSimTick();
+  const sub = useSub(subId);
+  const frWind = useStore(e => e.state.frWind);
+  const frSolar = useStore(e => e.state.frSolar);
+  const isPaused = useUserPaused();
+  const dispatch = useDispatch();
+
+  const onUnitAction = useCallback((sid: string, unitIndex: number) => {
+    dispatch({ type: 'TOGGLE_UNIT', subId: sid, unitIndex });
+  }, [dispatch]);
+
+  const onAbortTransition = useCallback((sid: string, unitIndex: number) => {
+    dispatch({ type: 'ABORT_UNIT_TRANSITION', subId: sid, unitIndex });
+  }, [dispatch]);
+
+  const onSetSetpoint = useCallback((sid: string, unitIndex: number, value: number) => {
+    dispatch({ type: 'SET_SETPOINT', subId: sid, unitIndex, value });
+  }, [dispatch]);
+
+  if (!open || !sub) return null;
 
   return (
-    <Dialog open={!!sub} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-3xl">
+    <Dialog open={open} onOpenChange={(isOpen) => !isOpen && onClose()}>
+      <DialogContent id="substation-modal" className="sm:max-w-3xl">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <GenerationTypeIcon category={sub.Category} aria-hidden="true" />
@@ -152,10 +139,11 @@ export function SubstationModal({ sub, onClose, onUnitAction, onSetSetpoint, frW
           </DialogTitle>
           <DialogDescription className="sr-only">Controls and details for {sub.Name}.</DialogDescription>
         </DialogHeader>
-        <div role="region" aria-label={`${sub.Name} Controls`} className="max-h-[60vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
+        <div role="region" aria-label={`${sub.Name} Controls`} className="max-h-[70vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
           <SubstationModalContent
             sub={sub}
             onUnitAction={onUnitAction}
+            onAbortTransition={onAbortTransition}
             onSetSetpoint={onSetSetpoint}
             frWind={frWind}
             frSolar={frSolar}

@@ -3,7 +3,9 @@
 import {
   Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription
 } from "@/components/ui/dialog";
-import { NotificationList } from "@/components/modals/notification-list";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { X } from "lucide-react";
 
 interface NotificationDialogProps {
   open: boolean;
@@ -21,13 +23,35 @@ export function NotificationDialog({ open, onOpenChange, title, description, ite
   if (!open) return null;
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
+      <DialogContent id="notifications-modal" className="sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>{title}</DialogTitle>
           <DialogDescription>{description}</DialogDescription>
         </DialogHeader>
-        <div className="max-h-[60vh] overflow-y-auto -mx-6 px-6">
-          <NotificationList items={items} onRemove={onRemove} onDismissAll={onDismissAll} emptyMessage={emptyMessage} ariaLabel={ariaLabel} />
+        <div className="max-h-[70vh] overflow-y-auto -mx-6 px-6">
+          {items.length === 0 ? (
+            <div className="p-4 text-center text-muted-foreground">{emptyMessage}</div>
+          ) : (
+            <div>
+              <div className="flex justify-end p-2 border-b">
+                <Button variant="ghost" size="sm" onClick={onDismissAll}>Dismiss All</Button>
+              </div>
+              <ul className="flex flex-col" aria-label={ariaLabel}>
+                {items.map((item) => (
+                  <li key={item.id} className="flex items-start gap-3 border-b p-3">
+                    <Badge variant="secondary" className="mt-0.5 whitespace-nowrap">{item.time}</Badge>
+                    <p className={`flex-1 text-sm leading-snug ${item.critical ? "text-destructive font-semibold" : ""}`}>
+                      {item.critical && <span className="sr-only">Critical: </span>}
+                      {item.message}
+                    </p>
+                    <Button variant="ghost" size="icon" onClick={() => onRemove(item.id)} className="h-6 w-6 shrink-0 cursor-pointer" aria-label={`Dismiss: ${item.message}`}>
+                      <X className="h-4 w-4" aria-hidden="true" />
+                    </Button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
         </div>
       </DialogContent>
     </Dialog>

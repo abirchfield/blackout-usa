@@ -1,7 +1,7 @@
 "use client";
 
 import { Substation } from "@/lib/types";
-import { LoadUnitDetails } from "@/components/controls";
+import { LoadUnitDetails } from "@/components/game/controls";
 import { cn } from "@/lib/utils";
 
 interface LoadUnitsTableProps {
