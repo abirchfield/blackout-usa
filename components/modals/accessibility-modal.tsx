@@ -19,8 +19,7 @@ import {
 } from "@/components/ui/select";
 import { Button } from "@/components/ui/button";
 import { KeybindSettings } from "@/components/modals/keybind-settings";
-import { ViewConfig } from "@/lib/config";
-import { defaultKeyBindings } from "@/lib/key-bindings";
+import { ViewConfig, defaultKeyBindings } from "@/lib/view/constants";
 import { AppSettings, FontSize } from "@/lib/hooks/use-app-settings";
 import { cn } from "@/lib/utils";
 import { RotateCcw } from "lucide-react";
@@ -72,7 +71,7 @@ export function AccessibilityModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent id="accessibility-modal" className="sm:max-w-lg">
+      <DialogContent id="accessibility-modal" className="sm:max-w-lg" overlayClassName="bg-black/70">
         <DialogHeader>
           <DialogTitle>Settings</DialogTitle>
           <DialogDescription>

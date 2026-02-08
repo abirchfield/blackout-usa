@@ -6,9 +6,9 @@ export function DayTimeDisplay({ day, timeStr, idPrefix, size }: {
     <div className="flex items-center gap-4" role="timer" aria-labelledby={`${idPrefix}-day-label ${idPrefix}-day-value ${idPrefix}-time-value`}>
       <div className="flex items-center gap-2">
         <span id={`${idPrefix}-day-label`} className={`${textClass} font-semibold text-muted-foreground uppercase`}>Day</span>
-        <span id={`${idPrefix}-day-value`} className={`${textClass} font-semibold text-muted-foreground tabular-nums`}>{day || 1}</span>
+        <span id={`${idPrefix}-day-value`} className={`${textClass} font-semibold text-muted-foreground font-numeric`}>{day ?? 1}</span>
       </div>
-      <time id={`${idPrefix}-time-value`} dateTime={`D${day}T${timeStr.replace(/ /g, '')}`} className={`${textClass} font-bold text-foreground tabular-nums tracking-wider`}>{timeStr}</time>
+      <time id={`${idPrefix}-time-value`} dateTime={`D${day}T${timeStr.replace(/ /g, '')}`} className={`${textClass} font-bold text-foreground font-numeric tracking-wider`}>{timeStr}</time>
     </div>
   );
 }

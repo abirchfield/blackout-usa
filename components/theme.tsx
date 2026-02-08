@@ -58,7 +58,7 @@ export const GenerationTypeConfig: Record<SubstationCategory, {
       border: "border-[var(--color-gen-load)]",
     },
     icon: Plug,
-  }
+  },
 };
 
 export const StatusConfig: Record<UnitStatus, {

@@ -11,8 +11,8 @@ import {
 } from "@/components/ui/table"
 import { Substation, SubstationCategory } from "@/lib/types"
 import { Button } from "@/components/ui/button"
-import { StatusIndicator } from "@/components/icons/status-indicator"
-import { GenerationTypeIcon } from "@/components/modals/substation-modal"
+import { StatusIndicator } from "./status-indicator"
+import { GenerationTypeIcon } from "@/components/modals/grid-modal"
 
 interface SubstationsListProps {
   subs?: Record<string, Substation>;
@@ -54,7 +54,7 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                     </TableHead>
                     <TableCell className="py-2 pr-2">
                       <div className="flex items-center gap-1 flex-wrap">
-                        {sub.Category === SubstationCategory.Load
+                        {sub.isLoad
                           ? sub.U.map((unit, index) => {
                             const title = `Circuit #${index + 1}: ${unit.Status}`;
                             return (
@@ -63,14 +63,25 @@ export function SubstationsList({ subs, onSubstationSelect }: SubstationsListPro
                               </span>
                             );
                           })
-                          : sub.U.map((unit, index) => {
-                            const title = `Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`;
-                            return (
-                              <span key={`indicator-${sub.Number}-${index}`} role="img" aria-label={title}>
-                                <StatusIndicator status={unit.Status} power={unit.P} pmax={sub.Pmax / sub.Units} className="w-2.5 h-2.5" title={title} />
-                              </span>
-                            );
-                          })}
+                          : <>
+                              {sub.U.map((unit, index) => {
+                                const title = `Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`;
+                                return (
+                                  <span key={`indicator-${sub.Number}-${index}`} role="img" aria-label={title}>
+                                    <StatusIndicator status={unit.Status} power={unit.P} pmax={unit.Pmax} className="w-2.5 h-2.5" title={title} />
+                                  </span>
+                                );
+                              })}
+                              {sub.Loads?.U.map((unit, index) => {
+                                const title = `Load #${index + 1}: ${unit.Status}`;
+                                return (
+                                  <span key={`load-indicator-${sub.Number}-${index}`} role="img" aria-label={title}>
+                                    <StatusIndicator status={unit.Status} category={SubstationCategory.Load} className="w-2.5 h-2.5" title={title} />
+                                  </span>
+                                );
+                              })}
+                            </>
+                        }
                       </div>
                     </TableCell>
                     <TableCell className="text-right text-xs py-2 text-foreground whitespace-nowrap">

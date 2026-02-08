@@ -1,0 +1,13 @@
+{
+  "name": "Texas",
+  "referenceBus": "Bryan",
+  "timeConfig": { "startHour": 13 },
+  "mapConfig": {
+    "bounds": {
+      "xMax": -93,
+      "xMin": -107,
+      "yMax": 37,
+      "yMin": 25.5
+    }
+  }
+}

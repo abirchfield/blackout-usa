@@ -63,8 +63,8 @@ export function GeneratorUnitDetails({
   isHighContrast,
   columnConfig: rawColumnConfig,
 }: GeneratorUnitDetailsProps) {
-  const pmax_unit = sub.Pmax / sub.Units;
-  const pmin_unit = sub.Pmin / sub.Units;
+  const pmax_unit = unit.Pmax;
+  const pmin_unit = unit.Pmin;
   const columnConfig = { ...defaultColumnConfig, ...rawColumnConfig };
 
   // Coerce the setpoint from props to a number and clamp it to be safe for the UI.
@@ -98,12 +98,12 @@ export function GeneratorUnitDetails({
 
     switch (unit.Status) {
       case UnitStatus.IN:
-        const rampTimeHours = (sub.StartTime / 60).toFixed(1);
+        const rampTimeHours = (unit.StartTime / 60).toFixed(1);
         controlElement = <PowerSlider {...sliderProps} onValueChange={handleSliderChange} onValueCommit={handleSliderCommit} />;
         timeElement = (
           <time
             className="text-xs text-muted-foreground"
-            dateTime={`PT${sub.StartTime}M`}
+            dateTime={`PT${unit.StartTime}M`}
             title={`Characteristic ramp time: ${rampTimeHours} hr`}
             aria-label={`Characteristic ramp time: ${rampTimeHours} hours`}
           >
@@ -113,13 +113,13 @@ export function GeneratorUnitDetails({
         actionButtonElement = <Button variant="destructive" size="icon" onClick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Shut Down Unit ${index + 1}`}><Power className="h-5 w-5" aria-hidden="true" /></Button>;
         break;
       case UnitStatus.DIS:
-        const startupTimeHours = (sub.StartTime / 60).toFixed(1);
+        const startupTimeHours = (unit.StartTime / 60).toFixed(1);
         controlElement = <PowerSlider {...sliderProps} actual={0} disabled={true} />;
         actualElement = <>{(0).toFixed(0)}{mwSuffix}</>;
         timeElement = (
           <time
             className="text-xs text-muted-foreground"
-            dateTime={`PT${sub.StartTime}M`}
+            dateTime={`PT${unit.StartTime}M`}
             title={`Startup Time: ${startupTimeHours} hr`}
             aria-label={`Startup time: ${startupTimeHours} hours`}
           >
@@ -130,7 +130,7 @@ export function GeneratorUnitDetails({
         break;
       case UnitStatus.STARTUP:
         controlElement = <PowerSlider {...sliderProps} disabled={true} />;
-        const startupTimeRemaining = Math.max(0, sub.StartTime - unit.StatusCount);
+        const startupTimeRemaining = Math.max(0, unit.StartTime - unit.StatusCount);
         const formattedStartupTime = formatTimeRemaining(startupTimeRemaining);
         timeElement = (
           <time
@@ -152,7 +152,7 @@ export function GeneratorUnitDetails({
         break;
       case UnitStatus.SHUTDOWN:
         controlElement = <PowerSlider {...sliderProps} disabled={true} />;
-        const shutdownTimeRemaining = Math.max(0, sub.StartTime - unit.StatusCount);
+        const shutdownTimeRemaining = Math.max(0, unit.StartTime - unit.StatusCount);
         const formattedShutdownTime = formatTimeRemaining(shutdownTimeRemaining);
         timeElement = (
           <time

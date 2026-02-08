@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState, useCallback } from "react";
 import { useTheme } from "next-themes";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import { GameEngine } from "@/lib/engine";
-import { activeCase } from "@/data/cases";
+import { loadCase, DEFAULT_CASE, CASE_NAMES } from "@/data/_out/registry";
 import { AccessibilityModal } from "@/components/modals/accessibility-modal";
 import { useAppSettings } from "@/lib/hooks/use-app-settings";
 import { useModals } from "@/lib/hooks/use-modals";
@@ -14,68 +14,82 @@ import { PersonStanding, ExternalLink } from "lucide-react";
 const isStaticExport = process.env.NODE_ENV === 'production';
 
 export default function WelcomePage() {
-  const svgContainerRef = useRef<HTMLDivElement>(null);
+  const mapContainerRef = useRef<HTMLDivElement>(null);
   const engineRef = useRef<GameEngine | null>(null);
   const { resolvedTheme } = useTheme();
   const modals = useModals();
   const { settings, updateSettings } = useAppSettings({ renderMapLabels: false });
+  const [selectedCase, setSelectedCase] = useState(DEFAULT_CASE);
 
-  const gameUrl = isStaticExport ? './game.html' : '/game';
-  const tutorialUrl = isStaticExport ? './game.html?tutorial=true' : '/game?tutorial=true';
+  const gameUrl = isStaticExport
+    ? `./game.html?case=${selectedCase}`
+    : `/game?case=${selectedCase}`;
+  const tutorialUrl = isStaticExport
+    ? `./game.html?tutorial=true&case=${selectedCase}`
+    : `/game?tutorial=true&case=${selectedCase}`;
 
+  // Create a non-interactive preview engine for the background map
   useEffect(() => {
+    if (!mapContainerRef.current) return;
+
+    engineRef.current?.destroy();
+    engineRef.current = null;
+
+    let cancelled = false;
     let animationFrameId: number;
 
-    if (svgContainerRef.current && !engineRef.current) {
-      const engine = new GameEngine(svgContainerRef.current, activeCase, { interactive: false });
-      engineRef.current = engine;
+    loadCase(selectedCase).then(gridCase => {
+      if (cancelled || !mapContainerRef.current) return;
 
-      engine.applySettings({ keyBindings: settings.keyBindings });
+      const engine = new GameEngine(mapContainerRef.current, gridCase, { interactive: false });
+      engineRef.current = engine;
+      engine.applySettings({
+        theme: (resolvedTheme as 'light' | 'dark') || 'dark',
+        animationsEnabled: settings.animationsEnabled,
+        renderMapLabels: false,
+        keyBindings: settings.keyBindings,
+      });
       engine.userPaused = false;
-      engine.startDay(1);
-      engine.step(false);
+      engine.startDay();
 
       const animate = () => {
-        if (engineRef.current) {
-          engine.applySettings({ theme: (resolvedTheme as 'light' | 'dark') || 'dark' });
-          engine.draw();
-        }
+        engine.draw();
         animationFrameId = requestAnimationFrame(animate);
       };
+      animationFrameId = requestAnimationFrame(animate);
+    });
 
-      const handleResize = () => {
-        engineRef.current?.draw();
-      };
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(animationFrameId);
+      engineRef.current?.destroy();
+      engineRef.current = null;
+    };
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- settings are synced separately below; only recreate engine on case change
+  }, [selectedCase]);
 
-      animate();
-      window.addEventListener('resize', handleResize);
-
-      return () => {
-        window.removeEventListener('resize', handleResize);
-        cancelAnimationFrame(animationFrameId);
-        engine.destroy();
-        engineRef.current = null;
-      };
-    }
-  }, [resolvedTheme, settings.keyBindings]);
-
-  // Sync settings to engine
+  // Sync settings (including theme) to engine
   useEffect(() => {
     engineRef.current?.applySettings({
+      theme: (resolvedTheme as 'light' | 'dark') || 'dark',
       animationsEnabled: settings.animationsEnabled,
       renderMapLabels: settings.renderMapLabels,
       keyBindings: settings.keyBindings,
     });
-  }, [settings.animationsEnabled, settings.renderMapLabels, settings.keyBindings]);
+  }, [resolvedTheme, settings.animationsEnabled, settings.renderMapLabels, settings.keyBindings]);
+
+  const openAccessibility = useCallback(() => {
+    modals.openModal('accessibility');
+  }, [modals]);
 
   return (
-    <main className="relative flex min-h-screen flex-col lg:flex-row items-center justify-center p-4 lg:p-8 font-share-tech gap-8">
+    <main className="font-sans relative flex min-h-screen flex-col lg:flex-row items-center justify-center p-4 lg:p-8 gap-8">
       <div className="relative w-full lg:w-1/2 rounded-lg border bg-card p-8 text-card-foreground shadow-lg z-10">
         <div className="absolute top-4 right-4">
           <Button
             variant="ghost"
             size="icon"
-            onClick={() => modals.openModal('accessibility')}
+            onClick={openAccessibility}
             aria-label="Accessibility Settings"
           >
             <PersonStanding className="h-6 w-6" />
@@ -85,11 +99,7 @@ export default function WelcomePage() {
           <h1 className="text-3xl font-bold">Welcome to the Blackout USA Game!</h1>
           <p>
             Can you efficiently operate an electrical grid and keep it safe
-            from a blackout? Manage the grid for 5 different days, each one
-            a bit more challenging than the one before. Pay attention to the
-            briefing for each day, and read the &quot;How to Play&quot;
-            instructions. Click the buttons below to get
-            started.
+            from a blackout? Choose a map to play.
           </p>
           <p className="text-sm text-muted-foreground">
             This game was developed by the research group of Prof. Adam
@@ -107,6 +117,26 @@ export default function WelcomePage() {
             .
           </p>
         </div>
+        {CASE_NAMES.length > 1 && (
+          <div className="mt-4">
+            <label className="text-sm font-medium text-muted-foreground uppercase tracking-wide">Select Grid</label>
+            <div className="mt-2 flex gap-2 flex-wrap">
+              {CASE_NAMES.map(name => (
+                <button
+                  key={name}
+                  onClick={() => setSelectedCase(name)}
+                  className={`px-4 py-2 rounded-md border text-sm font-medium transition-colors cursor-pointer ${
+                    selectedCase === name
+                      ? 'bg-primary text-primary-foreground border-primary'
+                      : 'bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground'
+                  }`}
+                >
+                  {name}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
         <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Button variant="secondary" asChild className="text-xl py-6 cursor-pointer">
             <Link href={tutorialUrl}>How to Play</Link>
@@ -118,7 +148,7 @@ export default function WelcomePage() {
       </div>
       <div className="w-full lg:w-1/2 h-[50vh] lg:h-[70vh] rounded-lg bg-background overflow-hidden">
         <div
-          ref={svgContainerRef}
+          ref={mapContainerRef}
           aria-label="A static visual of the Texas electrical grid map"
           role="img"
           className="h-full w-full"

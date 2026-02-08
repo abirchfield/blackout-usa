@@ -1,27 +1,6 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono, Share_Tech } from "next/font/google";
 import "./globals.css";
 import { ThemeProvider } from "next-themes";
-
-
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-  preload: false, // Preload links use crossorigin which fails on file:// protocol
-});
-
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-  preload: false,
-});
-
-const shareTech = Share_Tech({
-  weight: "400",
-  variable: "--font-share-tech",
-  subsets: ["latin"],
-  preload: false,
-});
 
 export const metadata: Metadata = {
   title: "Blackout USA",
@@ -36,8 +15,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" suppressHydrationWarning>
+      <head>
+        <link rel="stylesheet" href="./fonts.css" />
+      </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} ${shareTech.variable} antialiased`}
+        className="antialiased"
         suppressHydrationWarning
       >
         <ThemeProvider

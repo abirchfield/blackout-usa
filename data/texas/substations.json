@@ -1,0 +1,1097 @@
+[
+  {
+    "Name": "Abilene",
+    "Latitude": 32.51,
+    "Longitude": -99.66,
+    "Loads": {
+      "LoadCategory": "Residential",
+      "Pmax": 104.33,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 104.33
+        },
+        {
+          "Status": "IN",
+          "P": 104.33
+        },
+        {
+          "Status": "IN",
+          "P": 104.33
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Armstrong",
+    "Latitude": 27.0,
+    "Longitude": -97.6,
+    "Gens": {
+      "Category": "Wind",
+      "Pmax": 108.8,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 20.0,
+      "FixedCost": 600.0,
+      "FuelCost": 0.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 71.0
+        },
+        {
+          "Status": "IN",
+          "P": 71.0
+        },
+        {
+          "Status": "IN",
+          "P": 71.0
+        },
+        {
+          "Status": "IN",
+          "P": 71.0
+        },
+        {
+          "Status": "IN",
+          "P": 71.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Austin",
+    "Latitude": 30.29,
+    "Longitude": -97.78,
+    "Loads": {
+      "Pmax": 158.75,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 158.75,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 158.75,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 158.75,
+          "LoadCategory": "Datacenter"
+        },
+        {
+          "Status": "IN",
+          "P": 158.75,
+          "LoadCategory": "Datacenter"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Bastrop",
+    "Latitude": 30.15,
+    "Longitude": -97.27,
+    "Gens": {
+      "Category": "Solar PV",
+      "Pmax": 240.0,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 10.0,
+      "FixedCost": 400.0,
+      "FuelCost": 0.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 195.0
+        },
+        {
+          "Status": "IN",
+          "P": 195.0
+        },
+        {
+          "Status": "IN",
+          "P": 195.0
+        },
+        {
+          "Status": "IN",
+          "P": 195.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Brownsville",
+    "Latitude": 25.94,
+    "Longitude": -97.32,
+    "Loads": {
+      "Pmax": 88.67,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 88.67,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 88.67,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 88.67,
+          "LoadCategory": "Commercial"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Bryan",
+    "Latitude": 30.79,
+    "Longitude": -96.46,
+    "Gens": {
+      "Category": "Gas Turbine",
+      "Pmax": 85.0,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 30.0,
+      "FixedCost": 1000.0,
+      "FuelCost": 40.0,
+      "U": [
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "College Station",
+    "Latitude": 30.61,
+    "Longitude": -96.33,
+    "Loads": {
+      "Pmax": 101.5,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 101.5,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 101.5,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 101.5,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 101.5,
+          "LoadCategory": "Datacenter"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Corpus Christi",
+    "Latitude": 27.81,
+    "Longitude": -97.43,
+    "Loads": {
+      "Pmax": 85.75,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 85.75,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 85.75,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 85.75,
+          "LoadCategory": "Industrial"
+        },
+        {
+          "Status": "IN",
+          "P": 85.75,
+          "LoadCategory": "Industrial"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Dallas",
+    "Latitude": 32.71,
+    "Longitude": -96.68,
+    "Loads": {
+      "Pmax": 144.29,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 144.29,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 144.29,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 144.29,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 144.29,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 144.29,
+          "LoadCategory": "Industrial"
+        },
+        {
+          "Status": "IN",
+          "P": 144.29,
+          "LoadCategory": "Industrial"
+        },
+        {
+          "Status": "IN",
+          "P": 144.29,
+          "LoadCategory": "Datacenter"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "El Campo",
+    "Latitude": 29.21,
+    "Longitude": -96.28,
+    "Gens": {
+      "Category": "Gas Combined Cycle",
+      "Pmax": 103.75,
+      "Pmin": 20.0,
+      "Ramp": 10.0,
+      "StartTime": 240.0,
+      "FixedCost": 1000.0,
+      "FuelCost": 20.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 20.0
+        },
+        {
+          "Status": "IN",
+          "P": 20.0
+        },
+        {
+          "Status": "IN",
+          "P": 20.0
+        },
+        {
+          "Status": "IN",
+          "P": 20.0
+        },
+        {
+          "Status": "IN",
+          "P": 20.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Fluvanna",
+    "Latitude": 33.05,
+    "Longitude": -101.15,
+    "Gens": {
+      "Category": "Wind",
+      "Pmax": 147.0,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 20.0,
+      "FixedCost": 600.0,
+      "FuelCost": 0.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 136.67
+        },
+        {
+          "Status": "IN",
+          "P": 136.67
+        },
+        {
+          "Status": "IN",
+          "P": 136.67
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Franklin",
+    "Latitude": 31.18,
+    "Longitude": -96.49,
+    "Gens": {
+      "Category": "Coal-fired Steam",
+      "Pmax": 483.33,
+      "Pmin": 96.67,
+      "Ramp": 5.0,
+      "StartTime": 360.0,
+      "FixedCost": 1000.0,
+      "FuelCost": 35.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 500.0
+        },
+        {
+          "Status": "IN",
+          "P": 500.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Ft Worth",
+    "Latitude": 32.53,
+    "Longitude": -97.31,
+    "Loads": {
+      "Pmax": 153.0,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 153.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 153.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 153.0,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 153.0,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 153.0,
+          "LoadCategory": "Industrial"
+        },
+        {
+          "Status": "IN",
+          "P": 153.0,
+          "LoadCategory": "Industrial"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Galveston",
+    "Latitude": 29.31,
+    "Longitude": -94.78,
+    "Loads": {
+      "Pmax": 47.0,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 47.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 47.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 47.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 47.0,
+          "LoadCategory": "Commercial"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Houston",
+    "Latitude": 29.61,
+    "Longitude": -95.4,
+    "Loads": {
+      "Pmax": 170.12,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Industrial"
+        },
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Industrial"
+        },
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Datacenter"
+        },
+        {
+          "Status": "IN",
+          "P": 170.13,
+          "LoadCategory": "Datacenter"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Katy",
+    "Latitude": 29.74,
+    "Longitude": -95.83,
+    "Loads": {
+      "Pmax": 138.2,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 138.2,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 138.2,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 138.2,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 138.2,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 138.2,
+          "LoadCategory": "Industrial"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Kerrville",
+    "Latitude": 30.04,
+    "Longitude": -99.16,
+    "Gens": {
+      "Category": "Gas Combined Cycle",
+      "Pmax": 72.5,
+      "Pmin": 14.5,
+      "Ramp": 10.0,
+      "StartTime": 180.0,
+      "FixedCost": 1000.0,
+      "FuelCost": 22.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 50.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Lubbock",
+    "Latitude": 33.66,
+    "Longitude": -101.39,
+    "Loads": {
+      "LoadCategory": "Residential",
+      "Pmax": 88.0,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 88.0
+        },
+        {
+          "Status": "IN",
+          "P": 88.0
+        },
+        {
+          "Status": "IN",
+          "P": 88.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "McCamey",
+    "Latitude": 31.21,
+    "Longitude": -102.24,
+    "Gens": {
+      "Category": "Solar PV",
+      "Pmax": 201.67,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 10.0,
+      "FixedCost": 400.0,
+      "FuelCost": 0.0,
+      "U": [
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "McKinney",
+    "Latitude": 33.17,
+    "Longitude": -96.6,
+    "Gens": {
+      "Category": "Gas Combined Cycle",
+      "Pmax": 206.0,
+      "Pmin": 41.2,
+      "Ramp": 10.0,
+      "StartTime": 270.0,
+      "FixedCost": 1000.0,
+      "FuelCost": 36.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 103.0
+        },
+        {
+          "Status": "IN",
+          "P": 103.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Mission",
+    "Latitude": 26.21,
+    "Longitude": -98.4,
+    "Gens": {
+      "Category": "Gas Turbine",
+      "Pmax": 73.75,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 90.0,
+      "FixedCost": 1000.0,
+      "FuelCost": 45.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 61.0
+        },
+        {
+          "Status": "IN",
+          "P": 61.0
+        },
+        {
+          "Status": "IN",
+          "P": 61.0
+        },
+        {
+          "Status": "IN",
+          "P": 61.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Monahans",
+    "Latitude": 31.58,
+    "Longitude": -102.96,
+    "Gens": {
+      "Category": "Wind",
+      "Pmax": 240.0,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 20.0,
+      "FixedCost": 600.0,
+      "FuelCost": 0.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 157.5
+        },
+        {
+          "Status": "IN",
+          "P": 157.5
+        },
+        {
+          "Status": "IN",
+          "P": 157.5
+        },
+        {
+          "Status": "IN",
+          "P": 157.5
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Odessa",
+    "Latitude": 31.84,
+    "Longitude": -102.33,
+    "Loads": {
+      "Pmax": 59.33,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 59.33,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 59.33,
+          "LoadCategory": "Industrial"
+        },
+        {
+          "Status": "IN",
+          "P": 59.33,
+          "LoadCategory": "Datacenter"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "O'Donnell",
+    "Latitude": 32.93,
+    "Longitude": -101.65,
+    "Gens": {
+      "Category": "Wind",
+      "Pmax": 305.0,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 20.0,
+      "FixedCost": 600.0,
+      "FuelCost": 0.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 206.67
+        },
+        {
+          "Status": "IN",
+          "P": 206.67
+        },
+        {
+          "Status": "IN",
+          "P": 206.67
+        },
+        {
+          "Status": "IN",
+          "P": 206.67
+        },
+        {
+          "Status": "IN",
+          "P": 206.67
+        },
+        {
+          "Status": "IN",
+          "P": 206.67
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Pasadena",
+    "Latitude": 29.72,
+    "Longitude": -95.18,
+    "Gens": {
+      "Category": "Gas Turbine",
+      "Pmax": 112.5,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 60.0,
+      "FixedCost": 2000.0,
+      "FuelCost": 43.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 30.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Rockdale",
+    "Latitude": 30.57,
+    "Longitude": -97.06,
+    "Gens": {
+      "Category": "Coal-fired Steam",
+      "Pmax": 290.0,
+      "Pmin": 58.0,
+      "Ramp": 5.0,
+      "StartTime": 720.0,
+      "FixedCost": 4000.0,
+      "FuelCost": 32.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 142.0
+        },
+        {
+          "Status": "IN",
+          "P": 142.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "San Antonio",
+    "Latitude": 29.59,
+    "Longitude": -98.61,
+    "Loads": {
+      "Pmax": 171.0,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 171.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 171.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 171.0,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 171.0,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 171.0,
+          "LoadCategory": "Industrial"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Snyder",
+    "Latitude": 32.75,
+    "Longitude": -100.95,
+    "Gens": {
+      "Category": "Gas Turbine",
+      "Pmax": 160.0,
+      "Pmin": 0.0,
+      "Ramp": 25.0,
+      "StartTime": 30.0,
+      "FixedCost": 1000.0,
+      "FuelCost": 47.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 80.0
+        },
+        {
+          "Status": "DIS",
+          "P": 0.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Tyler",
+    "Latitude": 32.24,
+    "Longitude": -95.32,
+    "Loads": {
+      "LoadCategory": "Commercial",
+      "Pmax": 97.33,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 97.33
+        },
+        {
+          "Status": "IN",
+          "P": 97.33
+        },
+        {
+          "Status": "IN",
+          "P": 97.33
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Waco",
+    "Latitude": 31.62,
+    "Longitude": -97.1,
+    "Loads": {
+      "Pmax": 106.0,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 106.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 106.0,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 106.0,
+          "LoadCategory": "Commercial"
+        },
+        {
+          "Status": "IN",
+          "P": 106.0,
+          "LoadCategory": "Commercial"
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Wadsworth",
+    "Latitude": 28.8,
+    "Longitude": -96.05,
+    "Gens": {
+      "Category": "Nuclear Steam",
+      "Pmax": 1050.0,
+      "Pmin": 210.0,
+      "Ramp": 5.0,
+      "StartTime": 1440.0,
+      "FixedCost": 18000.0,
+      "FuelCost": 10.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 1050.0
+        },
+        {
+          "Status": "IN",
+          "P": 1050.0
+        }
+      ]
+    }
+  },
+  {
+    "Name": "Wichita Falls",
+    "Latitude": 33.91,
+    "Longitude": -98.49,
+    "Loads": {
+      "Pmax": 43.0,
+      "Pmin": 0.0,
+      "Ramp": 50.0,
+      "StartTime": 5.0,
+      "FixedCost": 0.0,
+      "FuelCost": 200.0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 43.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 43.0,
+          "LoadCategory": "Residential"
+        },
+        {
+          "Status": "IN",
+          "P": 43.0,
+          "LoadCategory": "Commercial"
+        }
+      ]
+    }
+  }
+]

@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 import { GameEngine } from '../engine';
-import { KeyBindings, GameAction } from '../key-bindings';
+import { KeyBindings, GameAction } from '../types';
 
 interface UseGameInputProps {
   engine: GameEngine;
@@ -25,6 +25,9 @@ export function useInput({
       if (isTyping || isInputBlockedRef.current || isBlackout) {
         return;
       }
+
+      // Don't intercept browser shortcuts (Ctrl+=/Ctrl+-/Ctrl+0 for browser zoom, etc.)
+      if (e.ctrlKey || e.metaKey) return;
 
       const key = e.key.toLowerCase();
       const action = (Object.keys(keyBindings) as GameAction[]).find(

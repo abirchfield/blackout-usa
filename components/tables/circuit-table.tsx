@@ -1,27 +1,24 @@
 "use client";
 
 import { Branch, BranchStatus } from "@/lib/types";
-import { getLoadingBarColor, hcVariant } from "@/lib/utils";
+import { branchLoading, getLoadingBarColor, hcVariant } from "@/lib/utils";
 import { Table, TableBody, TableHead, TableHeader, TableRow, TableCell } from "@/components/ui/table";
 import { Button } from "@/components/ui/button";
-import { StatusIndicator } from "@/components/icons/status-indicator";
+import { StatusIndicator } from "./status-indicator";
 
-interface CircuitRecordProps {
+interface BranchRecordProps {
   branch: Branch;
-  circuitNum: 1 | 2;
-  onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
+  label: string;
+  onBranchAction: (branchId: string) => void;
   isPaused?: boolean;
   isHighContrast?: boolean;
 }
 
-function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighContrast }: CircuitRecordProps) {
-  const status = circuitNum === 1 ? branch.Status1 : branch.Status2;
-
-  const inServiceCircuits = (branch.Status1 === BranchStatus.IN ? 1 : 0) + (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN ? 1 : 0);
-  const isThisCircuitIn = status === BranchStatus.IN;
-  const flow = isThisCircuitIn && inServiceCircuits > 0 ? branch.P / inServiceCircuits : 0;
+function BranchRecord({ branch, label, onBranchAction, isPaused, isHighContrast }: BranchRecordProps) {
+  const status = branch.Status;
+  const flow = status === BranchStatus.IN ? branch.P : 0;
   const rating = branch.Pmax;
-  const loading = rating > 0 ? (Math.abs(flow) / rating) * 100 : 0;
+  const loading = branchLoading(branch);
 
   let statusText: string;
   let buttonText: string | null = null;
@@ -49,8 +46,8 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighCo
   const barColor = getLoadingBarColor(loading);
 
   return (
-    <TableRow aria-labelledby={`circuit-header-${branch.Number}-${circuitNum}`}>
-      <th scope="row" id={`circuit-header-${branch.Number}-${circuitNum}`} className="font-medium text-center p-2">{circuitNum}</th>
+    <TableRow aria-labelledby={`branch-header-${branch.Number}`}>
+      <th scope="row" id={`branch-header-${branch.Number}`} className="font-medium text-center p-2">{label}</th>
       <TableCell>
         <div className="flex items-center gap-2">
           <StatusIndicator status={status} />
@@ -60,13 +57,13 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighCo
       <TableCell className="text-right font-mono">{Math.abs(flow).toFixed(0)} MW</TableCell>
       <TableCell className="text-right font-mono">{rating.toFixed(0)} MW</TableCell>
       <TableCell>
-        <div className="flex items-center gap-2" title={`Loading: ${loading.toFixed(0)}%`} aria-label={`Circuit loading: ${loading.toFixed(0)}%`}>
+        <div className="flex items-center gap-2" title={`Loading: ${loading.toFixed(0)}%`} aria-label={`Branch loading: ${loading.toFixed(0)}%`}>
           <div
             role="progressbar"
             aria-valuenow={loading}
             aria-valuemin={0}
             aria-valuemax={100}
-            aria-label={`Circuit loading progress bar`}
+            aria-label={`Branch loading progress bar`}
             className="h-2 w-full rounded-full bg-muted"
           >
             <div className={`h-2 rounded-full ${barColor} transition-all`} style={{ width: `${Math.min(100, loading)}%` }} />
@@ -79,7 +76,7 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighCo
           <Button
             variant={status === BranchStatus.IN ? "destructive" : hcVariant(isHighContrast ?? false)}
             size="sm"
-            onClick={() => onCircuitAction(branch.Number, circuitNum)}
+            onClick={() => onBranchAction(branch.Number)}
             disabled={buttonDisabled || isPaused}
           >{buttonText}</Button>
         )}
@@ -90,12 +87,13 @@ function CircuitRecord({ branch, circuitNum, onCircuitAction, isPaused, isHighCo
 
 interface CircuitTableProps {
   branch: Branch;
-  onCircuitAction: (branchId: string, circuit: 1 | 2) => void;
+  sibling?: Branch;
+  onBranchAction: (branchId: string) => void;
   isPaused?: boolean;
   isHighContrast?: boolean;
 }
 
-export function CircuitTable({ branch, onCircuitAction, isPaused, isHighContrast }: CircuitTableProps) {
+export function CircuitTable({ branch, sibling, onBranchAction, isPaused, isHighContrast }: CircuitTableProps) {
   return (
     <Table className="w-full table-fixed">
       <caption className="sr-only">Details for each circuit in the transmission line.</caption>
@@ -110,9 +108,9 @@ export function CircuitTable({ branch, onCircuitAction, isPaused, isHighContrast
         </TableRow>
       </TableHeader>
       <TableBody>
-        <CircuitRecord branch={branch} circuitNum={1} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} />
-        {branch.Circuits === 2 && (
-          <CircuitRecord branch={branch} circuitNum={2} onCircuitAction={onCircuitAction} isPaused={isPaused} isHighContrast={isHighContrast} />
+        <BranchRecord branch={branch} label="1" onBranchAction={onBranchAction} isPaused={isPaused} isHighContrast={isHighContrast} />
+        {sibling && (
+          <BranchRecord branch={sibling} label="2" onBranchAction={onBranchAction} isPaused={isPaused} isHighContrast={isHighContrast} />
         )}
       </TableBody>
     </Table>

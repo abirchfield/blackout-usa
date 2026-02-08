@@ -10,7 +10,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { Branch, BranchStatus } from "@/lib/types"
-import { getLoadingBarColor } from "@/lib/utils"
+import { branchLoading, getLoadingBarColor, isBranchActive } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 
 interface BranchesListProps {
@@ -19,28 +19,20 @@ interface BranchesListProps {
 }
 
 const getBranchIndicator = (branch: Branch) => {
-  const totalRating = branch.Pmax * branch.Circuits;
-  const loading = totalRating > 0 ? (Math.abs(branch.P) / totalRating) * 100 : 0;
+  const loading = branchLoading(branch);
 
-  const isTripped = branch.Status1 === BranchStatus.TRIP || (branch.Circuits === 2 && branch.Status2 === BranchStatus.TRIP);
-  if (isTripped) {
+  if (branch.Status === BranchStatus.TRIP) {
     return { className: 'bg-destructive w-2.5 h-2.5 rounded-full', title: 'Tripped' };
   }
 
-  let inServiceCircuits = 0;
-  if (branch.Status1 === BranchStatus.IN) inServiceCircuits++;
-  if (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN) inServiceCircuits++;
-
-  if (inServiceCircuits === 0) {
+  if (!isBranchActive(branch)) {
     return { className: 'border border-muted-foreground w-2.5 h-2.5 rounded-full', title: 'Out-of-Service' };
   }
 
-  // If in service, check for overload
   if (loading > 100) {
     return { className: 'bg-[var(--color-warning)] w-2.5 h-2.5 rounded-full', title: `Overloaded: ${loading.toFixed(0)}%` };
   }
 
-  // If in service and not overloaded
   return { className: 'bg-[var(--color-status-in)] w-2.5 h-2.5 rounded-full', title: `In-Service: ${loading.toFixed(0)}%` };
 };
 
@@ -65,14 +57,9 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
           {sortedBranches.length > 0 ? (
             sortedBranches
               .map(branch => {
-                const totalRating = branch.Pmax * branch.Circuits;
-                const loading = totalRating > 0 ? (Math.abs(branch.P) / totalRating) * 100 : 0;
+                const loading = branchLoading(branch);
+                const active = isBranchActive(branch);
                 const indicator = getBranchIndicator(branch);
-
-                let inServiceCircuits = 0;
-                if (branch.Status1 === BranchStatus.IN) inServiceCircuits++;
-                if (branch.Circuits === 2 && branch.Status2 === BranchStatus.IN) inServiceCircuits++;
-
                 const barColor = getLoadingBarColor(loading);
 
                 return (
@@ -89,7 +76,7 @@ export function BranchesList({ branches, onBranchSelect }: BranchesListProps) {
                     <TableCell className="py-2 text-right">
                       <div className="flex items-center justify-end gap-2">
                         <div role="img" aria-label={indicator.title} className={indicator.className} title={indicator.title} />
-                        {inServiceCircuits > 0 && (
+                        {active && (
                            <>
                             <div
                               role="progressbar"

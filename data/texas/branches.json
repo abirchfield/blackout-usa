@@ -1,0 +1,506 @@
+[
+  {
+    "Number": 1,
+    "FromBus": "Abilene",
+    "ToBus": "McCamey",
+    "Z": 0.2,
+    "Pmax": 500
+  },
+  {
+    "Number": 2,
+    "FromBus": "Abilene",
+    "ToBus": "Odessa",
+    "Z": 0.18,
+    "Pmax": 500
+  },
+  {
+    "Number": 3,
+    "FromBus": "Abilene",
+    "ToBus": "Snyder",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 4,
+    "FromBus": "Abilene",
+    "ToBus": "Snyder",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 5,
+    "FromBus": "Abilene",
+    "ToBus": "Waco",
+    "Z": 0.1,
+    "Pmax": 500
+  },
+  {
+    "Number": 6,
+    "FromBus": "Armstrong",
+    "ToBus": "Corpus Christi",
+    "Z": 0.08,
+    "Pmax": 500
+  },
+  {
+    "Number": 7,
+    "FromBus": "Austin",
+    "ToBus": "Bastrop",
+    "Z": 0.05,
+    "Pmax": 800
+  },
+  {
+    "Number": 8,
+    "FromBus": "Austin",
+    "ToBus": "Franklin",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 9,
+    "FromBus": "Austin",
+    "ToBus": "Rockdale",
+    "Z": 0.03,
+    "Pmax": 500
+  },
+  {
+    "Number": 10,
+    "FromBus": "Austin",
+    "ToBus": "Rockdale",
+    "Z": 0.03,
+    "Pmax": 500
+  },
+  {
+    "Number": 11,
+    "FromBus": "Austin",
+    "ToBus": "Waco",
+    "Z": 0.04,
+    "Pmax": 500
+  },
+  {
+    "Number": 12,
+    "FromBus": "Brownsville",
+    "ToBus": "Armstrong",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 13,
+    "FromBus": "Brownsville",
+    "ToBus": "Corpus Christi",
+    "Z": 0.12,
+    "Pmax": 500
+  },
+  {
+    "Number": 14,
+    "FromBus": "Bryan",
+    "ToBus": "Tyler",
+    "Z": 0.13,
+    "Pmax": 500
+  },
+  {
+    "Number": 15,
+    "FromBus": "College Station",
+    "ToBus": "Bryan",
+    "Z": 0.02,
+    "Pmax": 500
+  },
+  {
+    "Number": 16,
+    "FromBus": "College Station",
+    "ToBus": "Bryan",
+    "Z": 0.02,
+    "Pmax": 500
+  },
+  {
+    "Number": 17,
+    "FromBus": "College Station",
+    "ToBus": "Franklin",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 18,
+    "FromBus": "Corpus Christi",
+    "ToBus": "El Campo",
+    "Z": 0.12,
+    "Pmax": 500
+  },
+  {
+    "Number": 19,
+    "FromBus": "Corpus Christi",
+    "ToBus": "Wadsworth",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 20,
+    "FromBus": "Dallas",
+    "ToBus": "Ft Worth",
+    "Z": 0.03,
+    "Pmax": 500
+  },
+  {
+    "Number": 21,
+    "FromBus": "Dallas",
+    "ToBus": "Ft Worth",
+    "Z": 0.03,
+    "Pmax": 500
+  },
+  {
+    "Number": 22,
+    "FromBus": "Dallas",
+    "ToBus": "McKinney",
+    "Z": 0.04,
+    "Pmax": 500
+  },
+  {
+    "Number": 23,
+    "FromBus": "Dallas",
+    "ToBus": "Waco",
+    "Z": 0.09,
+    "Pmax": 500
+  },
+  {
+    "Number": 24,
+    "FromBus": "El Campo",
+    "ToBus": "Katy",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 25,
+    "FromBus": "El Campo",
+    "ToBus": "San Antonio",
+    "Z": 0.14,
+    "Pmax": 500
+  },
+  {
+    "Number": 26,
+    "FromBus": "Fluvanna",
+    "ToBus": "Lubbock",
+    "Z": 0.1,
+    "Pmax": 300
+  },
+  {
+    "Number": 27,
+    "FromBus": "Fluvanna",
+    "ToBus": "O'Donnell",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 28,
+    "FromBus": "Franklin",
+    "ToBus": "Bryan",
+    "Z": 0.05,
+    "Pmax": 500
+  },
+  {
+    "Number": 29,
+    "FromBus": "Franklin",
+    "ToBus": "Dallas",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 30,
+    "FromBus": "Franklin",
+    "ToBus": "Dallas",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 31,
+    "FromBus": "Ft Worth",
+    "ToBus": "Abilene",
+    "Z": 0.13,
+    "Pmax": 500
+  },
+  {
+    "Number": 32,
+    "FromBus": "Ft Worth",
+    "ToBus": "Abilene",
+    "Z": 0.13,
+    "Pmax": 500
+  },
+  {
+    "Number": 33,
+    "FromBus": "Ft Worth",
+    "ToBus": "Snyder",
+    "Z": 0.17,
+    "Pmax": 500
+  },
+  {
+    "Number": 34,
+    "FromBus": "Ft Worth",
+    "ToBus": "Waco",
+    "Z": 0.08,
+    "Pmax": 500
+  },
+  {
+    "Number": 35,
+    "FromBus": "Galveston",
+    "ToBus": "Katy",
+    "Z": 0.05,
+    "Pmax": 500
+  },
+  {
+    "Number": 36,
+    "FromBus": "Galveston",
+    "ToBus": "Pasadena",
+    "Z": 0.04,
+    "Pmax": 800
+  },
+  {
+    "Number": 37,
+    "FromBus": "Houston",
+    "ToBus": "College Station",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 38,
+    "FromBus": "Houston",
+    "ToBus": "El Campo",
+    "Z": 0.08,
+    "Pmax": 500
+  },
+  {
+    "Number": 39,
+    "FromBus": "Houston",
+    "ToBus": "El Campo",
+    "Z": 0.08,
+    "Pmax": 500
+  },
+  {
+    "Number": 40,
+    "FromBus": "Houston",
+    "ToBus": "Pasadena",
+    "Z": 0.01,
+    "Pmax": 500
+  },
+  {
+    "Number": 41,
+    "FromBus": "Katy",
+    "ToBus": "Bastrop",
+    "Z": 0.1,
+    "Pmax": 800
+  },
+  {
+    "Number": 42,
+    "FromBus": "Katy",
+    "ToBus": "Houston",
+    "Z": 0.02,
+    "Pmax": 500
+  },
+  {
+    "Number": 43,
+    "FromBus": "Katy",
+    "ToBus": "Houston",
+    "Z": 0.02,
+    "Pmax": 500
+  },
+  {
+    "Number": 44,
+    "FromBus": "Katy",
+    "ToBus": "Rockdale",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 45,
+    "FromBus": "Kerrville",
+    "ToBus": "Austin",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 46,
+    "FromBus": "Kerrville",
+    "ToBus": "McCamey",
+    "Z": 0.2,
+    "Pmax": 500
+  },
+  {
+    "Number": 47,
+    "FromBus": "Lubbock",
+    "ToBus": "O'Donnell",
+    "Z": 0.16,
+    "Pmax": 300
+  },
+  {
+    "Number": 48,
+    "FromBus": "Lubbock",
+    "ToBus": "Wichita Falls",
+    "Z": 0.2,
+    "Pmax": 300
+  },
+  {
+    "Number": 49,
+    "FromBus": "McKinney",
+    "ToBus": "Ft Worth",
+    "Z": 0.05,
+    "Pmax": 500
+  },
+  {
+    "Number": 50,
+    "FromBus": "McKinney",
+    "ToBus": "Wichita Falls",
+    "Z": 0.17,
+    "Pmax": 300
+  },
+  {
+    "Number": 51,
+    "FromBus": "Mission",
+    "ToBus": "Brownsville",
+    "Z": 0.03,
+    "Pmax": 500
+  },
+  {
+    "Number": 52,
+    "FromBus": "Mission",
+    "ToBus": "Corpus Christi",
+    "Z": 0.14,
+    "Pmax": 500
+  },
+  {
+    "Number": 53,
+    "FromBus": "Mission",
+    "ToBus": "San Antonio",
+    "Z": 0.2,
+    "Pmax": 300
+  },
+  {
+    "Number": 54,
+    "FromBus": "Monahans",
+    "ToBus": "McCamey",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 55,
+    "FromBus": "Odessa",
+    "ToBus": "McCamey",
+    "Z": 0.09,
+    "Pmax": 500
+  },
+  {
+    "Number": 56,
+    "FromBus": "Odessa",
+    "ToBus": "Monahans",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 57,
+    "FromBus": "Odessa",
+    "ToBus": "O'Donnell",
+    "Z": 0.1,
+    "Pmax": 500
+  },
+  {
+    "Number": 58,
+    "FromBus": "Pasadena",
+    "ToBus": "College Station",
+    "Z": 0.1,
+    "Pmax": 500
+  },
+  {
+    "Number": 59,
+    "FromBus": "Rockdale",
+    "ToBus": "Bryan",
+    "Z": 0.08,
+    "Pmax": 500
+  },
+  {
+    "Number": 60,
+    "FromBus": "Rockdale",
+    "ToBus": "Franklin",
+    "Z": 0.08,
+    "Pmax": 500
+  },
+  {
+    "Number": 61,
+    "FromBus": "Rockdale",
+    "ToBus": "Waco",
+    "Z": 0.11,
+    "Pmax": 500
+  },
+  {
+    "Number": 62,
+    "FromBus": "San Antonio",
+    "ToBus": "Austin",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 63,
+    "FromBus": "San Antonio",
+    "ToBus": "Austin",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 64,
+    "FromBus": "San Antonio",
+    "ToBus": "Kerrville",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 65,
+    "FromBus": "San Antonio",
+    "ToBus": "Kerrville",
+    "Z": 0.07,
+    "Pmax": 500
+  },
+  {
+    "Number": 66,
+    "FromBus": "Snyder",
+    "ToBus": "Fluvanna",
+    "Z": 0.08,
+    "Pmax": 800
+  },
+  {
+    "Number": 67,
+    "FromBus": "Snyder",
+    "ToBus": "O'Donnell",
+    "Z": 0.09,
+    "Pmax": 800
+  },
+  {
+    "Number": 68,
+    "FromBus": "Tyler",
+    "ToBus": "Dallas",
+    "Z": 0.09,
+    "Pmax": 500
+  },
+  {
+    "Number": 69,
+    "FromBus": "Wadsworth",
+    "ToBus": "El Campo",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 70,
+    "FromBus": "Wadsworth",
+    "ToBus": "El Campo",
+    "Z": 0.06,
+    "Pmax": 500
+  },
+  {
+    "Number": 71,
+    "FromBus": "Wadsworth",
+    "ToBus": "Galveston",
+    "Z": 0.05,
+    "Pmax": 800
+  },
+  {
+    "Number": 72,
+    "FromBus": "Wadsworth",
+    "ToBus": "San Antonio",
+    "Z": 0.14,
+    "Pmax": 500
+  }
+]

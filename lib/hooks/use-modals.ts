@@ -1,5 +1,5 @@
 import { useState, useCallback, useRef } from 'react';
-import { Briefing, ResultDetails, GameStatistics } from '../types';
+import { ResultDetails, StatsSnapshot } from '../types';
 
 export type ModalId =
   | 'quit'
@@ -7,8 +7,7 @@ export type ModalId =
   | 'alerts'
   | 'hints'
   | 'help'
-  | 'substation'
-  | 'branch'
+  | 'grid'
   | 'day-briefing'
   | 'day-results';
 
@@ -16,9 +15,9 @@ export interface ModalPayload {
   substationId?: string;
   branchId?: string;
   targetDay?: number;
-  briefing?: Briefing | null;
+  info?: string[] | null;
   resultDetails?: ResultDetails | null;
-  gameStatistics?: GameStatistics;
+  gameStatistics?: StatsSnapshot;
 }
 
 /**
@@ -110,7 +109,7 @@ export function useModals() {
     onOpenChange,
     isAnyModalOpen: activeModal !== null,
     /** True when an open modal should pause the game (all except substation/branch). */
-    isPausingModal: activeModal !== null && activeModal !== 'substation' && activeModal !== 'branch',
+    isPausingModal: activeModal !== null && activeModal !== 'grid',
 
     // Focus ref (exposed for edge cases)
     lastFocusedRef,

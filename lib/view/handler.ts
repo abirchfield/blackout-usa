@@ -1,11 +1,13 @@
-import { GameState, InteractionHandler, SimulationAction } from "../types";
-import { GameAction } from "../key-bindings";
-import { ViewConfig, DrawingConfig } from "../config";
-import { getDynamicSubstationRadius, clampViewBounds } from "../utils";
+import { GameState, InteractionHandler, GameAction } from "../types";
+import { ViewConfig, DrawingConfig } from "./constants";
+import { clampViewBounds, clampPan, getDynamicSubstationRadius } from "./view-math";
 
 export interface IGridHandler {
   onInteract?: InteractionHandler;
-  onDispatch?: (action: SimulationAction) => void;
+  onTripHottestLine?: () => void;
+  onShedMinLoad?: () => void;
+  onShedMaxLoad?: () => void;
+  onRampAllUp?: () => void;
   onTogglePause?: () => void;
   onToggleFastForward?: () => void;
   onResetView?: () => void;
@@ -19,11 +21,14 @@ export interface IGridHandler {
 
 const CLICK_DRAG_THRESHOLD_SQ = ViewConfig.CLICK_DRAG_THRESHOLD * ViewConfig.CLICK_DRAG_THRESHOLD;
 
-export class SvgHandler implements IGridHandler {
-  private svg: SVGSVGElement;
+export class InputHandler implements IGridHandler {
+  private canvas: HTMLCanvasElement;
   private state: GameState;
   public onInteract?: InteractionHandler;
-  public onDispatch?: (action: SimulationAction) => void;
+  public onTripHottestLine?: () => void;
+  public onShedMinLoad?: () => void;
+  public onShedMaxLoad?: () => void;
+  public onRampAllUp?: () => void;
   public onTogglePause?: () => void;
   public onToggleFastForward?: () => void;
   public onResetView?: () => void;
@@ -48,8 +53,8 @@ export class SvgHandler implements IGridHandler {
   private branchArray: import("../types").Branch[] = [];
   private lastCachedVersion: number = -1;
 
-  constructor(svg: SVGSVGElement, state: GameState) {
-    this.svg = svg;
+  constructor(canvas: HTMLCanvasElement, state: GameState) {
+    this.canvas = canvas;
     this.state = state;
 
     this.boundHandleMouseDown = this.handleMouseDown.bind(this);
@@ -58,25 +63,25 @@ export class SvgHandler implements IGridHandler {
     this.boundHandleMouseUp = this.handleMouseUp.bind(this);
     this.boundHandleWheel = this.handleWheel.bind(this);
 
-    this.svg.addEventListener("mousedown", this.boundHandleMouseDown);
-    this.svg.addEventListener("mousemove", this.boundHandleMouseMove);
-    this.svg.addEventListener("mouseleave", this.boundHandleMouseLeave);
-    this.svg.addEventListener("mouseup", this.boundHandleMouseUp);
-    this.svg.addEventListener("wheel", this.boundHandleWheel, { passive: false });
+    this.canvas.addEventListener("mousedown", this.boundHandleMouseDown);
+    this.canvas.addEventListener("mousemove", this.boundHandleMouseMove);
+    this.canvas.addEventListener("mouseleave", this.boundHandleMouseLeave);
+    this.canvas.addEventListener("mouseup", this.boundHandleMouseUp);
+    this.canvas.addEventListener("wheel", this.boundHandleWheel, { passive: false });
 
     // Invalidate cached rect on resize or scroll
     this.boundInvalidateRect = () => { this.cachedRect = null; };
     this.resizeObserver = new ResizeObserver(this.boundInvalidateRect);
-    this.resizeObserver.observe(this.svg);
+    this.resizeObserver.observe(this.canvas);
     window.addEventListener("scroll", this.boundInvalidateRect, { passive: true });
   }
 
   public destroy() {
-    this.svg.removeEventListener("mousedown", this.boundHandleMouseDown);
-    this.svg.removeEventListener("mousemove", this.boundHandleMouseMove);
-    this.svg.removeEventListener("mouseleave", this.boundHandleMouseLeave);
-    this.svg.removeEventListener("mouseup", this.boundHandleMouseUp);
-    this.svg.removeEventListener("wheel", this.boundHandleWheel);
+    this.canvas.removeEventListener("mousedown", this.boundHandleMouseDown);
+    this.canvas.removeEventListener("mousemove", this.boundHandleMouseMove);
+    this.canvas.removeEventListener("mouseleave", this.boundHandleMouseLeave);
+    this.canvas.removeEventListener("mouseup", this.boundHandleMouseUp);
+    this.canvas.removeEventListener("wheel", this.boundHandleWheel);
     this.resizeObserver.disconnect();
     window.removeEventListener("scroll", this.boundInvalidateRect);
     if (this.moveRafId) {
@@ -87,7 +92,7 @@ export class SvgHandler implements IGridHandler {
 
   private getRect(): DOMRect {
     if (!this.cachedRect) {
-      this.cachedRect = this.svg.getBoundingClientRect();
+      this.cachedRect = this.canvas.getBoundingClientRect();
     }
     return this.cachedRect;
   }
@@ -114,11 +119,13 @@ export class SvgHandler implements IGridHandler {
 
     if (this.state.inDrag) {
       // Panning — runs immediately, no hover detection needed
+      const prevX0 = this.state.x0;
+      const prevY0 = this.state.y0;
       const deltaX = offsetX - this.state.dragStartX;
       const deltaY = offsetY - this.state.dragStartY;
       this.state.x0 -= deltaX / this.state.scaleX;
       this.state.y0 += deltaY / this.state.scaleY;
-      this.clampToBounds();
+      this.clampPanBounds(prevX0, prevY0);
       this.state.dragStartX = offsetX;
       this.state.dragStartY = offsetY;
       return;
@@ -150,11 +157,11 @@ export class SvgHandler implements IGridHandler {
 
     this.state.hoverSub = null;
     this.state.hoverBranch = null;
-    this.state.hoverCircuit = null;
 
     const worldX = this.state.x0 + offsetX / this.state.scaleX;
     const worldY = this.state.y0 - offsetY / this.state.scaleY;
-    const hoverRadius = getDynamicSubstationRadius(this.state.scaleX, this.state.referenceScale, true);
+    const scaleFactor = Math.sqrt(this.state.scaleX / this.state.referenceScale);
+    const hoverRadius = getDynamicSubstationRadius(scaleFactor, true);
     const hoverRadiusSq = (hoverRadius / this.state.scaleX) * (hoverRadius / this.state.scaleX);
 
     this.ensureCachedArrays();
@@ -171,8 +178,6 @@ export class SvgHandler implements IGridHandler {
     if (this.state.hoverSub === null) {
       let mindist = ViewConfig.BRANCH_HOVER_RADIUS;
 
-      // Compute loop-invariant offset values once
-      const scaleFactor = Math.sqrt(this.state.scaleX / this.state.referenceScale);
       const normalRadius = Math.max(DrawingConfig.BRANCH_RADIUS_MIN,
         Math.min(DrawingConfig.BRANCH_RADIUS_NORMAL * scaleFactor, DrawingConfig.BRANCH_RADIUS_MAX));
       const halfOffPx = normalRadius * DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR / 2;
@@ -190,22 +195,18 @@ export class SvgHandler implements IGridHandler {
           const raw = dy * (worldX - s1.Longitude) - dx * (worldY - s1.Latitude);
           const signedPerpPx = -raw / branch.dist * this.state.scaleX;
 
-          if (branch.Circuits === 2) {
-            const distC1 = Math.abs(signedPerpPx + halfOffPx);
-            const distC2 = Math.abs(signedPerpPx - halfOffPx);
-            const closerDist = Math.min(distC1, distC2);
-            if (closerDist < mindist) {
-              this.state.hoverBranch = branch;
-              this.state.hoverCircuit = distC1 <= distC2 ? 1 : 2;
-              mindist = closerDist;
-            }
+          // Account for visual offset of parallel siblings
+          let effectiveDist: number;
+          if (branch.sibling) {
+            const offset = branch.Number < branch.sibling ? -1 : 1;
+            effectiveDist = Math.abs(signedPerpPx - offset * halfOffPx);
           } else {
-            const dist_to_line = Math.abs(signedPerpPx);
-            if (dist_to_line < mindist) {
-              this.state.hoverBranch = branch;
-              this.state.hoverCircuit = 1;
-              mindist = dist_to_line;
-            }
+            effectiveDist = Math.abs(signedPerpPx);
+          }
+
+          if (effectiveDist < mindist) {
+            this.state.hoverBranch = branch;
+            mindist = effectiveDist;
           }
         }
       }
@@ -241,10 +242,13 @@ export class SvgHandler implements IGridHandler {
   private handleWheel(e: WheelEvent) {
     e.preventDefault();
     const { offsetX, offsetY } = this.getMouseOffset(e);
-    // Use exp for a smooth, symmetric zoom curve.
+    // Normalize delta to pixels (Firefox sends DOM_DELTA_LINE for mouse wheel)
+    let delta = e.deltaY;
+    if (e.deltaMode === 1) delta *= 33;                // DOM_DELTA_LINE → approx pixels
+    else if (e.deltaMode === 2) delta *= window.innerHeight; // DOM_DELTA_PAGE → pixels
+    // Exp for a smooth, symmetric zoom curve.
     // At default sensitivity (1.0), one mouse wheel notch (deltaY≈100) zooms ~26%.
-    // Trackpad gestures send smaller deltas and zoom proportionally.
-    const zoomFactor = Math.exp(-e.deltaY * 0.003 * this.state.zoomSensitivity);
+    const zoomFactor = Math.exp(-delta * 0.003 * this.state.zoomSensitivity);
     this.zoom(offsetX, offsetY, zoomFactor);
   }
 
@@ -256,17 +260,17 @@ export class SvgHandler implements IGridHandler {
     switch (action) {
       case "ZOOM_IN": this.zoomIn(x, y); break;
       case "ZOOM_OUT": this.zoomOut(x, y); break;
-      case "PAN_LEFT": this.state.x0 -= panAmount / this.state.scaleX; this.clampToBounds(); break;
-      case "PAN_RIGHT": this.state.x0 += panAmount / this.state.scaleX; this.clampToBounds(); break;
-      case "PAN_DOWN": this.state.y0 -= panAmount / this.state.scaleY; this.clampToBounds(); break;
-      case "PAN_UP": this.state.y0 += panAmount / this.state.scaleY; this.clampToBounds(); break;
+      case "PAN_LEFT": { const px = this.state.x0; this.state.x0 -= panAmount / this.state.scaleX; this.clampPanBounds(px, this.state.y0); break; }
+      case "PAN_RIGHT": { const px = this.state.x0; this.state.x0 += panAmount / this.state.scaleX; this.clampPanBounds(px, this.state.y0); break; }
+      case "PAN_DOWN": { const py = this.state.y0; this.state.y0 -= panAmount / this.state.scaleY; this.clampPanBounds(this.state.x0, py); break; }
+      case "PAN_UP": { const py = this.state.y0; this.state.y0 += panAmount / this.state.scaleY; this.clampPanBounds(this.state.x0, py); break; }
       case "RESET_ZOOM": this.onResetView?.(); break;
       case "TOGGLE_PAUSE": this.onTogglePause?.(); break;
       case "TOGGLE_FAST_FORWARD": this.onToggleFastForward?.(); break;
-      case "DISCONNECT_MOST_LOADED_LINE": this.onDispatch?.({ type: "DISCONNECT_MOST_LOADED_LINE" }); break;
-      case "DISCONNECT_SMALLEST_LOAD": this.onDispatch?.({ type: "DISCONNECT_SMALLEST_LOAD" }); break;
-      case "RAMP_ALL_GENERATION_UP": this.onDispatch?.({ type: "RAMP_ALL_GENERATION" }); break;
-      case "EMERGENCY_LOAD_SHED": this.onDispatch?.({ type: "EMERGENCY_LOAD_SHED" }); break;
+      case "DISCONNECT_MOST_LOADED_LINE": this.onTripHottestLine?.(); break;
+      case "DISCONNECT_SMALLEST_LOAD": this.onShedMinLoad?.(); break;
+      case "RAMP_ALL_GENERATION_UP": this.onRampAllUp?.(); break;
+      case "EMERGENCY_LOAD_SHED": this.onShedMaxLoad?.(); break;
       case "CENTER_VIEW_ON_SELECTION":
         // Center on hovered substation or branch midpoint
         if (this.state.hoverSub) {
@@ -293,10 +297,10 @@ export class SvgHandler implements IGridHandler {
 
     this.state.x0 += x / oldScale * (1 - 1 / actualFactor);
     this.state.y0 -= y / oldScale * (1 - 1 / actualFactor);
-    this.clampToBounds();
+    // No hard clamp here — soft clamp in the frame loop handles boundary return smoothly
   }
 
-  public centerAndZoomOn(longitude: number, latitude: number, zoomLevel: number = ViewConfig.DETAIL_ZOOM_LEVEL) {
+  public centerAndZoomOn(longitude: number, latitude: number, zoomLevel: number = this.state.referenceScale * ViewConfig.DETAIL_ZOOM_RATIO) {
     this.state.scaleX = zoomLevel;
     this.state.scaleY = zoomLevel;
     const rect = this.getRect();
@@ -308,6 +312,11 @@ export class SvgHandler implements IGridHandler {
   private clampToBounds() {
     const rect = this.getRect();
     clampViewBounds(this.state, rect.width, rect.height);
+  }
+
+  private clampPanBounds(prevX0: number, prevY0: number) {
+    const rect = this.getRect();
+    clampPan(this.state, prevX0, prevY0, rect.width, rect.height);
   }
 
   public zoomIn(x: number, y: number) {
