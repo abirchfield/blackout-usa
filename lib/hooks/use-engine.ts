@@ -1,39 +1,45 @@
 import { useEffect, useRef, useState } from 'react';
 import { GameEngine } from '../engine';
-import { activeCase } from '@/data/cases';
+import { loadCase } from '@/data/_out/registry';
 
 /**
  * Creates and manages the GameEngine lifecycle.
- * The engine owns its own RAF loop (startLoop/stopLoop).
+ * Loads the case asynchronously via dynamic import, then creates the engine.
  *
- * Returns the engine instance (null during the first render before the effect runs).
+ * Returns the engine instance (null while loading or before the effect runs).
  * State subscriptions (stats, alerts, hints, playback) are handled via
  * useSyncExternalStore in use-store.ts.
  */
 export function useCreateEngine(
-  svgContainerRef: React.RefObject<HTMLDivElement | null>,
+  containerRef: React.RefObject<HTMLDivElement | null>,
+  caseName: string,
 ) {
   const engineRef = useRef<GameEngine | null>(null);
   const [, setReady] = useState(false);
 
   useEffect(() => {
-    const element = svgContainerRef.current;
+    const element = containerRef.current;
     if (!element || engineRef.current) return;
 
-    const engine = new GameEngine(element, activeCase, { interactive: true });
-    engine.startDay(1);
-    engine.step(false);
-    engine.startLoop();
+    let cancelled = false;
 
-    engineRef.current = engine;
-    setReady(true); // Trigger re-render so context consumers mount
+    loadCase(caseName).then(gridCase => {
+      if (cancelled || !containerRef.current) return;
+
+      const engine = new GameEngine(containerRef.current, gridCase, { interactive: true });
+      engine.startLoop();
+
+      engineRef.current = engine;
+      setReady(true); // Trigger re-render so context consumers mount
+    });
 
     return () => {
-      engine.destroy();
+      cancelled = true;
+      engineRef.current?.destroy();
       engineRef.current = null;
     };
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- svgContainerRef is a stable ref
-  }, []);
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- containerRef is a stable ref
+  }, [caseName]);
 
   return engineRef.current;
 }

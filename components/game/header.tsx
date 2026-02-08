@@ -77,7 +77,7 @@ export function AppHeader({ onOpenModal, onBriefingClick, controlsDisabled, isHi
       {/* Left: Title & Main Actions */}
       <div className="flex shrink-0">
         <div className="flex items-center gap-2 flex-nowrap">
-          <h1 className="text-xl sm:text-2xl font-bold font-share-tech text-foreground">
+          <h1 className="text-xl sm:text-2xl font-bold font-sans text-foreground">
             <span className={isBlackout ? "text-[var(--color-alert-emphasis)] animate-pulse" : undefined}>Blackout</span> USA
           </h1>
           {/* Desktop Controls */}

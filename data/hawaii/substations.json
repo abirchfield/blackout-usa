@@ -1,0 +1,788 @@
+[
+  {
+    "Name": "ALOHA",
+    "Latitude": 21.344246,
+    "Longitude": -157.939889,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 25,
+      "StartTime": 15,
+      "FixedCost": 800,
+      "FuelCost": 60,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 2.500000037252903
+        },
+        {
+          "Status": "IN",
+          "P": 2.500000037252903
+        },
+        {
+          "Status": "IN",
+          "P": 2.500000037252903
+        },
+        {
+          "Status": "IN",
+          "P": 2.500000037252903
+        }
+      ],
+      "Category": "Gas Turbine"
+    },
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 60.69999933242798
+        }
+      ]
+    }
+  },
+  {
+    "Name": "FLOWER",
+    "Latitude": 21.347927,
+    "Longitude": -157.876274,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 59.390002489089966
+        }
+      ]
+    }
+  },
+  {
+    "Name": "WAVE",
+    "Latitude": 21.293143,
+    "Longitude": -157.848767,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 22.470000386238098
+        }
+      ]
+    }
+  },
+  {
+    "Name": "HONOLULU",
+    "Latitude": 21.316548,
+    "Longitude": -157.845053,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 27.459999918937683
+        }
+      ]
+    }
+  },
+  {
+    "Name": "SURF",
+    "Latitude": 21.291518,
+    "Longitude": -157.826869,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 37.00999915599823
+        }
+      ]
+    }
+  },
+  {
+    "Name": "KANEOHE",
+    "Latitude": 21.451733,
+    "Longitude": -157.824227,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 65.10000228881836
+        }
+      ]
+    }
+  },
+  {
+    "Name": "TURTLE",
+    "Latitude": 21.273462,
+    "Longitude": -157.822444,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 37.76000142097473
+        }
+      ]
+    }
+  },
+  {
+    "Name": "MAHALO",
+    "Latitude": 21.35548,
+    "Longitude": -157.821663,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 65.54999947547913
+        }
+      ]
+    }
+  },
+  {
+    "Name": "LYCHEE",
+    "Latitude": 21.32021,
+    "Longitude": -157.810758,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 54.009997844696045
+        }
+      ]
+    }
+  },
+  {
+    "Name": "COCONUT",
+    "Latitude": 21.290612,
+    "Longitude": -157.788328,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 59.24000144004822
+        }
+      ]
+    }
+  },
+  {
+    "Name": "KAILUA",
+    "Latitude": 21.395084,
+    "Longitude": -157.758188,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 60.9000027179718
+        }
+      ]
+    }
+  },
+  {
+    "Name": "PALM",
+    "Latitude": 21.311063,
+    "Longitude": -157.750269,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 23.829999566078186
+        }
+      ]
+    }
+  },
+  {
+    "Name": "WAIMANALO",
+    "Latitude": 21.335013,
+    "Longitude": -157.710924,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 12.039999663829803
+        }
+      ]
+    }
+  },
+  {
+    "Name": "VOLCANO",
+    "Latitude": 21.294518,
+    "Longitude": -157.688748,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 36.320000886917114
+        }
+      ]
+    }
+  },
+  {
+    "Name": "PEARL CITY",
+    "Latitude": 21.417374,
+    "Longitude": -157.936867,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 48.60000014305115
+        }
+      ]
+    }
+  },
+  {
+    "Name": "MILILANI",
+    "Latitude": 21.482531,
+    "Longitude": -157.934221,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 64.95000123977661
+        }
+      ]
+    }
+  },
+  {
+    "Name": "AIEA",
+    "Latitude": 21.406053,
+    "Longitude": -157.884952,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 48.339998722076416
+        }
+      ]
+    }
+  },
+  {
+    "Name": "WAIPAHU",
+    "Latitude": 21.417469,
+    "Longitude": -157.983838,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 25,
+      "StartTime": 15,
+      "FixedCost": 800,
+      "FuelCost": 60,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 69.2747414112091
+        },
+        {
+          "Status": "IN",
+          "P": 39.12993669509888
+        },
+        {
+          "Status": "IN",
+          "P": 69.2747414112091
+        },
+        {
+          "Status": "IN",
+          "P": 47.637367248535156
+        },
+        {
+          "Status": "IN",
+          "P": 47.109630703926086
+        },
+        {
+          "Status": "IN",
+          "P": 44.5331871509552
+        },
+        {
+          "Status": "IN",
+          "P": 44.5331871509552
+        },
+        {
+          "Status": "IN",
+          "P": 43.61436367034912
+        },
+        {
+          "Status": "IN",
+          "P": 43.18811297416687
+        },
+        {
+          "Status": "IN",
+          "P": 12.531810998916626
+        }
+      ],
+      "Category": "Gas Turbine"
+    },
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 86.75000071525574
+        }
+      ]
+    }
+  },
+  {
+    "Name": "KAPOLEI",
+    "Latitude": 21.363106,
+    "Longitude": -158.082206,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 46.57999873161316
+        }
+      ]
+    }
+  },
+  {
+    "Name": "EWA BEACH",
+    "Latitude": 21.344756,
+    "Longitude": -158.022282,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 100,
+      "FuelCost": 0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 20.000000298023224
+        },
+        {
+          "Status": "IN",
+          "P": 10.199999809265137
+        }
+      ],
+      "Category": "Solar PV"
+    },
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 75.27999877929688
+        }
+      ]
+    }
+  },
+  {
+    "Name": "KAHUKU",
+    "Latitude": 21.658692,
+    "Longitude": -157.978792,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 100,
+      "FuelCost": 0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 30.000001192092896
+        },
+        {
+          "Status": "IN",
+          "P": 27.59999930858612
+        }
+      ],
+      "Category": "Wind"
+    },
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 3.9500001817941666
+        }
+      ]
+    }
+  },
+  {
+    "Name": "HALEIWA",
+    "Latitude": 21.621367,
+    "Longitude": -158.048011,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 100,
+      "FuelCost": 0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 46.29998803138733
+        },
+        {
+          "Status": "IN",
+          "P": 68.99999976158142
+        }
+      ],
+      "Category": "Wind"
+    },
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 8.820000290870667
+        }
+      ]
+    }
+  },
+  {
+    "Name": "LAIE",
+    "Latitude": 21.618479,
+    "Longitude": -157.943953,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 7.699999958276749
+        }
+      ]
+    }
+  },
+  {
+    "Name": "WAHIAWA",
+    "Latitude": 21.57139,
+    "Longitude": -157.979384,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 49.02999997138977
+        }
+      ]
+    }
+  },
+  {
+    "Name": "WAIALUA",
+    "Latitude": 21.56364,
+    "Longitude": -158.185151,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 9.619999676942825
+        }
+      ]
+    }
+  },
+  {
+    "Name": "HAUULA",
+    "Latitude": 21.55775,
+    "Longitude": -157.905396,
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 6.669999659061432
+        }
+      ]
+    }
+  },
+  {
+    "Name": "WAIANAE",
+    "Latitude": 21.468626,
+    "Longitude": -158.166919,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 100,
+      "FuelCost": 0,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 27.59999930858612
+        }
+      ],
+      "Category": "Solar PV"
+    },
+    "Loads": {
+      "Pmin": 0,
+      "Ramp": 50,
+      "StartTime": 5,
+      "FixedCost": 0,
+      "FuelCost": 200,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 58.21999907493591
+        }
+      ]
+    }
+  },
+  {
+    "Name": "SCHOFIELD",
+    "Latitude": 21.4785,
+    "Longitude": -158.0581,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 25,
+      "StartTime": 15,
+      "FixedCost": 800,
+      "FuelCost": 60,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 7.2200000286102295
+        },
+        {
+          "Status": "IN",
+          "P": 6.040000170469284
+        },
+        {
+          "Status": "IN",
+          "P": 6.040000170469284
+        },
+        {
+          "Status": "IN",
+          "P": 6.040000170469284
+        },
+        {
+          "Status": "IN",
+          "P": 6.009000167250633
+        },
+        {
+          "Status": "IN",
+          "P": 7.2200000286102295
+        }
+      ],
+      "Category": "Gas Turbine"
+    }
+  },
+  {
+    "Name": "KALAELOA",
+    "Latitude": 21.303419,
+    "Longitude": -158.106528,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 25,
+      "StartTime": 15,
+      "FixedCost": 800,
+      "FuelCost": 60,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 57.999998331069946
+        },
+        {
+          "Status": "IN",
+          "P": 28.00000011920929
+        },
+        {
+          "Status": "IN",
+          "P": 0.0
+        },
+        {
+          "Status": "IN",
+          "P": 20.000000298023224
+        },
+        {
+          "Status": "IN",
+          "P": 67.00000166893005
+        },
+        {
+          "Status": "IN",
+          "P": 0.0
+        },
+        {
+          "Status": "IN",
+          "P": 50.0
+        },
+        {
+          "Status": "IN",
+          "P": 56.199997663497925
+        }
+      ],
+      "Category": "Gas Turbine"
+    }
+  },
+  {
+    "Name": "COGEN",
+    "Latitude": 21.311667,
+    "Longitude": -158.113889,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 25,
+      "StartTime": 15,
+      "FixedCost": 800,
+      "FuelCost": 60,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 1.9999999552965164
+        },
+        {
+          "Status": "IN",
+          "P": 2.101000025868416
+        },
+        {
+          "Status": "IN",
+          "P": 1.9999999552965164
+        },
+        {
+          "Status": "IN",
+          "P": 2.4800000712275505
+        }
+      ],
+      "Category": "Gas Turbine"
+    }
+  },
+  {
+    "Name": "KAHE",
+    "Latitude": 21.356395,
+    "Longitude": -158.128853,
+    "Gens": {
+      "Pmin": 0,
+      "Ramp": 25,
+      "StartTime": 15,
+      "FixedCost": 800,
+      "FuelCost": 60,
+      "U": [
+        {
+          "Status": "IN",
+          "P": 0.0
+        },
+        {
+          "Status": "IN",
+          "P": 0.0
+        },
+        {
+          "Status": "IN",
+          "P": 58.324211835861206
+        },
+        {
+          "Status": "IN",
+          "P": 0.0
+        },
+        {
+          "Status": "IN",
+          "P": 68.48000288009644
+        },
+        {
+          "Status": "IN",
+          "P": 0.0
+        }
+      ],
+      "Category": "Gas Turbine"
+    }
+  }
+]

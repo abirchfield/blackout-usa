@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { GeneratorUnitsTable } from "@/components/tables/unit-table";
 import { CircuitTable } from "@/components/tables/circuit-table";
-import { SubstationCategory, UnitStatus } from "@/lib/types";
+import { Substation, Branch, Unit, SubstationCategory, BranchStatus, UnitStatus } from "@/lib/types";
 import { GenerationTypeConfig, LoadTypeConfig, StatusConfig } from "@/components/theme";
 import { cn } from "@/lib/utils";
 import {
@@ -25,16 +25,303 @@ import {
   Activity,
   Settings,
   TrendingUp,
+  DollarSign,
+  Clock,
+  Power,
 } from "lucide-react";
-import {
-  SubstationExample,
-  LineExampleNew,
-  mockSubInService,
-  mockSubOutOfService,
-  mockSubStartup,
-  mockBranch,
-  generatorTypes,
-} from "@/components/modals/help-examples";
+// --- Mock data for help examples ---
+
+const mockSubBase: Substation = {
+  Name: "Example",
+  Number: "0",
+  idx: 0,
+  Latitude: 0,
+  Longitude: 0,
+  Units: 1,
+  Category: SubstationCategory.Thermal,
+  Pmax: 100,
+  Pmin: 20,
+  pmax: 100,
+  pmin: 20,
+  isLoad: false,
+  isRenewable: false,
+  FixedCost: 500,
+  FuelCost: 50,
+  StartTime: 60,
+  Ramp: 5,
+  U: []
+};
+
+const mockBranch: Branch = {
+  Number: "0",
+  FromNum: "1",
+  ToNum: "2",
+  fromIdx: 0,
+  toIdx: 1,
+  FromSub: "Example A",
+  ToSub: "Example B",
+  Status: BranchStatus.IN,
+  P: 450,
+  Pmax: 500,
+  Z: 0.01,
+  ybr: -100,
+};
+
+const generatorTypes = [
+  SubstationCategory.Nuclear,
+  SubstationCategory.Thermal,
+  SubstationCategory.Wind,
+  SubstationCategory.Solar,
+];
+
+// --- Visual example components ---
+
+function SubstationExample({ category, fillPercent, label, sublabel }: {
+  category: SubstationCategory;
+  fillPercent: number;
+  label: string;
+  sublabel?: string;
+}) {
+  const isLoad = category === SubstationCategory.Load;
+  const config = GenerationTypeConfig[category];
+  const color = isLoad ? "var(--foreground)" : `var(${config.cssVar})`;
+  const center = 24;
+  const strokeWidth = 2;
+  const ratio = Math.max(0, Math.min(1, fillPercent / 100));
+
+  if (isLoad) {
+    const size = 30;
+    const half = size / 2;
+    const x = center - half;
+    const y = center - half;
+    const fillHeight = size * ratio;
+    const fillY = y + size - fillHeight;
+
+    return (
+      <div className="flex flex-col items-center gap-1.5 min-w-[80px]">
+        <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true">
+          <rect x={x} y={y} width={size} height={size} fill="var(--background)" />
+          {ratio > 0 && (
+            <rect x={x} y={fillY} width={size} height={fillHeight} fill={color} />
+          )}
+          <rect x={x} y={y} width={size} height={size} fill="none" stroke={color} strokeWidth={strokeWidth} />
+        </svg>
+        <div className="text-center">
+          <p className="text-xs font-medium">{label}</p>
+          {sublabel && <p className="text-[10px] text-muted-foreground">{sublabel}</p>}
+        </div>
+      </div>
+    );
+  }
+
+  const outerRadius = 20;
+  const innerRadius = outerRadius / 1.2;
+  const endAngle = -Math.PI / 2 + (Math.PI * 2 * ratio);
+  const isFullCircle = ratio >= 1;
+
+  const x = center + innerRadius * Math.cos(-Math.PI / 2);
+  const y = center + innerRadius * Math.sin(-Math.PI / 2);
+  const x2 = center + innerRadius * Math.cos(endAngle);
+  const y2 = center + innerRadius * Math.sin(endAngle);
+  const largeArcFlag = ratio > 0.5 ? 1 : 0;
+  const piePath = `M${center},${center} L${x},${y} A${innerRadius},${innerRadius} 0 ${largeArcFlag},1 ${x2},${y2} Z`;
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 min-w-[80px]">
+      <svg width="48" height="48" viewBox="0 0 48 48" aria-hidden="true">
+        <circle cx={center} cy={center} r={outerRadius} fill={color} stroke={color} strokeWidth={strokeWidth} />
+        <circle cx={center} cy={center} r={innerRadius} fill="var(--background)" />
+        {ratio > 0 && (
+          isFullCircle
+            ? <circle cx={center} cy={center} r={innerRadius} fill={color} />
+            : <path d={piePath} fill={color} />
+        )}
+        <circle cx={center} cy={center} r={innerRadius} fill="none" stroke={color} strokeWidth={strokeWidth} />
+      </svg>
+      <div className="text-center">
+        <p className="text-xs font-medium">{label}</p>
+        {sublabel && <p className="text-[10px] text-muted-foreground">{sublabel}</p>}
+      </div>
+    </div>
+  );
+}
+
+function LineExampleNew({ status, label, showFlow }: {
+  status: 'normal' | 'overloaded' | 'critical' | 'tripped' | 'out';
+  label: string;
+  showFlow?: boolean;
+}) {
+  const getLineStyle = () => {
+    switch (status) {
+      case 'normal':
+        return { stroke: 'var(--foreground)', dasharray: 'none' };
+      case 'overloaded':
+        return { stroke: 'var(--color-warning)', dasharray: 'none' };
+      case 'critical':
+        return { stroke: 'var(--color-overload-critical)', dasharray: '8,4' };
+      case 'tripped':
+        return { stroke: 'var(--color-tripped)', dasharray: '5,5' };
+      case 'out':
+        return { stroke: 'var(--foreground)', dasharray: '5,5' };
+      default:
+        return { stroke: 'var(--foreground)', dasharray: 'none' };
+    }
+  };
+
+  const style = getLineStyle();
+
+  return (
+    <div className="flex flex-col items-center gap-1.5 min-w-[80px]">
+      <div className="w-16 h-6 flex items-center justify-center">
+        <svg width="100%" height="6" viewBox="0 0 64 6" className="overflow-visible">
+          <line
+            x1="0" y1="3" x2="64" y2="3"
+            stroke={style.stroke}
+            strokeWidth="3"
+            strokeDasharray={style.dasharray}
+            strokeLinecap="round"
+          />
+          {showFlow && status === 'normal' && (
+            <>
+              <circle cx="16" cy="3" r="2.5" fill="var(--color-power-flow)" />
+              <circle cx="32" cy="3" r="2.5" fill="var(--color-power-flow)" />
+              <circle cx="48" cy="3" r="2.5" fill="var(--color-power-flow)" />
+            </>
+          )}
+        </svg>
+      </div>
+      <p className="text-xs font-medium text-center">{label}</p>
+    </div>
+  );
+}
+
+// --- Interactive circuit demo for help page ---
+
+function InteractiveCircuitDemo() {
+  const RAMP_RATE = 30;      // MW per tick
+  const TICK_MS = 100;
+  const TARGET_FLOW = 450;   // MW when in-service
+
+  const [branch, setBranch] = useState<Branch>({ ...mockBranch });
+  const rampRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  // Ramp flow toward target (TARGET_FLOW when IN, 0 when DIS)
+  useEffect(() => {
+    clearInterval(rampRef.current);
+    const target = branch.Status === BranchStatus.IN ? TARGET_FLOW : 0;
+    if (Math.abs(branch.P - target) < 0.5) return;
+    rampRef.current = setInterval(() => {
+      setBranch(prev => {
+        const t = prev.Status === BranchStatus.IN ? TARGET_FLOW : 0;
+        if (Math.abs(prev.P - t) < 0.5) return { ...prev, P: t };
+        const step = Math.min(Math.abs(t - prev.P), RAMP_RATE);
+        return { ...prev, P: +(prev.P + Math.sign(t - prev.P) * step).toFixed(1) };
+      });
+    }, TICK_MS);
+    return () => clearInterval(rampRef.current);
+  }, [branch.Status, branch.P]);
+
+  return (
+    <CircuitTable
+      branch={branch}
+      onBranchAction={() => {
+        setBranch(prev => {
+          if (prev.Status === BranchStatus.IN) return { ...prev, Status: BranchStatus.DIS };
+          if (prev.Status === BranchStatus.DIS) return { ...prev, Status: BranchStatus.IN };
+          return prev;
+        });
+      }}
+    />
+  );
+}
+
+// --- Interactive generator demo for help page ---
+
+function InteractiveGeneratorDemo() {
+  const DEMO_START_TIME = 5; // short startup for snappy demo
+  const TICK_MS = 600;
+
+  const initialUnit: Unit = {
+    Status: UnitStatus.DIS, P: 0, Pset: 0, P0: 0,
+    Status0: UnitStatus.DIS, StatusCount: 0,
+    Pmax: 100, Pmin: 20, Ramp: 5, StartTime: DEMO_START_TIME,
+    FixedCost: 500, FuelCost: 50,
+  };
+
+  const [unit, setUnit] = useState<Unit>(initialUnit);
+  const [setpointVal, setSetpointVal] = useState(0);
+  const rampRef = useRef<ReturnType<typeof setInterval>>(undefined);
+
+  // Transition countdown (startup / shutdown)
+  useEffect(() => {
+    if (unit.Status !== UnitStatus.STARTUP && unit.Status !== UnitStatus.SHUTDOWN) return;
+    const id = setInterval(() => {
+      setUnit(prev => {
+        const next = prev.StatusCount + 1;
+        if (next >= prev.StartTime) {
+          if (prev.Status === UnitStatus.STARTUP) {
+            return { ...prev, Status: UnitStatus.IN, StatusCount: 0, P: prev.Pmin, Pset: prev.Pmin };
+          }
+          return { ...prev, Status: UnitStatus.DIS, StatusCount: 0, P: 0, Pset: 0 };
+        }
+        return { ...prev, StatusCount: next };
+      });
+    }, TICK_MS);
+    return () => clearInterval(id);
+  }, [unit.Status]);
+
+  // Sync slider when coming online / going offline
+  useEffect(() => {
+    if (unit.Status === UnitStatus.IN) setSetpointVal(unit.Pmin);
+    if (unit.Status === UnitStatus.DIS) setSetpointVal(0);
+  }, [unit.Status, unit.Pmin]);
+
+  // Ramp output toward setpoint
+  useEffect(() => {
+    clearInterval(rampRef.current);
+    if (unit.Status !== UnitStatus.IN) return;
+    rampRef.current = setInterval(() => {
+      setUnit(prev => {
+        if (prev.Status !== UnitStatus.IN || Math.abs(prev.P - prev.Pset) < 0.5) return prev;
+        const step = Math.min(Math.abs(prev.Pset - prev.P), prev.Ramp);
+        return { ...prev, P: +(prev.P + Math.sign(prev.Pset - prev.P) * step).toFixed(1) };
+      });
+    }, 150);
+    return () => clearInterval(rampRef.current);
+  }, [unit.Status]);
+
+  const demoSub: Substation = { ...mockSubBase, StartTime: DEMO_START_TIME, U: [unit] };
+
+  return (
+    <GeneratorUnitsTable
+      sub={demoSub}
+      onUnitAction={() => {
+        setUnit(prev => {
+          if (prev.Status === UnitStatus.DIS) return { ...prev, Status: UnitStatus.STARTUP, StatusCount: 0 };
+          if (prev.Status === UnitStatus.IN) return { ...prev, Status: UnitStatus.SHUTDOWN, StatusCount: 0 };
+          return prev;
+        });
+      }}
+      onAbortTransition={() => {
+        setUnit(prev => {
+          if (prev.Status === UnitStatus.STARTUP) return { ...prev, Status: UnitStatus.DIS, StatusCount: 0, P: 0, Pset: 0 };
+          if (prev.Status === UnitStatus.SHUTDOWN) return { ...prev, Status: UnitStatus.IN, StatusCount: 0 };
+          return prev;
+        });
+      }}
+      onSetSetpoint={(_sid, _idx, val) => {
+        setSetpointVal(val);
+        setUnit(prev => ({ ...prev, Pset: val }));
+      }}
+      setpoints={{ 0: setpointVal }}
+      onSetpointChange={(_idx, val) => {
+        setSetpointVal(val);
+        setUnit(prev => ({ ...prev, Pset: val }));
+      }}
+      isPaused={false}
+    />
+  );
+}
 
 interface HelpModalProps {
   open: boolean;
@@ -80,7 +367,6 @@ const genDesc: Record<string, string> = {
 
 export function HelpModal({ open, onOpenChange }: HelpModalProps) {
   const [currentPage, setCurrentPage] = useState(0);
-  const [demoSetpoint, setDemoSetpoint] = useState(65);
 
   const helpPages = [
     // ── Page 0: Welcome ──
@@ -103,37 +389,26 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
               <div className="space-y-2 text-sm">
                 <div className="flex items-start gap-2.5">
                   <Zap className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                  <span><strong>Keep customers powered.</strong> If generation falls short, frequency drops and blackouts follow.</span>
+                  <p className="text-sm"><span className="font-semibold">Keep customers powered</span> <span className="text-muted-foreground">— If generation falls short, frequency drops and blackouts follow.</span></p>
                 </div>
                 <div className="flex items-start gap-2.5">
-                  <TrendingUp className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
-                  <span><strong>Keep costs low.</strong> Some generators cost less to run. Only start expensive plants when you need them.</span>
+                  <DollarSign className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
+                  <p className="text-sm"><span className="font-semibold">Keep costs low</span> <span className="text-muted-foreground">— Only start expensive plants when you need them.</span></p>
                 </div>
               </div>
             </div>
 
             <div>
-              <SectionLabel>Getting Around</SectionLabel>
-              <ul className="space-y-1.5 text-sm">
-                <li><Badge variant="outline" className="mr-1.5 text-[10px]">Click + Drag</Badge> Pan the map</li>
-                <li><Badge variant="outline" className="mr-1.5 text-[10px]">Scroll</Badge> Zoom in / out</li>
-                <li><Badge variant="outline" className="mr-1.5 text-[10px]">Click</Badge> Select a substation or line</li>
-                <li><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">Space</Badge> Pause / Resume</li>
-                <li><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">F</Badge> Fast forward (10x speed)</li>
-              </ul>
-            </div>
-          </div>
-
-          <div className="border-t pt-3">
-            <SectionLabel>Help Along the Way</SectionLabel>
-            <div className="grid grid-cols-2 gap-x-5 text-sm">
-              <div className="flex items-start gap-2.5">
-                <Bell className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <span><strong>Alerts</strong> warn about problems — overloaded lines, low reserves, trips.</span>
-              </div>
-              <div className="flex items-start gap-2.5">
-                <Lightbulb className="h-4 w-4 text-[var(--color-hint)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <span><strong>Hints</strong> suggest actions you can take to improve the situation.</span>
+              <SectionLabel>Help Along the Way</SectionLabel>
+              <div className="space-y-2 text-sm">
+                <div className="flex items-start gap-2.5">
+                  <Bell className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
+                  <p className="text-sm"><span className="font-semibold">Alerts</span> <span className="text-muted-foreground">— Warn about problems: overloaded lines, low reserves, trips.</span></p>
+                </div>
+                <div className="flex items-start gap-2.5">
+                  <Lightbulb className="h-4 w-4 text-[var(--color-hint)] flex-shrink-0 mt-0.5" aria-hidden="true" />
+                  <p className="text-sm"><span className="font-semibold">Hints</span> <span className="text-muted-foreground">— Suggest actions you can take to improve the situation.</span></p>
+                </div>
               </div>
             </div>
           </div>
@@ -148,14 +423,14 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       subtitle: "Substations are the building blocks of the grid. They either generate or consume power.",
       content: (
         <div className="space-y-4">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-            {/* Generators column */}
+          {/* Visual examples — side by side */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 items-start">
             <div>
               <SectionLabel>Generators (Circles)</SectionLabel>
               <p className="text-xs text-muted-foreground mb-2">
                 Produce electricity. Colored ring = fuel type. Pie fill = output level.
               </p>
-              <div className="flex flex-wrap gap-2 justify-center mb-3">
+              <div className="grid grid-cols-4 gap-1 justify-items-center">
                 {generatorTypes.map((cat) => (
                   <SubstationExample
                     key={cat}
@@ -165,30 +440,13 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
                   />
                 ))}
               </div>
-              <div className="space-y-1">
-                {generatorTypes.map(cat => {
-                  const config = GenerationTypeConfig[cat];
-                  const Icon = config.icon;
-                  return (
-                    <div key={cat} className="flex items-start gap-2 py-0.5">
-                      <Icon className={cn("h-4 w-4 flex-shrink-0 mt-0.5", config.tailwind.text)} aria-hidden="true" />
-                      <p className="text-xs">
-                        <span className="font-semibold">{config.name}</span>
-                        <span className="text-muted-foreground"> — {genDesc[config.name]}</span>
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
             </div>
-
-            {/* Loads column */}
             <div>
               <SectionLabel>Loads (Squares)</SectionLabel>
               <p className="text-xs text-muted-foreground mb-2">
                 Consume electricity. Fill level = how much demand is being served.
               </p>
-              <div className="flex flex-wrap gap-4 justify-center mb-3">
+              <div className="flex gap-3 justify-center">
                 <SubstationExample
                   category={SubstationCategory.Load}
                   fillPercent={85}
@@ -202,27 +460,46 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
                   sublabel="No power"
                 />
               </div>
-              <div className="space-y-1">
-                {Object.values(LoadTypeConfig).map(config => {
-                  const Icon = config.icon;
-                  return (
-                    <div key={config.name} className="flex items-start gap-2 py-0.5">
-                      <Icon className={cn("h-4 w-4 flex-shrink-0 mt-0.5", config.tailwind.text)} aria-hidden="true" />
-                      <p className="text-xs">
-                        <span className="font-semibold">{config.name}</span>
-                        <span className="text-muted-foreground"> — {config.description}</span>
-                      </p>
-                    </div>
-                  );
-                })}
-              </div>
+            </div>
+          </div>
+
+          {/* Type descriptions — aligned in their own grid row */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
+            <div className="space-y-1">
+              {generatorTypes.map(cat => {
+                const config = GenerationTypeConfig[cat];
+                const Icon = config.icon;
+                return (
+                  <div key={cat} className="flex items-start gap-2 py-0.5">
+                    <Icon className={cn("h-4 w-4 flex-shrink-0 mt-0.5", config.tailwind.text)} aria-hidden="true" />
+                    <p className="text-xs">
+                      <span className="font-semibold">{config.name}</span>
+                      <span className="text-muted-foreground"> — {genDesc[config.name]}</span>
+                    </p>
+                  </div>
+                );
+              })}
+            </div>
+            <div className="space-y-1">
+              {Object.values(LoadTypeConfig).map(config => {
+                const Icon = config.icon;
+                return (
+                  <div key={config.name} className="flex items-start gap-2 py-0.5">
+                    <Icon className={cn("h-4 w-4 flex-shrink-0 mt-0.5", config.tailwind.text)} aria-hidden="true" />
+                    <p className="text-xs">
+                      <span className="font-semibold">{config.name}</span>
+                      <span className="text-muted-foreground"> — {config.description}</span>
+                    </p>
+                  </div>
+                );
+              })}
             </div>
           </div>
 
           <div className="rounded-lg border p-3 bg-card/50 text-sm">
-            <strong>Tip:</strong> Click any substation on the map to open its control panel.
+            <span className="font-semibold">Tip</span> <span className="text-muted-foreground">— Click any substation on the map to open its control panel.
             For generators, you can start/stop units and adjust output.
-            For loads, you can see demand and shed load in emergencies.
+            For loads, you can see demand and shed load in emergencies.</span>
           </div>
         </div>
       ),
@@ -232,7 +509,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
     {
       title: "Generator Controls",
       icon: Settings,
-      subtitle: "Click any generator substation to open its controls. Here's how the unit table works.",
+      subtitle: "Click any generator substation to open its controls. Try the interactive demo below.",
       content: (
         <div className="space-y-3">
           <div>
@@ -251,50 +528,14 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
             </div>
           </div>
 
-          <div className="border-t pt-2">
-            <SectionLabel>In-Service — Adjust Output</SectionLabel>
+          <div className="border-t pt-3">
+            <SectionLabel>Interactive Demo</SectionLabel>
+            <p className="text-xs text-muted-foreground mb-2">
+              Click the power button to start the unit. Once online, drag the slider to set output. Click power again to shut down.
+            </p>
             <div className="border rounded-lg overflow-hidden bg-background/50">
-              <GeneratorUnitsTable
-                sub={mockSubInService}
-                onUnitAction={() => {}}
-                onSetSetpoint={(_subId, _idx, val) => setDemoSetpoint(val)}
-                setpoints={{ 0: demoSetpoint }}
-                onSetpointChange={(_idx, val) => setDemoSetpoint(val)}
-                isPaused={false}
-              />
+              <InteractiveGeneratorDemo />
             </div>
-            <p className="text-xs text-muted-foreground mt-1">Drag the slider to change the target output. The unit ramps at its rated speed.</p>
-          </div>
-
-          <div>
-            <SectionLabel>Out-of-Service — Start Up</SectionLabel>
-            <div className="border rounded-lg overflow-hidden bg-background/50">
-              <GeneratorUnitsTable
-                sub={mockSubOutOfService}
-                onUnitAction={() => {}}
-                onSetSetpoint={() => {}}
-                setpoints={{ 0: 20 }}
-                onSetpointChange={() => {}}
-                isPaused={false}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Click the power button to begin the startup sequence.</p>
-          </div>
-
-          <div>
-            <SectionLabel>Starting Up — Wait or Abort</SectionLabel>
-            <div className="border rounded-lg overflow-hidden bg-background/50">
-              <GeneratorUnitsTable
-                sub={mockSubStartup}
-                onUnitAction={() => {}}
-                onAbortTransition={() => {}}
-                onSetSetpoint={() => {}}
-                setpoints={{ 0: 20 }}
-                onSetpointChange={() => {}}
-                isPaused={false}
-              />
-            </div>
-            <p className="text-xs text-muted-foreground mt-1">Countdown shows time remaining. Click the X to abort.</p>
           </div>
         </div>
       ),
@@ -325,19 +566,19 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
           </div>
 
           <div className="border-t pt-3">
-            <SectionLabel>Circuit Controls</SectionLabel>
+            <SectionLabel>Interactive Demo</SectionLabel>
             <p className="text-xs text-muted-foreground mb-2">
-              Click a line on the map to see its circuits. Lines have 1–2 circuits, each toggleable independently.
+              Click the button to open or close the line. Watch flow and loading update in real time.
             </p>
             <div className="border rounded-lg overflow-hidden bg-background/50">
-              <CircuitTable branch={mockBranch} onCircuitAction={() => {}} />
+              <InteractiveCircuitDemo />
             </div>
           </div>
 
           <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3">
             <p className="text-sm">
-              <strong>Cascading failures:</strong> When a line trips, its power redistributes to other lines.
-              This can push them over capacity too — a chain reaction that can black out entire regions.
+              <span className="font-semibold">Cascading failures</span> <span className="text-muted-foreground">— When a line trips, its power redistributes to other lines.
+              This can push them over capacity too, a chain reaction that can black out entire regions.</span>
             </p>
           </div>
         </div>
@@ -350,99 +591,90 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       icon: TrendingUp,
       subtitle: "How to read the sidebar and know when to act.",
       content: (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3">
-          {/* Left: Critical Indicators */}
-          <div className="space-y-3">
-            <div>
-              <SectionLabel>Frequency</SectionLabel>
-              <p className="text-xs text-muted-foreground mb-1.5">
-                Shows whether generation matches load. When balanced, frequency stays
-                at 60 Hz. A drop means you need more generation or less load.
-              </p>
-              <div className="space-y-0.5 text-xs">
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold tabular-nums text-foreground w-14 text-right">60.00</span>
-                  <span className="text-muted-foreground">Stable — system balanced</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold tabular-nums text-[var(--color-warning)] w-14 text-right">{"< 59.85"}</span>
-                  <span className="text-muted-foreground">Warning — start backup units</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold tabular-nums text-destructive w-14 text-right">{"< 59.70"}</span>
-                  <span className="text-muted-foreground">Danger — loss of load imminent</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <span className="font-mono font-bold tabular-nums text-destructive w-14 text-right">{"< 40.00"}</span>
-                  <span className="text-muted-foreground">Blackout — grid collapses</span>
-                </div>
+        <div className="space-y-4">
+          {/* Mock Hero Stats — replica of the actual sidebar top bar */}
+          <div>
+            <SectionLabel>Key Indicators</SectionLabel>
+            <p className="text-xs text-muted-foreground mb-2">
+              These three numbers sit at the top of the sidebar. They tell you the health of the grid at a glance.
+            </p>
+            <div className="grid grid-cols-3 gap-3 rounded-lg border bg-card/50 p-3">
+              <div>
+                <div className="text-[0.6rem] text-muted-foreground/60 uppercase tracking-wider font-bold">Frequency</div>
+                <div className="text-lg sm:text-xl font-numeric font-bold text-foreground">60.00<span className="text-[0.6em] opacity-50 ml-[0.15em]">Hz</span></div>
               </div>
-            </div>
-
-            <div className="border-t pt-2">
-              <SectionLabel>Reserves</SectionLabel>
-              <p className="text-xs text-muted-foreground">
-                Spare generation capacity above current load. Acts as a safety buffer.
-                Keep above <strong className="text-foreground">500 MW</strong> to absorb
-                sudden changes like a line tripping or generation dropping.
-              </p>
-            </div>
-
-            <div className="border-t pt-2">
-              <SectionLabel>Total Generation</SectionLabel>
-              <p className="text-xs text-muted-foreground">
-                Sum of all online generators. Should stay close to total load.
-                Too low and frequency drops. Too high and you waste fuel.
-              </p>
+              <div>
+                <div className="text-[0.6rem] text-muted-foreground/60 uppercase tracking-wider font-bold">Total Gen.</div>
+                <div className="text-lg sm:text-xl font-numeric font-bold text-foreground">6.97<span className="text-[0.6em] opacity-50 ml-[0.15em]">GW</span></div>
+              </div>
+              <div>
+                <div className="text-[0.6rem] text-muted-foreground/60 uppercase tracking-wider font-bold">Reserves</div>
+                <div className="text-lg sm:text-xl font-numeric font-bold text-foreground">938<span className="text-[0.6em] opacity-50 ml-[0.15em]">MW</span></div>
+              </div>
             </div>
           </div>
 
-          {/* Right: Performance */}
-          <div className="space-y-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 items-start">
+            {/* Left: Frequency thresholds */}
             <div>
-              <SectionLabel>Generation Bars</SectionLabel>
-              <p className="text-xs text-muted-foreground mb-1.5">
-                Each bar in the sidebar shows one fuel type&apos;s output vs. its total available capacity.
-              </p>
-              <div className="space-y-1.5">
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="h-2.5 w-20 rounded-full bg-primary" />
-                  <span className="text-muted-foreground">Solid = current output</span>
-                </div>
-                <div className="flex items-center gap-2 text-xs">
-                  <div className="h-2.5 w-20 rounded-full bg-primary/30" />
-                  <span className="text-muted-foreground">Faded = available but unused capacity</span>
-                </div>
-              </div>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                A long faded section means you have room to bring more online.
-                A bar that&apos;s all solid means that fuel type is maxed out.
-              </p>
-            </div>
-
-            <div className="border-t pt-2">
-              <SectionLabel>Costs</SectionLabel>
-              <p className="text-xs text-muted-foreground mb-1.5">
-                The sidebar tracks spending during your shift. Three factors drive cost:
+              <SectionLabel>Frequency Thresholds</SectionLabel>
+              <p className="text-xs text-muted-foreground mb-2">
+                Frequency reflects supply vs. demand balance. When generation falls short, frequency drops.
               </p>
               <div className="space-y-1 text-xs">
-                <div className="flex gap-2">
-                  <span className="font-semibold text-foreground shrink-0">Fixed cost</span>
-                  <span className="text-muted-foreground">— paid for every running unit, regardless of output</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-semibold text-foreground shrink-0">Fuel cost</span>
-                  <span className="text-muted-foreground">— per MW generated, varies by fuel type</span>
-                </div>
-                <div className="flex gap-2">
-                  <span className="font-semibold text-foreground shrink-0">Unserved penalty</span>
-                  <span className="text-muted-foreground">— per MW of unmet demand (very expensive)</span>
+                {([
+                  { value: "60.00", color: "text-[var(--color-status-in)]", dot: "bg-[var(--color-status-in)]", label: "Stable — system balanced" },
+                  { value: "< 59.85", color: "text-[var(--color-warning)]", dot: "bg-[var(--color-warning)]", label: "Warning — start backup units" },
+                  { value: "< 59.70", color: "text-destructive", dot: "bg-destructive", label: "Danger — loss of load imminent" },
+                  { value: "< 58.00", color: "text-destructive", dot: "bg-destructive", label: "Blackout — grid collapses" },
+                ] as const).map((t, i) => (
+                  <div key={i} className="flex items-center gap-2">
+                    <span className={cn("w-1.5 h-1.5 rounded-full shrink-0", t.dot)} />
+                    <span className={cn("font-numeric font-bold w-14 text-right shrink-0", t.color)}>{t.value}</span>
+                    <span className="text-muted-foreground">{t.label}</span>
+                  </div>
+                ))}
+              </div>
+              <div className="rounded-lg border p-2.5 bg-card/50 text-xs mt-3">
+                <span className="font-semibold">Reserves</span> <span className="text-muted-foreground">— Keep at least <strong className="text-foreground font-numeric">500 MW</strong> of spare capacity to absorb sudden trips or demand spikes.</span>
+              </div>
+            </div>
+
+            {/* Right: Generation bars + costs */}
+            <div className="space-y-3">
+              <div>
+                <SectionLabel>Generation Bars</SectionLabel>
+                <p className="text-xs text-muted-foreground mb-2">
+                  Each fuel type shows current output (solid) and available capacity (faded).
+                </p>
+                <div className="space-y-1.5">
+                  {([
+                    { type: SubstationCategory.Nuclear, output: 70, capacity: 85 },
+                    { type: SubstationCategory.Thermal, output: 55, capacity: 90 },
+                    { type: SubstationCategory.Solar, output: 30, capacity: 30 },
+                    { type: SubstationCategory.Wind, output: 60, capacity: 65 },
+                  ] as const).map(({ type, output, capacity }) => {
+                    const config = GenerationTypeConfig[type];
+                    const Icon = config.icon;
+                    return (
+                      <div key={type} className="flex items-center gap-2">
+                        <Icon className={cn("h-3.5 w-3.5 shrink-0", config.tailwind.text)} aria-hidden="true" />
+                        <span className="text-[11px] text-muted-foreground/60 w-14 shrink-0">{config.name}</span>
+                        <div className="h-2.5 flex-1 rounded-full bg-foreground/10">
+                          <div className="h-2.5 flex rounded-full overflow-hidden" style={{ width: `${capacity}%` }}>
+                            <div className={cn("h-full", config.tailwind.bg)} style={{ width: `${(output / capacity) * 100}%` }} />
+                            <div className={cn("h-full opacity-30", config.tailwind.bg)} style={{ width: `${((capacity - output) / capacity) * 100}%` }} />
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
-              <p className="text-xs text-muted-foreground mt-1.5">
-                It is almost always cheaper to run an extra generator than to leave
-                customers without power.
-              </p>
+
+              <div className="rounded-lg border p-2.5 bg-card/50 text-xs mt-2">
+                <span className="font-semibold">Costs</span> <span className="text-muted-foreground">— Each running unit charges a <strong className="text-foreground">fixed cost</strong> per hour plus a <strong className="text-foreground">fuel cost</strong> per MW. Unserved load incurs a steep <strong className="text-foreground">penalty</strong>. Your goal is to minimize total cost while keeping the lights on.</span>
+              </div>
             </div>
           </div>
         </div>
@@ -455,73 +687,37 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
       icon: Lightbulb,
       subtitle: "Practical advice for keeping the lights on and costs down.",
       content: (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
-          <div>
-            <SectionLabel>Keeping the Lights On</SectionLabel>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5">
-                <Zap className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Maintain 500+ MW reserves</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">This buffer absorbs sudden changes like a line tripping or generation dropping.</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Zap className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Start units early</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Thermal units take minutes to warm up. Begin startup before demand peaks.</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Zap className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Watch overloaded lines</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Yellow or red lines can trip at any moment, causing cascading failures.</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <Zap className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Read the alerts</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">The bell icon warns you before problems become emergencies.</p>
-                </div>
-              </li>
-            </ul>
+        <div className="space-y-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-4">
+            <div className="flex items-start gap-2.5">
+              <Clock className="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-semibold leading-tight">Start units early</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Thermal units take minutes to warm up. Begin startup before demand peaks.</p>
+              </div>
+            </div>
+            <div className="flex items-start gap-2.5">
+              <Power className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
+              <div>
+                <p className="text-sm font-semibold leading-tight">Shut down idle units</p>
+                <p className="text-xs text-muted-foreground mt-0.5">Every running generator has a fixed cost. Turn off what you don&apos;t need.</p>
+              </div>
+            </div>
           </div>
 
-          <div>
-            <SectionLabel>Minimizing Costs</SectionLabel>
-            <ul className="space-y-3">
-              <li className="flex items-start gap-2.5">
-                <TrendingUp className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Use zero-cost fuel sources</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Wind and solar have no fuel charges — use them whenever they&apos;re available.</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <TrendingUp className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Shut down idle units</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Every running generator has a fixed cost. Turn off what you don&apos;t need.</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <TrendingUp className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Avoid unserved load</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">The penalty for dropping customers is far more expensive than any generator.</p>
-                </div>
-              </li>
-              <li className="flex items-start gap-2.5">
-                <TrendingUp className="h-4 w-4 text-primary flex-shrink-0 mt-0.5" aria-hidden="true" />
-                <div>
-                  <p className="text-sm font-semibold leading-tight">Match generation to load</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">Excess generation wastes fuel. Keep output balanced with demand.</p>
-                </div>
-              </li>
-            </ul>
+          <div className="rounded-lg border p-3 bg-card/50">
+            <SectionLabel>Keyboard Shortcuts</SectionLabel>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
+              <div><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">Space</Badge> Pause / Resume</div>
+              <div><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">F</Badge> Fast forward (10x)</div>
+              <div><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">E</Badge> Emergency load shed</div>
+              <div><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">L</Badge> Trip overloaded line</div>
+              <div><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">K</Badge> Shed smallest load</div>
+              <div><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">R</Badge> Ramp up generation</div>
+              <div><Badge variant="secondary" className="mr-1.5 font-mono text-[10px]">C</Badge> Center on selection</div>
+              <div><Badge variant="outline" className="mr-1.5 text-[10px]">Click + Drag</Badge> Pan</div>
+              <div><Badge variant="outline" className="mr-1.5 text-[10px]">Scroll</Badge> Zoom</div>
+            </div>
           </div>
         </div>
       ),
@@ -532,14 +728,6 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
 
   const goToNextPage = () => setCurrentPage(prev => Math.min(prev + 1, totalPages - 1));
   const goToPrevPage = () => setCurrentPage(prev => Math.max(prev - 1, 0));
-
-  // Reset generator demo when leaving that page
-  const GENERATOR_CONTROLS_PAGE = 2;
-  useEffect(() => {
-    if (!open || currentPage !== GENERATOR_CONTROLS_PAGE) {
-      setDemoSetpoint(65);
-    }
-  }, [open, currentPage]);
 
   // Reset to first page when modal opens
   useEffect(() => {
@@ -552,7 +740,7 @@ export function HelpModal({ open, onOpenChange }: HelpModalProps) {
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent id="help-modal" className="sm:max-w-3xl font-share-tech max-h-[85vh] flex flex-col">
+      <DialogContent id="help-modal" className="sm:max-w-3xl font-sans max-h-[85vh] flex flex-col" overlayClassName="bg-black/70">
         <DialogHeader className="flex-shrink-0">
           <DialogTitle className="text-xl font-bold flex items-center gap-2">
             <PageIcon className="h-5 w-5 text-primary" aria-hidden="true" />

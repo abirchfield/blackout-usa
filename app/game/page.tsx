@@ -15,31 +15,32 @@ import { GameEngine } from "@/lib/engine"
 import { AppHeader } from "@/components/game/header"
 import { KeyStats, Dashboard } from "@/components/game/dashboard"
 import { DayTimeDisplay } from "@/components/game/day-time-display"
-import { SubstationModal } from "@/components/modals/substation-modal"
-import { BranchModal } from "@/components/modals/branch-modal"
+import { ForecastPanel } from "@/components/game/forecast-bar"
+import { GridModal } from "@/components/modals/grid-modal"
 import { QuitModal } from "@/components/modals/quit-modal"
 import { AccessibilityModal } from "@/components/modals/accessibility-modal"
 import { NotificationDialog } from "@/components/modals/notification-dialog"
 import { SubstationsList } from "@/components/tables/substation-table"
 import { BranchesList } from "@/components/tables/branch-table"
-import { SubstationIcon } from "@/components/icons/substation-icon"
-import { LinesIcon } from "@/components/icons/lines-icon"
 import { HelpModal } from "@/components/modals/help-modal"
 import { DayTransitionModal } from "@/components/modals/day-transition-modal"
 import { ErrorBoundary } from "@/components/error-boundary"
+import { DEFAULT_CASE } from "@/data/_out/registry"
 
 const isStaticExport = process.env.NODE_ENV === 'production';
 
 /**
  * Outer shell: creates the engine and provides it via context.
  *
- * On the first render the SVG container is shown bare so the engine effect
+ * On the first render the canvas container is shown bare so the engine effect
  * can attach to it. Once the engine is ready, GameUI mounts and reparents
- * the SVG into its layout.
+ * the canvas into its layout.
  */
 function GamePageContent() {
+  const searchParams = useSearchParams();
+  const caseName = searchParams.get('case') ?? DEFAULT_CASE;
   const initRef = useRef<HTMLDivElement>(null);
-  const engine = useCreateEngine(initRef);
+  const engine = useCreateEngine(initRef, caseName);
 
   return (
     <EngineContext.Provider value={engine}>
@@ -47,7 +48,7 @@ function GamePageContent() {
         {engine ? (
           <GameUI engine={engine} />
         ) : (
-          /* Temporary container — the engine attaches its SVG here on mount. */
+          /* Temporary container — the engine attaches its canvas here on mount. */
           <div ref={initRef} className="flex-1" />
         )}
       </div>
@@ -60,10 +61,11 @@ function GamePageContent() {
  * context provider.
  */
 function GameUI({ engine }: { engine: GameEngine }) {
-  // --- Reparent SVG into the real layout container ---
-  const svgRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    if (svgRef.current) engine.reparent(svgRef.current);
+  // --- Reparent canvas into the real layout container ---
+  // Callback ref ensures reparent fires whenever React mounts a new div
+  // (e.g. when isMobile flips and the layout swaps element order).
+  const mapRef = useCallback((node: HTMLDivElement | null) => {
+    if (node) engine.reparent(node);
   }, [engine]);
 
   // --- App Settings ---
@@ -83,7 +85,7 @@ function GameUI({ engine }: { engine: GameEngine }) {
 
   // --- Sync modal pause to engine ---
   useEffect(() => {
-    engine.setModalPaused(modals.isPausingModal);
+    engine.externalPaused = modals.isPausingModal;
   }, [engine, modals.isPausingModal]);
 
   // Sync config to engine
@@ -97,14 +99,14 @@ function GameUI({ engine }: { engine: GameEngine }) {
     });
   }, [engine, resolvedTheme, settings.animationsEnabled, settings.renderMapLabels, settings.keyBindings, settings.zoomSensitivity]);
 
-  // --- Interaction (SVG click → open modal) ---
+  // --- Interaction (map click → open modal) ---
   const handleSubstationSelect = useCallback((sub: Substation) => {
-    modals.openModal('substation', { substationId: sub.Number });
+    modals.openModal('grid', { substationId: sub.Number });
     setAnnouncement(`Opened modal for ${sub.Name} substation.`);
   }, [modals]);
 
   const handleBranchSelect = useCallback((branch: Branch) => {
-    modals.openModal('branch', { branchId: branch.Number });
+    modals.openModal('grid', { branchId: branch.Number });
     setAnnouncement(`Opened modal for line from ${branch.sub1?.Name} to ${branch.sub2?.Name}.`);
   }, [modals]);
 
@@ -126,7 +128,7 @@ function GameUI({ engine }: { engine: GameEngine }) {
     if (dayTransitionId === prevTransitionIdRef.current) return;
     prevTransitionIdRef.current = dayTransitionId;
     if (engine.dayPhase === 'briefing') {
-      modals.replaceModal('day-briefing', { targetDay: engine.targetDay, briefing: engine.currentBriefing });
+      modals.replaceModal('day-briefing', { targetDay: engine.targetDay, info: engine.currentInfo });
     } else if (engine.dayPhase === 'results') {
       modals.replaceModal('day-results', { targetDay: engine.targetDay, resultDetails: engine.lastResults, gameStatistics: engine.lastResultStats ?? undefined });
       setAnnouncement(`Day ${engine.targetDay} complete.`);
@@ -145,9 +147,8 @@ function GameUI({ engine }: { engine: GameEngine }) {
   }, []);
 
   const openBriefing = useCallback(() => {
-    const stats = engine.getStats();
-    const briefing = engine.getBriefingForDay(stats.day);
-    modals.openModal('day-briefing', { targetDay: stats.day, briefing });
+    const info = engine.getInfoForDay(engine.stats.day);
+    modals.openModal('day-briefing', { targetDay: engine.stats.day, info });
   }, [engine, modals]);
 
   // --- Input Handling ---
@@ -163,11 +164,11 @@ function GameUI({ engine }: { engine: GameEngine }) {
   // --- Layout ---
   const SidebarPanel = (
     <aside
-      className={cn("bg-sidebar overflow-y-auto", isMobile ? "border-t-4 border-border" : "w-[400px] flex-shrink-0 border-r border-border")}
+      className={cn("bg-sidebar overflow-y-auto", isMobile ? "border-t-4 border-border" : "w-[clamp(280px,35%,400px)] flex-shrink-0 border-r border-border")}
       role="complementary"
       aria-label="Game Sidebar"
     >
-      <div className="font-share-tech flex flex-col p-4 h-full">
+      <div className="font-sans flex flex-col p-4 h-full">
         <SidebarContent />
       </div>
     </aside>
@@ -175,14 +176,19 @@ function GameUI({ engine }: { engine: GameEngine }) {
 
   const MainPanel = (
     <main className="flex-1 min-w-0 h-full flex flex-col" aria-label="Main game area">
-      <div className="font-share-tech relative flex-1 w-full h-full flex flex-col">
+      <div className="font-sans relative flex-1 w-full h-full flex flex-col">
         {settings.viewMode !== 'tabular' && (
-          <div className="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-5 py-2.5 rounded-md border border-border/50 shadow-sm">
-            <MapTimeOverlay />
-          </div>
+          <>
+            <div className="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-5 py-2.5 rounded-md border border-border/50 shadow-sm">
+              <MapTimeOverlay />
+            </div>
+            <div className="absolute top-4 right-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm rounded-md border border-border/50 shadow-md hidden sm:block w-[min(45%,380px)]">
+              <ForecastOverlay />
+            </div>
+          </>
         )}
         <div
-          ref={svgRef}
+          ref={mapRef}
           tabIndex={0}
           aria-label="Interactive Texas electrical grid map"
           role="application"
@@ -232,17 +238,10 @@ function GameUI({ engine }: { engine: GameEngine }) {
           onSettingsChange={updateSettings}
         />
       )}
-      {modals.isOpen('substation') && (
-        <SubstationModal
+      {modals.isOpen('grid') && (
+        <GridModal
           open={true}
-          subId={modals.payload.substationId}
-          onClose={modals.closeModal}
-          isHighContrast={settings.isHighContrast}
-        />
-      )}
-      {modals.isOpen('branch') && (
-        <BranchModal
-          open={true}
+          substationId={modals.payload.substationId}
           branchId={modals.payload.branchId}
           onClose={modals.closeModal}
           isHighContrast={settings.isHighContrast}
@@ -252,7 +251,7 @@ function GameUI({ engine }: { engine: GameEngine }) {
         <QuitModal
           open={true}
           onOpenChange={(open) => modals.onOpenChange('quit', open)}
-          day={engine.state.day}
+          day={engine.targetDay}
           onQuitToStart={() => router.push(isStaticExport ? './index.html' : '/')}
           onReplayDay={(day: number) => engine.navigateToDay(day)}
           onNextDay={() => engine.advanceToNextDay()}
@@ -264,11 +263,11 @@ function GameUI({ engine }: { engine: GameEngine }) {
           open={true}
           mode={modals.isOpen('day-results') ? 'results' : 'briefing'}
           targetDay={modals.payload.targetDay ?? 1}
-          briefing={modals.payload.briefing}
+          info={modals.payload.info}
           resultDetails={modals.payload.resultDetails}
-          gameStatistics={modals.payload.gameStatistics ?? engine.getStats()}
+          gameStatistics={modals.payload.gameStatistics ?? engine.stats}
           isHighContrast={settings.isHighContrast}
-          onStartDay={() => { engine.beginDay(); modals.closeModal(); }}
+          onStartDay={() => { engine.startDay(); modals.closeModal(); }}
           onClose={modals.closeModal}
           onReplayDay={(day: number) => engine.navigateToDay(day)}
           onNextDay={() => engine.advanceToNextDay()}
@@ -309,6 +308,10 @@ function MapTimeOverlay() {
   return <DayTimeDisplay day={stats.day} timeStr={stats.timeStr} idPrefix="vis" size="lg" />;
 }
 
+function ForecastOverlay() {
+  return <ForecastPanel />;
+}
+
 function TabularView({ onSubstationSelect, onBranchSelect }: {
   onSubstationSelect: (sub: Substation) => void;
   onBranchSelect: (branch: Branch) => void;
@@ -317,10 +320,10 @@ function TabularView({ onSubstationSelect, onBranchSelect }: {
   const subs = useStore(e => e.state.subs);
   const branches = useStore(e => e.state.branches);
   return (
-    <div className="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-share-tech">
+    <div className="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-sans">
       <div className="flex-1 border-b md:border-b-0 md:border-r p-4 flex flex-col min-h-0">
         <div className="flex justify-between items-baseline mb-4">
-          <h2 className="text-xl font-bold uppercase text-muted-foreground flex items-center gap-2"><SubstationIcon className="h-5 w-5" aria-hidden="true" />Substations</h2>
+          <h2 className="text-xl font-bold uppercase text-muted-foreground">Substations</h2>
           <DayTimeDisplay day={stats.day} timeStr={stats.timeStr} idPrefix="tab" size="sm" />
         </div>
         <div className="flex-1 overflow-y-auto -mr-4 pr-4">
@@ -328,7 +331,7 @@ function TabularView({ onSubstationSelect, onBranchSelect }: {
         </div>
       </div>
       <div className="flex-1 p-4 flex flex-col min-h-0">
-        <h2 className="text-xl font-bold mb-4 uppercase text-muted-foreground flex items-center gap-2"><LinesIcon className="h-7 w-7" aria-hidden="true" />Transmission Lines</h2>
+        <h2 className="text-xl font-bold mb-4 uppercase text-muted-foreground">Transmission Lines</h2>
         <div className="flex-1 overflow-y-auto -mr-4 pr-4">
           <BranchesList branches={branches} onBranchSelect={onBranchSelect} />
         </div>

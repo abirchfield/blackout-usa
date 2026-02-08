@@ -1,0 +1,13 @@
+{
+  "name": "Hawaii",
+  "referenceBus": "WAIPAHU",
+  "timeConfig": { "startHour": 13 },
+  "mapConfig": {
+    "bounds": {
+      "xMin": -158.25961145,
+      "xMax": -157.61428755,
+      "yMin": 21.199001550000002,
+      "yMax": 21.733152449999995
+    }
+  }
+}

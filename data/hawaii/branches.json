@@ -1,0 +1,541 @@
+[
+  {
+    "Number": 1,
+    "FromBus": "ALOHA",
+    "ToBus": "HONOLULU",
+    "Z": 47.8171,
+    "Pmax": 232.80000686645508
+  },
+  {
+    "Number": 2,
+    "FromBus": "ALOHA",
+    "ToBus": "HONOLULU",
+    "Z": 47.8171,
+    "Pmax": 232.80000686645508
+  },
+  {
+    "Number": 3,
+    "FromBus": "ALOHA",
+    "ToBus": "WAIPAHU",
+    "Z": 41.3685,
+    "Pmax": 177.7999997138977
+  },
+  {
+    "Number": 4,
+    "FromBus": "ALOHA",
+    "ToBus": "EWA BEACH",
+    "Z": 63.2991,
+    "Pmax": 217.00000762939453
+  },
+  {
+    "Number": 5,
+    "FromBus": "ALOHA",
+    "ToBus": "EWA BEACH",
+    "Z": 63.2991,
+    "Pmax": 217.00000762939453
+  },
+  {
+    "Number": 6,
+    "FromBus": "ALOHA",
+    "ToBus": "KALAELOA",
+    "Z": 23.8538,
+    "Pmax": 281.5999984741211
+  },
+  {
+    "Number": 7,
+    "FromBus": "ALOHA",
+    "ToBus": "KALAELOA",
+    "Z": 23.8538,
+    "Pmax": 281.5999984741211
+  },
+  {
+    "Number": 8,
+    "FromBus": "ALOHA",
+    "ToBus": "WAVE",
+    "Z": 12.6013,
+    "Pmax": 66.79999828338623
+  },
+  {
+    "Number": 9,
+    "FromBus": "ALOHA",
+    "ToBus": "HONOLULU",
+    "Z": 17.0648,
+    "Pmax": 81.99999928474426
+  },
+  {
+    "Number": 10,
+    "FromBus": "ALOHA",
+    "ToBus": "HONOLULU",
+    "Z": 17.0648,
+    "Pmax": 81.99999928474426
+  },
+  {
+    "Number": 11,
+    "FromBus": "ALOHA",
+    "ToBus": "SURF",
+    "Z": 13.2116,
+    "Pmax": 77.7999997138977
+  },
+  {
+    "Number": 12,
+    "FromBus": "ALOHA",
+    "ToBus": "AIEA",
+    "Z": 12.9304,
+    "Pmax": 94.80000138282776
+  },
+  {
+    "Number": 13,
+    "FromBus": "ALOHA",
+    "ToBus": "WAIPAHU",
+    "Z": 12.3411,
+    "Pmax": 101.30000114440918
+  },
+  {
+    "Number": 14,
+    "FromBus": "ALOHA",
+    "ToBus": "WAIPAHU",
+    "Z": 12.3411,
+    "Pmax": 101.30000114440918
+  },
+  {
+    "Number": 15,
+    "FromBus": "ALOHA",
+    "ToBus": "WAIPAHU",
+    "Z": 12.3411,
+    "Pmax": 101.30000114440918
+  },
+  {
+    "Number": 16,
+    "FromBus": "ALOHA",
+    "ToBus": "EWA BEACH",
+    "Z": 15.1249,
+    "Pmax": 61.69999837875366
+  },
+  {
+    "Number": 17,
+    "FromBus": "ALOHA",
+    "ToBus": "EWA BEACH",
+    "Z": 15.1249,
+    "Pmax": 61.69999837875366
+  },
+  {
+    "Number": 18,
+    "FromBus": "FLOWER",
+    "ToBus": "HONOLULU",
+    "Z": 27.2554,
+    "Pmax": 85.00000238418579
+  },
+  {
+    "Number": 19,
+    "FromBus": "FLOWER",
+    "ToBus": "HONOLULU",
+    "Z": 27.2554,
+    "Pmax": 85.00000238418579
+  },
+  {
+    "Number": 20,
+    "FromBus": "FLOWER",
+    "ToBus": "PALM",
+    "Z": 15.727,
+    "Pmax": 82.8000009059906
+  },
+  {
+    "Number": 21,
+    "FromBus": "FLOWER",
+    "ToBus": "PEARL CITY",
+    "Z": 32.0215,
+    "Pmax": 91.60000085830688
+  },
+  {
+    "Number": 22,
+    "FromBus": "FLOWER",
+    "ToBus": "PEARL CITY",
+    "Z": 32.0215,
+    "Pmax": 91.60000085830688
+  },
+  {
+    "Number": 23,
+    "FromBus": "FLOWER",
+    "ToBus": "PEARL CITY",
+    "Z": 32.0215,
+    "Pmax": 91.60000085830688
+  },
+  {
+    "Number": 24,
+    "FromBus": "FLOWER",
+    "ToBus": "AIEA",
+    "Z": 21.0491,
+    "Pmax": 49.000000953674316
+  },
+  {
+    "Number": 25,
+    "FromBus": "WAVE",
+    "ToBus": "COCONUT",
+    "Z": 25.9835,
+    "Pmax": 53.200000524520874
+  },
+  {
+    "Number": 26,
+    "FromBus": "HONOLULU",
+    "ToBus": "TURTLE",
+    "Z": 82.9325,
+    "Pmax": 170.70000171661377
+  },
+  {
+    "Number": 27,
+    "FromBus": "HONOLULU",
+    "ToBus": "KAILUA",
+    "Z": 25.7632,
+    "Pmax": 162.5
+  },
+  {
+    "Number": 28,
+    "FromBus": "HONOLULU",
+    "ToBus": "MAHALO",
+    "Z": 23.5877,
+    "Pmax": 88.99999856948853
+  },
+  {
+    "Number": 29,
+    "FromBus": "HONOLULU",
+    "ToBus": "LYCHEE",
+    "Z": 30.1287,
+    "Pmax": 58.799999952316284
+  },
+  {
+    "Number": 30,
+    "FromBus": "HONOLULU",
+    "ToBus": "LYCHEE",
+    "Z": 30.1287,
+    "Pmax": 58.799999952316284
+  },
+  {
+    "Number": 31,
+    "FromBus": "SURF",
+    "ToBus": "HONOLULU",
+    "Z": 100.0,
+    "Pmax": 40.20000100135803
+  },
+  {
+    "Number": 32,
+    "FromBus": "SURF",
+    "ToBus": "HONOLULU",
+    "Z": 100.0,
+    "Pmax": 40.20000100135803
+  },
+  {
+    "Number": 33,
+    "FromBus": "SURF",
+    "ToBus": "HONOLULU",
+    "Z": 100.0,
+    "Pmax": 40.20000100135803
+  },
+  {
+    "Number": 34,
+    "FromBus": "SURF",
+    "ToBus": "TURTLE",
+    "Z": 100.0,
+    "Pmax": 50.0
+  },
+  {
+    "Number": 35,
+    "FromBus": "SURF",
+    "ToBus": "COCONUT",
+    "Z": 36.0933,
+    "Pmax": 40.20000100135803
+  },
+  {
+    "Number": 36,
+    "FromBus": "SURF",
+    "ToBus": "COCONUT",
+    "Z": 36.0933,
+    "Pmax": 40.20000100135803
+  },
+  {
+    "Number": 37,
+    "FromBus": "SURF",
+    "ToBus": "COCONUT",
+    "Z": 36.0933,
+    "Pmax": 40.20000100135803
+  },
+  {
+    "Number": 38,
+    "FromBus": "KANEOHE",
+    "ToBus": "KAILUA",
+    "Z": 13.1843,
+    "Pmax": 84.89999771118164
+  },
+  {
+    "Number": 39,
+    "FromBus": "KANEOHE",
+    "ToBus": "PEARL CITY",
+    "Z": 9.7596,
+    "Pmax": 89.99999761581421
+  },
+  {
+    "Number": 40,
+    "FromBus": "KANEOHE",
+    "ToBus": "PEARL CITY",
+    "Z": 9.7596,
+    "Pmax": 89.99999761581421
+  },
+  {
+    "Number": 41,
+    "FromBus": "TURTLE",
+    "ToBus": "KAILUA",
+    "Z": 26.4215,
+    "Pmax": 169.29999589920044
+  },
+  {
+    "Number": 42,
+    "FromBus": "MAHALO",
+    "ToBus": "COCONUT",
+    "Z": 20.9332,
+    "Pmax": 45.3000009059906
+  },
+  {
+    "Number": 43,
+    "FromBus": "MAHALO",
+    "ToBus": "KAILUA",
+    "Z": 14.4465,
+    "Pmax": 48.60000014305115
+  },
+  {
+    "Number": 44,
+    "FromBus": "LYCHEE",
+    "ToBus": "KAILUA",
+    "Z": 24.1173,
+    "Pmax": 76.99999809265137
+  },
+  {
+    "Number": 45,
+    "FromBus": "LYCHEE",
+    "ToBus": "WAIMANALO",
+    "Z": 15.3043,
+    "Pmax": 49.90000128746033
+  },
+  {
+    "Number": 46,
+    "FromBus": "COCONUT",
+    "ToBus": "PALM",
+    "Z": 30.7248,
+    "Pmax": 51.99999809265137
+  },
+  {
+    "Number": 47,
+    "FromBus": "PALM",
+    "ToBus": "VOLCANO",
+    "Z": 25.492,
+    "Pmax": 51.70000195503235
+  },
+  {
+    "Number": 48,
+    "FromBus": "WAIMANALO",
+    "ToBus": "VOLCANO",
+    "Z": 33.6089,
+    "Pmax": 47.90000021457672
+  },
+  {
+    "Number": 49,
+    "FromBus": "PEARL CITY",
+    "ToBus": "WAIPAHU",
+    "Z": 32.8418,
+    "Pmax": 100.3000020980835
+  },
+  {
+    "Number": 50,
+    "FromBus": "PEARL CITY",
+    "ToBus": "WAIPAHU",
+    "Z": 32.8418,
+    "Pmax": 100.3000020980835
+  },
+  {
+    "Number": 51,
+    "FromBus": "PEARL CITY",
+    "ToBus": "WAIPAHU",
+    "Z": 32.8418,
+    "Pmax": 100.3000020980835
+  },
+  {
+    "Number": 52,
+    "FromBus": "PEARL CITY",
+    "ToBus": "WAIPAHU",
+    "Z": 32.8418,
+    "Pmax": 100.3000020980835
+  },
+  {
+    "Number": 53,
+    "FromBus": "MILILANI",
+    "ToBus": "WAIPAHU",
+    "Z": 13.3611,
+    "Pmax": 85.79999804496765
+  },
+  {
+    "Number": 54,
+    "FromBus": "MILILANI",
+    "ToBus": "WAHIAWA",
+    "Z": 14.6013,
+    "Pmax": 64.3999993801117
+  },
+  {
+    "Number": 55,
+    "FromBus": "MILILANI",
+    "ToBus": "HAUULA",
+    "Z": 25.0526,
+    "Pmax": 51.99999809265137
+  },
+  {
+    "Number": 56,
+    "FromBus": "WAIPAHU",
+    "ToBus": "EWA BEACH",
+    "Z": 56.5643,
+    "Pmax": 276.99999809265137
+  },
+  {
+    "Number": 57,
+    "FromBus": "WAIPAHU",
+    "ToBus": "KAHE",
+    "Z": 24.4852,
+    "Pmax": 292.8999900817871
+  },
+  {
+    "Number": 58,
+    "FromBus": "WAIPAHU",
+    "ToBus": "SCHOFIELD",
+    "Z": 10.9027,
+    "Pmax": 74.40000176429749
+  },
+  {
+    "Number": 59,
+    "FromBus": "WAIPAHU",
+    "ToBus": "SCHOFIELD",
+    "Z": 10.9027,
+    "Pmax": 74.40000176429749
+  },
+  {
+    "Number": 60,
+    "FromBus": "KAPOLEI",
+    "ToBus": "EWA BEACH",
+    "Z": 18.6986,
+    "Pmax": 65.6000018119812
+  },
+  {
+    "Number": 61,
+    "FromBus": "KAPOLEI",
+    "ToBus": "EWA BEACH",
+    "Z": 18.6986,
+    "Pmax": 65.6000018119812
+  },
+  {
+    "Number": 62,
+    "FromBus": "KAPOLEI",
+    "ToBus": "WAIANAE",
+    "Z": 30.1287,
+    "Pmax": 69.49999928474426
+  },
+  {
+    "Number": 63,
+    "FromBus": "KAPOLEI",
+    "ToBus": "COGEN",
+    "Z": 26.6304,
+    "Pmax": 48.69999885559082
+  },
+  {
+    "Number": 64,
+    "FromBus": "EWA BEACH",
+    "ToBus": "KALAELOA",
+    "Z": 40.95,
+    "Pmax": 201.39999389648438
+  },
+  {
+    "Number": 65,
+    "FromBus": "EWA BEACH",
+    "ToBus": "KALAELOA",
+    "Z": 40.95,
+    "Pmax": 201.39999389648438
+  },
+  {
+    "Number": 66,
+    "FromBus": "EWA BEACH",
+    "ToBus": "KAHE",
+    "Z": 38.2482,
+    "Pmax": 224.00000095367432
+  },
+  {
+    "Number": 67,
+    "FromBus": "EWA BEACH",
+    "ToBus": "KAHE",
+    "Z": 38.2482,
+    "Pmax": 224.00000095367432
+  },
+  {
+    "Number": 68,
+    "FromBus": "KAHUKU",
+    "ToBus": "LAIE",
+    "Z": 23.347,
+    "Pmax": 67.5000011920929
+  },
+  {
+    "Number": 69,
+    "FromBus": "HALEIWA",
+    "ToBus": "WAHIAWA",
+    "Z": 31.8512,
+    "Pmax": 69.9999988079071
+  },
+  {
+    "Number": 70,
+    "FromBus": "HALEIWA",
+    "ToBus": "WAHIAWA",
+    "Z": 31.8512,
+    "Pmax": 69.9999988079071
+  },
+  {
+    "Number": 71,
+    "FromBus": "HALEIWA",
+    "ToBus": "WAIALUA",
+    "Z": 9.5526,
+    "Pmax": 58.30000042915344
+  },
+  {
+    "Number": 72,
+    "FromBus": "LAIE",
+    "ToBus": "WAHIAWA",
+    "Z": 27.2807,
+    "Pmax": 49.300000071525574
+  },
+  {
+    "Number": 73,
+    "FromBus": "LAIE",
+    "ToBus": "HAUULA",
+    "Z": 16.3007,
+    "Pmax": 60.00000238418579
+  },
+  {
+    "Number": 74,
+    "FromBus": "WAIALUA",
+    "ToBus": "WAIANAE",
+    "Z": 17.3575,
+    "Pmax": 37.99999952316284
+  },
+  {
+    "Number": 75,
+    "FromBus": "WAIANAE",
+    "ToBus": "SCHOFIELD",
+    "Z": 11.9151,
+    "Pmax": 84.29999947547913
+  },
+  {
+    "Number": 76,
+    "FromBus": "WAIANAE",
+    "ToBus": "SCHOFIELD",
+    "Z": 11.9151,
+    "Pmax": 84.29999947547913
+  },
+  {
+    "Number": 77,
+    "FromBus": "KALAELOA",
+    "ToBus": "KAHE",
+    "Z": 119.4172,
+    "Pmax": 297.60000705718994
+  }
+]

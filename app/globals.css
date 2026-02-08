@@ -1,14 +1,27 @@
+/* =============================================
+   BlackoutUSA — Global Stylesheet (Ground Truth)
+   =============================================
+   Structure:
+     1. Tailwind imports & custom variant
+     2. Theme token mapping (@theme inline)
+     3. Color schemes (:root, .dark, .high-contrast, .dark.high-contrast)
+     4. Base layer defaults
+     5. Scrollbar styles
+     6. Game component styles (slider, high-contrast tabs)
+     7. Canvas & map layout
+   ============================================= */
+
 @import "tailwindcss";
 @import "tw-animate-css";
 
 @custom-variant dark (&:is(.dark *));
 
+/* --- 2. Theme Token Mapping --- */
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-share-tech: var(--font-share-tech);
+  --font-sans: 'Jura', sans-serif;
+  --font-mono: 'Geist Mono', monospace;
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -39,6 +52,7 @@
   --radius-xl: calc(var(--radius) + 4px);
 }
 
+/* --- 3a. Light Mode (default) --- */
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
@@ -74,6 +88,16 @@
   --color-alert: oklch(0.637 0.237 25.331); /* red-500 - notifications, errors */
   --color-alert-emphasis: oklch(0.577 0.245 27.325); /* red-600 - blackout text */
   --color-hint: oklch(0.769 0.188 70.08); /* amber-500 - hints */
+  /* Generation type colors (used by SVG grid map & theme config) */
+  --color-gen-nuclear: #c084fc;
+  --color-gen-thermal: #A08060;
+  --color-gen-wind: #22d3ee;
+  --color-gen-solar: #facc15;
+  --color-gen-load: #6b7280;
+  /* Map interaction colors */
+  --color-power-flow: #4ade80;
+  --color-line-hover: #60a5fa;
+  --color-tripped: #FF0000;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -84,6 +108,7 @@
   --sidebar-ring: oklch(0.708 0 0);
 }
 
+/* --- 3b. Dark Mode --- */
 .dark {
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
@@ -127,6 +152,7 @@
   --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* --- 3c. High Contrast (light) --- */
 .high-contrast {
   --background: oklch(1 0 0);
   --foreground: oklch(0 0 0);
@@ -170,6 +196,7 @@
   --sidebar-ring: oklch(0 0 0);
 }
 
+/* --- 3d. Dark + High Contrast --- */
 .dark.high-contrast {
   --background: oklch(0 0 0);
   --foreground: oklch(1 0 0);
@@ -213,6 +240,15 @@
   --sidebar-ring: oklch(1 0 0);
 }
 
+/* --- 3c. Numeric Utility ---
+   Monospace digits for rapidly-updating values (time, frequency, power).
+   Uses Geist Mono so every digit is exactly the same width. */
+@utility font-numeric {
+  font-family: var(--font-mono), ui-monospace, monospace;
+  font-variant-numeric: tabular-nums lining-nums;
+}
+
+/* --- 4. Base Layer Defaults --- */
 @layer base {
   * {
     @apply border-border;
@@ -231,7 +267,7 @@
 
 }
 
-/* Custom Scrollbar Styles */
+/* --- 5. Scrollbar Styles --- */
 /* For Webkit-based browsers (Chrome, Safari, Edge) */
 ::-webkit-scrollbar {
   width: 8px;
@@ -253,11 +289,7 @@
   background-color: var(--muted-foreground);
 }
 
-/* --- Game Styles (Ported from style.css) --- */
-
-.font-share-tech {
-  font-family: var(--font-share-tech), sans-serif;
-}
+/* --- 6. Game Component Styles --- */
 
 /* PowerSlider component styles */
 /* Make the slider track transparent so the actual output bar shows through */
@@ -318,217 +350,17 @@
   @apply outline outline-1 outline-offset-[-1px] outline-foreground;
 }
 
-/* =============================================
-   SVG Grid Map Styles
-   ============================================= */
+/* --- 7. Canvas & Map Layout --- */
 
-:root {
-  /* Generation type colors (used by SVG map) */
-  --color-gen-nuclear: #c084fc;
-  --color-gen-thermal: #A08060;
-  --color-gen-wind: #22d3ee;
-  --color-gen-solar: #facc15;
-  --color-gen-load: #6b7280;
-  --color-power-flow: #4ade80;
-  --color-line-hover: #60a5fa;
-  --color-tripped: #FF0000;
+/* Center modal over the canvas area (offset by half the sidebar width) */
+@media (min-width: 768px) {
+  .canvas-center {
+    left: calc(50% + clamp(280px, 35%, 400px) / 2);
+  }
 }
 
-/* SVG background */
-svg.grid-map {
+/* Canvas map background (prevents flash before first draw) */
+canvas.grid-map {
   background-color: var(--background);
-}
-
-/* Layer containment: changes within a layer don't trigger style recalc in siblings */
-#branches-layer,
-#substations-layer {
-  contain: layout style;
-}
-
-/* --- Branch Lines: static properties via CSS --- */
-#branches-layer line {
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
-}
-/* flow-fg uses world-unit dash patterns — opt out of non-scaling-stroke */
-#branches-layer line.flow-fg {
-  vector-effect: initial;
-}
-
-/* Base line default color */
-.circuit .base {
-  stroke: var(--foreground);
-}
-
-/* Hovered circuit: base line uses a distinct blue (differs from green flow packets) */
-.circuit[data-hovered] .base {
-  stroke: var(--color-line-hover);
-}
-
-/* Overload styling on base line: distinct colors and line patterns per level */
-[data-overload="warning"] .circuit .base {
-  stroke: var(--color-warning);
-}
-[data-overload="critical"] .circuit .base {
-  stroke: var(--color-overload-critical);
-  stroke-dasharray: 8,4;
-}
-
-/* --- Circuit Status Styling --- */
-
-/* DIS: dashed base line to indicate disconnected */
-.circuit[data-status="DIS"] .base {
-  stroke-dasharray: 5,5;
-}
-.circuit[data-status="DIS"] .flow-fg {
-  visibility: hidden;
-}
-
-/* TRIP: red dashed base line, flow hidden */
-.circuit[data-status="TRIP"] .base {
-  stroke: var(--color-tripped) !important;
-  stroke-dasharray: 5,5;
-}
-.circuit[data-status="TRIP"] .flow-fg {
-  visibility: hidden;
-}
-
-/* --- Power Flow Animation (world-unit dash pattern, JS-driven offset) --- */
-
-/* flow-fg lives in world coordinates (no non-scaling-stroke) so the dash
-   pattern scales naturally with the SVG transform — no per-zoom CSS updates.
-   --half-len is the world-unit half-length (set once per circuit).
-   --flow-offset is the accumulated animation offset in world units. */
-
-/* Forward-flowing circuits */
-.circuit[data-flow-dir="flow-forward"][data-animated] .flow-fg {
-  stroke-dashoffset: calc(var(--half-len, 0) - var(--flow-offset, 0));
-}
-/* Reverse-flowing circuits */
-.circuit[data-flow-dir="flow-reverse"][data-animated] .flow-fg {
-  stroke-dashoffset: calc(var(--half-len, 0) + var(--flow-offset, 0));
-}
-
-/* flow-fg: bright packet with round caps over the static base line */
-.circuit[data-animated] .flow-fg {
-  stroke: var(--color-power-flow);
-  stroke-dasharray: 0.2 0.44;
-  stroke-linecap: round;
-  visibility: visible;
-}
-
-/* Non-animated IN circuits: flow line hidden */
-.circuit[data-status="IN"]:not([data-animated]) .flow-fg {
-  visibility: hidden;
-}
-
-/* --- Border Polyline --- */
-#world-transform > polyline {
-  fill: none;
-  stroke: var(--foreground);
-  vector-effect: non-scaling-stroke;
-  pointer-events: none;
-}
-
-/* --- Substation Text Labels --- */
-#substations-layer text {
-  font-family: 'Share Tech', monospace;
-  paint-order: stroke;
-  stroke-linejoin: round;
-  pointer-events: none;
-  fill: var(--foreground);
-  stroke: var(--background);
-}
-
-/* Hover font size */
-#substations-layer [data-hovered] text {
-  font-size: 20px;
-}
-#substations-layer [data-sub-id]:not([data-hovered]) text {
-  font-size: 15px;
-}
-
-/* --- Substation Backgrounds --- */
-.sub-bg {
-  fill: var(--background);
-}
-/* Load substations: inner background matches canvas (like generators),
-   the gray color comes from the outer ring */
-
-
-/* --- Substation Pie Chart Wedge --- */
-.sub-pie {
-  stroke: none;
-}
-
-/* --- Substation Border Circles --- */
-.sub-border {
-  fill: none;
-}
-
-/* Load border, pie, and outer ring color (gray) */
-[data-category="load"] .sub-border {
-  stroke: var(--color-gen-load);
-}
-[data-category="load"] .sub-pie {
-  fill: var(--color-gen-load);
-}
-[data-category="load"] .outer-ring {
-  stroke: var(--color-gen-load);
-  fill: var(--color-gen-load);
-}
-
-/* Generator category colors: border (stroke-only), pie (fill-only), outer ring (filled) */
-[data-category="nuclear"] .sub-border { stroke: var(--color-gen-nuclear); }
-[data-category="nuclear"] .sub-pie { fill: var(--color-gen-nuclear); }
-[data-category="nuclear"] .outer-ring { stroke: var(--color-gen-nuclear); fill: var(--color-gen-nuclear); }
-
-[data-category="thermal"] .sub-border { stroke: var(--color-gen-thermal); }
-[data-category="thermal"] .sub-pie { fill: var(--color-gen-thermal); }
-[data-category="thermal"] .outer-ring { stroke: var(--color-gen-thermal); fill: var(--color-gen-thermal); }
-
-[data-category="wind"] .sub-border { stroke: var(--color-gen-wind); }
-[data-category="wind"] .sub-pie { fill: var(--color-gen-wind); }
-[data-category="wind"] .outer-ring { stroke: var(--color-gen-wind); fill: var(--color-gen-wind); }
-
-[data-category="solar"] .sub-border { stroke: var(--color-gen-solar); }
-[data-category="solar"] .sub-pie { fill: var(--color-gen-solar); }
-[data-category="solar"] .outer-ring { stroke: var(--color-gen-solar); fill: var(--color-gen-solar); }
-
-/* Outer ring background is always white outline */
-.outer-ring-bg {
-  fill: none;
-  stroke: #FFFFFF;
-}
-
-/* Tripped state overrides category colors */
-[data-tripped] .sub-border,
-[data-tripped] .outer-ring {
-  stroke: var(--color-tripped) !important;
-  fill: var(--color-tripped) !important;
-}
-[data-tripped] .sub-pie {
-  visibility: hidden !important;
-}
-
-/* --- Hover Label --- */
-#hover-label-layer text {
-  font-family: 'Share Tech', monospace;
-  font-size: 20px;
-  paint-order: stroke;
-  stroke-linejoin: round;
-  pointer-events: none;
-  fill: var(--foreground);
-  stroke: var(--background);
-}
-
-/* Hover label overload colors */
-#hover-label-layer text[data-label-status="warning"] {
-  fill: var(--color-warning);
-}
-#hover-label-layer text[data-label-status="critical"] {
-  fill: var(--color-overload-critical);
-}
-#hover-label-layer text[data-label-status="tripped"] {
-  fill: var(--color-tripped);
+  cursor: default;
 }

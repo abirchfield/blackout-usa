@@ -20,15 +20,13 @@ interface LoadUnitDetailsProps {
   isPaused?: boolean;
 }
 
-const loadCategories = Object.values(LoadCategoryType);
-
 /**
  * Renders the detailed view and controls for a single load unit (circuit).
  */
 export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: LoadUnitDetailsProps) {
   const config = StatusConfig[unit.Status];
   const StatusIcon = config.icon;
-  const category = loadCategories[index % loadCategories.length];
+  const category = unit.LoadCategory ?? LoadCategoryType.Residential;
   const { icon: TypeIcon, name: typeName, tailwind } = LoadTypeConfig[category];
   const mwSuffix = <span className="text-xs text-muted-foreground ml-1">MW</span>;
 
@@ -60,6 +58,18 @@ export function LoadUnitDetails({ sub, unit, index, onUnitAction, isPaused }: Lo
       </td>
       <td className="p-2 font-mono align-middle text-right">
         {unit.Status === UnitStatus.IN ? <>{unit.P.toFixed(0)}{mwSuffix}</> : '---'}
+      </td>
+      <td className="p-2 align-middle">
+        {unit.Status === UnitStatus.IN && unit.Pmax > 0 ? (
+          <div className="flex items-center gap-2" title={`Loading: ${((unit.P / unit.Pmax) * 100).toFixed(0)}%`}>
+            <div className="h-2 w-full rounded-full bg-muted overflow-hidden">
+              <div className={cn("h-full rounded-full transition-all", tailwind.bg)} style={{ width: `${Math.min(100, (unit.P / unit.Pmax) * 100)}%` }} />
+            </div>
+            <span className="text-xs font-mono text-muted-foreground w-8 text-right">{((unit.P / unit.Pmax) * 100).toFixed(0)}%</span>
+          </div>
+        ) : (
+          <span className="text-xs text-muted-foreground">---</span>
+        )}
       </td>
       <td className="p-2 align-middle text-center">
         {actionButtonElement}

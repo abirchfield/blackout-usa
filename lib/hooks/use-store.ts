@@ -2,7 +2,8 @@
 
 import { createContext, useContext, useCallback, useSyncExternalStore } from 'react';
 import { GameEngine } from '../engine';
-import type { StatsSnapshot, Substation, Branch, SimulationAction } from '../types';
+import type { StatsSnapshot, Substation, Branch } from '../types';
+import type { ForecastData } from '../weather/forecast';
 
 // --- Context ---
 
@@ -32,7 +33,7 @@ export function useStore<T>(selector: (engine: GameEngine) => T): T {
 
 /** Full dashboard stats (cached in engine — stable reference when unchanged). */
 export function useStats(): StatsSnapshot {
-  return useStore(e => e.getStats());
+  return useStore(e => e.stats);
 }
 
 export function useIsBlackout(): boolean {
@@ -82,16 +83,13 @@ export function useDayTransitionId(): number {
   return useStore(e => e.dayTransitionId);
 }
 
-// --- Action hooks ---
+// --- Forecast ---
 
-/** Returns a stable dispatch function. */
-export function useDispatch(): (action: SimulationAction) => void {
-  const engine = useEngine();
-  return useCallback(
-    (action: SimulationAction) => engine.dispatch(action),
-    [engine],
-  );
+export function useForecast(): ForecastData | null {
+  return useStore(e => e.forecast);
 }
+
+// --- Action hooks ---
 
 /** Returns stable engine action methods. */
 export function useActions() {
@@ -108,8 +106,15 @@ export function useActions() {
 
   // Day lifecycle
   const navigateToDay = useCallback((day: number) => engine.navigateToDay(day), [engine]);
-  const beginDay = useCallback(() => engine.beginDay(), [engine]);
+  const startDay = useCallback(() => engine.startDay(), [engine]);
   const advanceToNextDay = useCallback(() => engine.advanceToNextDay(), [engine]);
+
+  // Operator actions (engine wrappers handle commit internally)
+  const toggleUnit = useCallback((subId: string, unitIndex: number) => engine.toggleUnit(subId, unitIndex), [engine]);
+  const toggleLoadUnit = useCallback((subId: string, unitIndex: number) => engine.toggleLoadUnit(subId, unitIndex), [engine]);
+  const abortTransition = useCallback((subId: string, unitIndex: number) => engine.abortTransition(subId, unitIndex), [engine]);
+  const toggleBranch = useCallback((branchId: string) => engine.toggleBranch(branchId), [engine]);
+  const setSetpoint = useCallback((subId: string, unitIndex: number, value: number) => engine.setSetpoint(subId, unitIndex, value), [engine]);
 
   return {
     togglePause,
@@ -120,7 +125,12 @@ export function useActions() {
     dismissAllHints,
     clearAlerts,
     navigateToDay,
-    beginDay,
+    startDay,
     advanceToNextDay,
+    toggleUnit,
+    toggleLoadUnit,
+    abortTransition,
+    toggleBranch,
+    setSetpoint,
   };
 }

@@ -1,8 +1,8 @@
 /** Manages app-wide settings (high contrast, font size, view mode, keybindings).
  *  Syncs contrast class and font size to the document root. */
 import { useState, useEffect, useCallback } from 'react';
-import { ViewConfig } from '../config';
-import { defaultKeyBindings, KeyBindings } from '../key-bindings';
+import { ViewConfig, defaultKeyBindings } from '../view/constants';
+import { KeyBindings } from '../types';
 
 export type FontSize = 'sm' | 'base' | 'lg' | 'xl';
 

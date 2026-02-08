@@ -11,15 +11,15 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Briefing, ResultDetails, GameStatistics } from "@/lib/types";
+import { ResultDetails, StatsSnapshot } from "@/lib/types";
 
 interface DayTransitionModalProps {
   open: boolean;
   mode: 'briefing' | 'results';
   targetDay: number;
-  briefing: Briefing | null | undefined;
+  info: string[] | null | undefined;
   resultDetails: ResultDetails | null | undefined;
-  gameStatistics: GameStatistics;
+  gameStatistics: StatsSnapshot;
   isHighContrast: boolean;
   onStartDay: () => void;
   onClose: () => void;
@@ -31,7 +31,7 @@ export function DayTransitionModal({
   open,
   mode,
   targetDay,
-  briefing,
+  info,
   resultDetails,
   gameStatistics,
   isHighContrast,
@@ -54,7 +54,8 @@ export function DayTransitionModal({
     <Dialog open={open}>
       <DialogContent
         id="day-transition-modal"
-        className="sm:max-w-lg font-share-tech"
+        className="sm:max-w-lg font-sans"
+        overlayClassName="bg-black/70"
         showCloseButton={canDismiss}
         onPointerDownOutside={(e) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
         onEscapeKeyDown={(e) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
@@ -86,7 +87,7 @@ export function DayTransitionModal({
               </div>
             </div>
           </>
-        ) : briefing ? (
+        ) : info ? (
           <>
             <DialogHeader>
               <DialogTitle className="text-2xl">Day {targetDay} Briefing</DialogTitle>
@@ -94,14 +95,14 @@ export function DayTransitionModal({
             </DialogHeader>
             <div className="space-y-6">
               <div className="bg-muted/20 p-4 rounded-lg border border-border text-sm">
-                {briefing.isList ? (
+                {info.length > 1 ? (
                   <ul className="list-disc pl-4 space-y-2">
-                    {briefing.points.map((point, index) => (
-                      <li key={index}>{point}</li>
+                    {info.map((line, index) => (
+                      <li key={index}>{line}</li>
                     ))}
                   </ul>
                 ) : (
-                  <p>{briefing.points[0]}</p>
+                  <p>{info[0]}</p>
                 )}
               </div>
               {isDayInProgress ? (

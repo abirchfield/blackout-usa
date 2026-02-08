@@ -1,5 +1,22 @@
-import { KeyBindings } from "./key-bindings";
-import * as math from "mathjs";
+import type { WeatherConfig, WeatherKey } from "@/lib/weather";
+
+export type GameAction =
+  | 'PAN_UP'
+  | 'PAN_DOWN'
+  | 'PAN_LEFT'
+  | 'PAN_RIGHT'
+  | 'ZOOM_IN'
+  | 'ZOOM_OUT'
+  | 'RESET_ZOOM'
+  | 'DISCONNECT_MOST_LOADED_LINE'
+  | 'DISCONNECT_SMALLEST_LOAD'
+  | 'RAMP_ALL_GENERATION_UP'
+  | 'TOGGLE_PAUSE'
+  | 'TOGGLE_FAST_FORWARD'
+  | 'CENTER_VIEW_ON_SELECTION'
+  | 'EMERGENCY_LOAD_SHED';
+
+export type KeyBindings = Record<GameAction, string>;
 
 // Enums
 export enum UnitStatus {
@@ -42,6 +59,13 @@ export interface Unit {
   P0: number;
   Status0: UnitStatus;
   StatusCount: number;
+  Pmax: number;
+  Pmin: number;
+  Ramp: number;
+  StartTime: number;
+  FixedCost: number;
+  FuelCost: number;
+  LoadCategory?: LoadCategoryType;
 }
 
 export interface Substation {
@@ -49,7 +73,6 @@ export interface Substation {
   Number: string;
   idx: number; // Pre-computed 0-based index: parseInt(Number) - 1
   Category: SubstationCategory;
-  LoadCategory?: LoadCategoryType;
   Units: number;
   Pmax: number;
   Pmin: number;
@@ -61,6 +84,14 @@ export interface Substation {
   Longitude: number;
   U: Unit[];
   island?: number;
+  // Secondary load block (present only for mixed gen+load substations)
+  Loads?: { U: Unit[]; Units: number; Pmax: number; Pmin: number };
+  // Pre-computed per-unit limits (Pmax/Units, Pmin/Units)
+  pmax: number;
+  pmin: number;
+  // Pre-computed category flags
+  isLoad: boolean;
+  isRenewable: boolean;
 }
 
 export interface Branch {
@@ -73,9 +104,8 @@ export interface Branch {
   ToSub: string;
   sub1?: Substation;
   sub2?: Substation;
-  Circuits: number;
-  Status1: BranchStatus;
-  Status2: BranchStatus;
+  sibling?: string; // Number of parallel branch between same substations
+  Status: BranchStatus;
   P: number;
   Pmax: number;
   Z: number;
@@ -83,7 +113,7 @@ export interface Branch {
   dist?: number;
 }
 
-export interface GameMetrics {
+export interface InstantMetrics {
   loadServed: number;
   loadUnserved: number;
   loadServedResidential: number;
@@ -102,6 +132,9 @@ export interface GameMetrics {
   currentOpCost: number;
   currentFuelCost: number;
   currentUnservedCost: number;
+}
+
+export interface CumulativeMetrics {
   totalOpCost: number;
   totalFuelCost: number;
   totalUnservedCost: number;
@@ -110,16 +143,15 @@ export interface GameMetrics {
   totalMwh: number;
 }
 
-export type GameStatistics = GameMetrics & {
+export type StatsSnapshot = InstantMetrics & CumulativeMetrics & {
   day: number;
   timeStr: string;
   timeStep: number;
   frequency: number;
-  frWind: number;
-  frSolar: number;
+  windAvail: number;
+  sunAvail: number;
+  blackout: boolean;
 };
-
-export type StatsSnapshot = GameStatistics & { blackout: boolean };
 
 export interface ViewState {
   xmax: number;
@@ -147,14 +179,12 @@ export interface InputState {
   dragOrigX: number;
   dragOrigY: number;
   hoverBranch: Branch | null;
-  hoverCircuit: 1 | 2 | null;
   hoverSub: Substation | null;
 }
 
 export interface SimState {
   _vSim: number; // Version counter — game ticks, dispatch actions
   t: number;
-  day: number;
   frequency: number;
   subs: Record<string, Substation>;
   branches: Record<string, Branch>;
@@ -162,12 +192,16 @@ export interface SimState {
   nsubs: number;
   referenceBus: string; // Substation Number string used as slack bus / topology root
   refIdx: number; // Pre-computed 0-based index of the reference bus substation
-  Ybus: math.Matrix | null;
-  Yinv: math.LUDecomposition | null;
-  metrics: GameMetrics;
-  frLoad: number;
-  frWind: number;
-  frSolar: number;
+  // Pre-built arrays (avoid Object.values() in hot paths)
+  subList: Substation[];
+  genSubs: Substation[];
+  loadSubs: Substation[];
+  renewableSubs: Substation[];
+  branchList: Branch[];
+  cumulative: CumulativeMetrics;
+  loadLevel: number;
+  windAvail: number;
+  sunAvail: number;
 }
 
 export interface GameState extends SimState, ViewState, InputState {}
@@ -175,12 +209,6 @@ export interface GameState extends SimState, ViewState, InputState {}
 export type InteractionHandler = (type: 'sub' | 'branch', data: Substation | Branch) => void;
 export type AlertHandler = (alert: { message: string; critical: boolean }, reset?: boolean) => void;
 export type HintHandler = (hint: { message: string }, reset?: boolean) => void;
-
-export interface Briefing {
-  title: string;
-  isList: boolean;
-  points: string[];
-}
 
 export interface Alert {
   id: number;
@@ -209,47 +237,90 @@ export interface ResultDetails {
   message: string;
 }
 
+/** Common simulation model interface (LibGDX game loop pattern). */
+export interface IModel {
+  setup(): void;
+  tick(dt: number): void;
+}
+
+/** Grid simulation model — shields the engine from computational details. */
+export interface IGridModel extends IModel {
+  readonly state: SimState;
+  readonly instant: InstantMetrics;
+  reset(onAlert: AlertHandler, onHint: HintHandler): void;
+  initRenewableOutput(): void;
+  invalidate(): void;
+
+  // Operator actions (user-facing: toggle semantics)
+  toggleUnit(subId: string, unitIndex: number): void;
+  toggleLoadUnit(subId: string, unitIndex: number): void;
+  abortTransition(subId: string, unitIndex: number): void;
+  toggleBranch(branchId: string): void;
+  setSetpoint(subId: string, unitIndex: number, value: number): void;
+  shedMinLoad(): void;
+  tripHottestLine(): void;
+  shedMaxLoad(): void;
+  rampAllUp(): void;
+
+  // Scenario mutations (scripted: force-set semantics)
+  setUnitStatus(subId: string, status: UnitStatus, range?: number | { from?: number; count?: number }): void;
+  tripBranch(branchId: string): void;
+  randomTrips(branchIds: string[], probability: number, reason?: string): void;
+  readyUnits(subId: string, range?: { from?: number; count?: number }): void;
+  readyBranch(branchId: string): void;
+  setUnitPower(subId: string, power: number, range?: { from?: number; count?: number }): void;
+
+  // Notifications
+  pushAlert(message: string, critical?: boolean): void;
+  pushHint(message: string, reset?: boolean): void;
+}
+
+export interface CostThresholds {
+  record: number;
+  good: number;
+  okay: number;
+}
+
+/** Weather model — independent authority for resource availability (windAvail, sunAvail, loadLevel). */
+export interface IWeatherModel {
+  get(key: WeatherKey): number;
+  set(key: WeatherKey, value: number): void;
+  nudge(key: WeatherKey, delta: number): void;
+}
+
 export interface IScenario {
-  readonly day: number;
-  readonly briefing: Briefing;
-  start(state: SimState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
-  update(state: SimState, onAlert: AlertHandler | undefined, onHint: HintHandler | undefined): void;
-  getResultDetails(totalCost: number): ResultDetails;
+  readonly info: readonly string[];
+  readonly costs: CostThresholds;
+  readonly hints?: string[];
+  readonly weather?: WeatherConfig;
+  start?(t: number, grid: IGridModel, weather: IWeatherModel): void;
+  update?(t: number, grid: IGridModel, weather: IWeatherModel): void;
 }
 
 // --- Case Definition Types ---
 
 export interface MapConfig {
   bounds: { xMax: number; xMin: number; yMax: number; yMin: number };
-  initialView: { x0: number; y0: number; scale: number };
+  zoomMax?: number;
 }
 
-/** Grid topology data as loaded from generated files — enum fields are plain strings.
- *  Type safety is enforced at the SimState boundary after initGrid enrichment. */
-export interface RawGridData {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  subs: Record<string, any>;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  branches: Record<string, any>;
+/** Grid topology data as loaded from generated JSON — all derived fields pre-computed by runme.py. */
+export interface GridData {
+  subs: Record<string, Substation>;
+  branches: Record<string, Branch>;
   borders: number[][];
   nsubs: number;
 }
 
-export interface GridCase {
-  name: string;
-  referenceBus: string; // Substation Number string used as slack bus / topology root
-  scenarios: Record<number, IScenario>;
-  gridData: RawGridData;
-  mapConfig: MapConfig;
+export interface TimeConfig {
+  startHour: number;  // 24-hour clock, e.g. 13 = 1 PM
 }
 
-export type SimulationAction =
-  | { type: 'TOGGLE_UNIT'; subId: string; unitIndex: number }
-  | { type: 'ABORT_UNIT_TRANSITION'; subId: string; unitIndex: number }
-  | { type: 'TOGGLE_BRANCH'; branchId: string; circuitNum: 1 | 2 }
-  | { type: 'SET_SETPOINT'; subId: string; unitIndex: number; value: number }
-  | { type: 'DISCONNECT_SMALLEST_LOAD' }
-  | { type: 'DISCONNECT_MOST_LOADED_LINE' }
-  | { type: 'EMERGENCY_LOAD_SHED' }
-  | { type: 'RAMP_ALL_GENERATION' };
-
+export interface GridCase {
+  name: string;
+  referenceBus: string; // Substation Name used as slack bus / topology root
+  scenarios: Record<number, IScenario>;
+  gridData: GridData;
+  mapConfig: MapConfig;
+  timeConfig: TimeConfig;
+}
