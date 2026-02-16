@@ -16,18 +16,15 @@ are those of the author(s) and do not necessarily reflect the views of the Natio
 ---
 
 
-### Development and Exporting Webpages
-
-To run this in development environment, run the following in the repository root:
+### Development
 
 ```bash
-npm run dev
+npm install          # install dependencies
+npm run generate     # build grid data (requires Python, run once or after editing data/)
+npm run dev          # start Vite dev server (http://localhost:5173)
+npm run build        # static export to build/
+npm run preview      # preview the build locally
+npm run check        # run svelte-check for type errors
 ```
 
-And to do a static export do a build:
-
-```bash
-npm run build
-```
-
-The static web files should then appear in `/out/...`
+`npm run generate` runs `data/runme.py` which reads the case JSON files and writes `data/_out/`. You only need to re-run it when case data changes.
