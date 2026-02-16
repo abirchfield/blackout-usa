@@ -1,5 +1,5 @@
-import { IGridModel, IScenario, UnitStatus } from "@/lib/types";
-import { Wind, Solar, Demand } from "@/lib/weather";
+import { IGridModel, IScenario, UnitStatus } from "$lib/types";
+import { Wind, Solar, Demand } from "$lib/weather";
 import { SUB, LINE } from "../_out/texas/lookups";
 
 // --- Scenario timing helpers ---

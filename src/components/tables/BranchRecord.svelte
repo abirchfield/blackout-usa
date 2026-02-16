@@ -1,0 +1,82 @@
+<script lang="ts">
+  import { branchLoading, getLoadingBarColor, hcVariant } from '$lib/utils';
+  import Button from '$components/ui/Button.svelte';
+  import StatusIndicator from '$components/tables/StatusIndicator.svelte';
+  import type { Branch } from '$lib/types';
+  import { BranchStatus } from '$lib/types';
+
+  interface Props {
+    branch: Branch;
+    label: string;
+    onBranchAction: (branchId: string) => void;
+    isPaused?: boolean;
+    isHighContrast?: boolean;
+  }
+
+  let { branch, label, onBranchAction, isPaused, isHighContrast }: Props = $props();
+
+  let status = $derived(branch.Status);
+  let flow = $derived(status === BranchStatus.IN ? branch.P : 0);
+  let rating = $derived(branch.Pmax);
+  let loading = $derived(branchLoading(branch));
+
+  let statusText = $derived.by(() => {
+    switch (status) {
+      case BranchStatus.IN: return "In-Service";
+      case BranchStatus.DIS: return "Out-of-Service";
+      case BranchStatus.TRIP: return "Tripped";
+      default: return `Unknown (${status})`;
+    }
+  });
+
+  let buttonText = $derived.by(() => {
+    switch (status) {
+      case BranchStatus.IN: return "Open";
+      case BranchStatus.DIS: return "Close";
+      default: return null;
+    }
+  });
+
+  let buttonDisabled = $derived(status === BranchStatus.TRIP || (status !== BranchStatus.IN && status !== BranchStatus.DIS));
+
+  let barColor = $derived(getLoadingBarColor(loading));
+</script>
+
+<tr data-slot="table-row" class="hover:bg-muted/50 data-[state=selected]:bg-muted border-b transition-colors" aria-labelledby={`branch-header-${branch.Number}`}>
+  <th scope="row" id={`branch-header-${branch.Number}`} class="font-medium text-center p-2">{label}</th>
+  <td data-slot="table-cell" class="p-2 align-middle whitespace-nowrap">
+    <div class="flex items-center gap-2">
+      <StatusIndicator {status} />
+      <span>{statusText}</span>
+    </div>
+  </td>
+  <td data-slot="table-cell" class="p-2 align-middle whitespace-nowrap text-right font-mono">{Math.abs(flow).toFixed(0)} MW</td>
+  <td data-slot="table-cell" class="p-2 align-middle whitespace-nowrap text-right font-mono">{rating.toFixed(0)} MW</td>
+  <td data-slot="table-cell" class="p-2 align-middle whitespace-nowrap">
+    <div class="flex items-center gap-2" title={`Loading: ${loading.toFixed(0)}%`} aria-label={`Branch loading: ${loading.toFixed(0)}%`}>
+      <div
+        role="progressbar"
+        aria-valuenow={loading}
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-label="Branch loading progress bar"
+        class="h-2 w-full rounded-full bg-muted"
+      >
+        <div class="h-2 rounded-full {barColor} transition-all" style="width: {Math.min(100, loading)}%"></div>
+      </div>
+      <span class="text-xs font-mono text-right">{loading.toFixed(0)}%</span>
+    </div>
+  </td>
+  <td data-slot="table-cell" class="p-2 align-middle whitespace-nowrap">
+    {#if buttonText}
+      <Button
+        variant={status === BranchStatus.IN ? "destructive" : hcVariant(isHighContrast ?? false)}
+        size="sm"
+        onclick={() => onBranchAction(branch.Number)}
+        disabled={buttonDisabled || isPaused}
+      >
+        {buttonText}
+      </Button>
+    {/if}
+  </td>
+</tr>

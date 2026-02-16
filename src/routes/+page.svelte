@@ -1,0 +1,150 @@
+<script lang="ts">
+  import { base } from '$app/paths';
+  import Button from '$components/ui/Button.svelte';
+  import { GameEngine } from '$lib/engine';
+  import { loadCase, DEFAULT_CASE, CASE_NAMES } from '$data/_out/registry';
+  import { resolvedTheme } from '$lib/stores/theme';
+  import { settings } from '$lib/stores/settings';
+  import { modals } from '$lib/stores/modals';
+  import { PersonStanding, ExternalLink } from 'lucide-svelte';
+
+  const activeModal = modals.activeModal;
+
+  let mapContainer: HTMLDivElement;
+  let engine: GameEngine | null = null;
+  let selectedCase = $state(DEFAULT_CASE);
+
+  let gameUrl = $derived(`${base}/game?case=${selectedCase}`);
+  let tutorialUrl = $derived(`${base}/game?tutorial=true&case=${selectedCase}`);
+
+  // Create a non-interactive preview engine for the background map
+  $effect(() => {
+    // Track selectedCase for reactivity
+    const caseName = selectedCase;
+    if (!mapContainer) return;
+
+    engine?.destroy();
+    engine = null;
+
+    let cancelled = false;
+    let animationFrameId: number;
+
+    loadCase(caseName).then(gridCase => {
+      if (cancelled || !mapContainer) return;
+
+      engine = new GameEngine(mapContainer, gridCase, { interactive: false });
+      engine.applySettings({
+        theme: $resolvedTheme || 'dark',
+        animationsEnabled: $settings.animationsEnabled,
+        renderMapLabels: false,
+        keyBindings: $settings.keyBindings,
+      });
+      engine.userPaused = false;
+      engine.startDay();
+
+      const animate = () => {
+        engine?.draw();
+        animationFrameId = requestAnimationFrame(animate);
+      };
+      animationFrameId = requestAnimationFrame(animate);
+    });
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(animationFrameId);
+      engine?.destroy();
+      engine = null;
+    };
+  });
+
+  // Sync settings (including theme) to engine
+  $effect(() => {
+    engine?.applySettings({
+      theme: $resolvedTheme || 'dark',
+      animationsEnabled: $settings.animationsEnabled,
+      renderMapLabels: $settings.renderMapLabels,
+      keyBindings: $settings.keyBindings,
+    });
+  });
+</script>
+
+<main class="font-sans relative flex min-h-screen flex-col lg:flex-row items-center justify-center p-4 lg:p-8 gap-8">
+  <div class="relative w-full lg:w-1/2 rounded-lg border bg-card p-8 text-card-foreground shadow-lg z-10">
+    <div class="absolute top-4 right-4">
+      <Button
+        variant="ghost"
+        size="icon"
+        onclick={() => modals.openModal('accessibility')}
+        aria-label="Accessibility Settings"
+      >
+        <PersonStanding class="h-6 w-6" />
+      </Button>
+    </div>
+    <div class="grid gap-4 py-4 text-lg">
+      <h1 class="text-3xl font-bold">Welcome to the Blackout USA Game!</h1>
+      <p>
+        Can you efficiently operate an electrical grid and keep it safe
+        from a blackout? Choose a map to play.
+      </p>
+      <p class="text-sm text-muted-foreground">
+        This game was developed by the research group of Prof. Adam
+        Birchfield at Texas A&M University.
+
+        <a
+          href="https://birchfield.engr.tamu.edu"
+          class="underline hover:text-primary inline-flex items-center gap-1"
+          target="_blank"
+          rel="noopener noreferrer"
+        >
+          More Information
+          <ExternalLink class="h-3 w-3" aria-hidden="true" />
+          <span class="sr-only">(opens in a new tab)</span>
+        </a>.
+      </p>
+    </div>
+    {#if CASE_NAMES.length > 1}
+      <div class="mt-4">
+        <p class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Select Grid</p>
+        <div class="mt-2 flex gap-2 flex-wrap" role="group" aria-label="Grid selection">
+          {#each CASE_NAMES as name}
+            <button
+              onclick={() => selectedCase = name}
+              aria-pressed={selectedCase === name}
+              class="px-4 py-2 rounded-md border text-sm font-medium transition-colors cursor-pointer {selectedCase === name
+                ? 'bg-primary text-primary-foreground border-primary'
+                : 'bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground'}"
+            >
+              {name}
+            </button>
+          {/each}
+        </div>
+      </div>
+    {/if}
+    <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <Button variant="secondary" href={tutorialUrl} class="text-xl py-6 cursor-pointer">
+        How to Play
+      </Button>
+      <Button href={gameUrl} class="text-xl py-6 cursor-pointer">
+        Start my first shift!
+      </Button>
+    </div>
+  </div>
+  <div class="w-full lg:w-1/2 h-[50vh] lg:h-[70vh] rounded-lg bg-background overflow-hidden">
+    <div
+      bind:this={mapContainer}
+      aria-label="A static visual of the Texas electrical grid map"
+      role="img"
+      class="h-full w-full"
+    ></div>
+  </div>
+  {#if $activeModal === 'accessibility'}
+    {#await import('$components/modals/AccessibilityModal.svelte') then { default: AccessibilityModal }}
+      <AccessibilityModal
+        open={true}
+        onOpenChange={(open: boolean) => modals.onOpenChange('accessibility', open)}
+        settings={$settings}
+        onSettingsChange={(patch) => settings.update(patch)}
+      />
+    {/await}
+  {/if}
+</main>

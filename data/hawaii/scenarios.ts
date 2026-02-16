@@ -1,5 +1,5 @@
-import { IScenario } from "@/lib/types";
-import { Wind, Solar, Demand } from "@/lib/weather";
+import { IScenario } from "$lib/types";
+import { Wind, Solar, Demand } from "$lib/weather";
 // import { SUB, LINE } from "../_out/hawaii/lookups";
 
 const day1: IScenario = {
