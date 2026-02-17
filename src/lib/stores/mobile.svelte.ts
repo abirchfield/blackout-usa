@@ -7,6 +7,10 @@ function createMobileState() {
     const check = () => { isMobile = window.innerWidth < ViewConfig.MOBILE_BREAKPOINT_PX; };
     check();
     window.addEventListener('resize', check);
+
+    if (import.meta.hot) {
+      import.meta.hot.dispose(() => window.removeEventListener('resize', check));
+    }
   }
 
   return {

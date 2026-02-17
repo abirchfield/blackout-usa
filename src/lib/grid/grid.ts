@@ -305,6 +305,10 @@ export class GridModel implements GridModelApi {
       const mismatch = totalLoad - genSetpoint;
       const target = BASE_FREQUENCY - FREQUENCY_DROOP * mismatch / (genMax - genMin);
       this.state.frequency += this.state.frequency < target ? FREQ_STEP_SMALL : -FREQ_STEP_SMALL;
+    } else {
+      // genMax === genMin, no droop range — nudge toward nominal
+      if (this.state.frequency < BASE_FREQUENCY) this.state.frequency += FREQ_STEP_SMALL;
+      else if (this.state.frequency > BASE_FREQUENCY) this.state.frequency -= FREQ_STEP_SMALL;
     }
   }
 

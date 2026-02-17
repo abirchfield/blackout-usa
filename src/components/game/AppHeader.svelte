@@ -42,6 +42,8 @@
   });
 </script>
 
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && isMenuOpen) isMenuOpen = false; }} />
+
 {#snippet notificationDot(ping: boolean, color: string)}
   <span class="absolute top-1 right-1 flex h-2 w-2" aria-hidden="true">
     {#if ping}
@@ -131,7 +133,7 @@
     </nav>
 
     <!-- Mobile Menu Toggle -->
-    <Button variant="ghost" size="icon" class="md:hidden" onclick={() => { isMenuOpen = !isMenuOpen; }} aria-label="Toggle menu" aria-expanded={isMenuOpen}>
+    <Button variant="ghost" size="icon" class="md:hidden" onclick={() => { isMenuOpen = !isMenuOpen; }} aria-label="Toggle menu" aria-expanded={isMenuOpen} aria-controls="mobile-menu-nav">
       {#if isMenuOpen}
         <X class="h-5 w-5" />
       {:else}
@@ -142,7 +144,8 @@
 
   <!-- Mobile Menu Overlay -->
   {#if isMenuOpen}
-    <nav aria-label="Mobile menu" class="absolute top-full left-0 right-0 bg-background border-b shadow-lg z-50 p-4 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-2">
+    <button class="fixed inset-0 z-40 md:hidden bg-transparent" aria-hidden="true" tabindex="-1" onclick={() => { isMenuOpen = false; }}></button>
+    <nav aria-label="Mobile menu" id="mobile-menu-nav" class="absolute top-full left-0 right-0 bg-background border-b shadow-lg z-50 p-4 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-2">
       <div class="grid grid-cols-1 gap-2">
         <Button variant="ghost" onclick={() => { onOpenModal('alerts'); isMenuOpen = false; }} class="justify-start relative" disabled={controlsDisabled} aria-label="View alerts, {alertsCount} new notifications">
           <Bell class="mr-2 h-4 w-4" aria-hidden="true" />

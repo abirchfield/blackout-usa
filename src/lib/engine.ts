@@ -281,15 +281,15 @@ export class GameEngine {
   tick() {
     this.state.t += SECONDS_PER_TICK;
 
+    this._scenario?.update?.(this.state.t, this.grid, this.weather);
+    this.weather.tick(1);
+    this.grid.tick(1);
+
     if (this.state.t >= GAME_DURATION_S) {
       this.grid.invalidate();
       this.completeDayWithResults();
       return;
     }
-
-    this._scenario?.update?.(this.state.t, this.grid, this.weather);
-    this.weather.tick(1);
-    this.grid.tick(1);
 
     if (this.state.frequency < FREQUENCY_BLACKOUT_THRESHOLD) {
       this._isBlackout = true;

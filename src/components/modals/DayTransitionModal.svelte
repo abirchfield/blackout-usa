@@ -18,7 +18,7 @@
     onStartDay: () => void;
     onClose: () => void;
     onReplayDay: (day: number) => void;
-    onNextDay: (day: number) => void;
+    onNextDay: () => void;
   }
 
   let {
@@ -37,10 +37,16 @@
   // Check if day is in progress (user can close briefing to continue)
   let isDayInProgress = $derived(gameStatistics.day === targetDay && gameStatistics.timeStep > 0);
 
+  // Determine if modal has renderable content
+  let hasContent = $derived(
+    (mode === 'results' && !!resultDetails) || (mode === 'briefing' && !!info)
+  );
+
   // Determine if modal should be dismissible
   // Results modal is never dismissible (must choose replay or next)
   // Briefing is only dismissible if day is already in progress
-  let canDismiss = $derived(mode === 'briefing' && isDayInProgress);
+  // Always dismissible when content is missing (fallback escape hatch)
+  let canDismiss = $derived((mode === 'briefing' && isDayInProgress) || !hasContent);
 </script>
 
 {#if open}
@@ -67,7 +73,7 @@
               <span>Replay Today</span>
             </Button>
             <Button
-              onclick={() => onNextDay(gameStatistics.day)}
+              onclick={() => onNextDay()}
               class="flex items-center justify-center gap-2"
             >
               <span>Next Day</span>
@@ -98,6 +104,12 @@
               Start Day {targetDay}
             </Button>
           {/if}
+        </div>
+      {:else}
+        <DialogHeader title="Day {targetDay}" titleClass="text-2xl" />
+        <div class="space-y-6">
+          <p class="text-muted-foreground text-sm">No scenario data available for this day.</p>
+          <Button onclick={onClose} class="w-full text-lg py-6">Return to Game</Button>
         </div>
       {/if}
     </DialogContent>

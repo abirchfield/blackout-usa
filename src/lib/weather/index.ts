@@ -25,6 +25,7 @@ function smoothstep(a: number, b: number, t: number): number {
 /** Wind capacity fraction from diurnal pattern. Returns 0–1. */
 export function windDiurnal(hour: number, startHour: number): number {
     if (hour < WIND_PEAK_HOUR) {
+        if (startHour >= WIND_PEAK_HOUR) return PEAK_WIND;
         const t = (hour - startHour) / (WIND_PEAK_HOUR - startHour);
         return smoothstep(BASE_WIND, PEAK_WIND, t);
     }

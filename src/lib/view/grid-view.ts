@@ -36,6 +36,7 @@ export class GridView implements GridViewApi {
   private handler?: InputHandler;
   private state!: GameState;
   private isViewInitialized = false;
+  private _forceRedraw = false;
   private interactive: boolean;
 
   // DPI
@@ -109,7 +110,7 @@ export class GridView implements GridViewApi {
   }
 
   draw(isPaused: boolean, isFastForward: boolean): void {
-    this.resizeCanvas();
+    const resized = this.resizeCanvas();
     if (!this.isViewInitialized && this.isCanvasReady()) {
       this.setInitialView(this.state);
       this.isViewInitialized = true;
@@ -134,12 +135,17 @@ export class GridView implements GridViewApi {
     this.ensureStaticGeometry();
 
     // Update scaleMin on resize
-    this.updateViewBounds();
+    this.updateViewBounds(resized);
 
     // Dirty tracking: skip redraw when nothing changed
     const state = this.state;
     const p = this.prev;
+    const force = this._forceRedraw;
+    if (force) this._forceRedraw = false;
+
     const needsRedraw =
+      force ||
+      resized ||
       themeChanged ||
       state._vSim !== p.vSim ||
       state.scaleX !== p.scaleX ||
@@ -229,6 +235,7 @@ export class GridView implements GridViewApi {
     this.lastWidth = 0;
     this.lastHeight = 0;
     this.isViewInitialized = false;
+    this._forceRedraw = true;
   }
 
   performAction(action: GameAction): void {
@@ -308,7 +315,7 @@ export class GridView implements GridViewApi {
     }
   }
 
-  private updateViewBounds() {
+  private updateViewBounds(forceClamp = false) {
     const state = this.state;
     const width = this.lastWidth;
     const height = this.lastHeight;
@@ -324,7 +331,9 @@ export class GridView implements GridViewApi {
     if (state.scaleX < state.scaleMin) {
       state.scaleX = state.scaleMin;
       state.scaleY = state.scaleMin;
-      // Forced scale change (viewport shrunk) — clamp origin so map stays visible
+      clampViewBounds(state, width, height);
+    } else if (forceClamp) {
+      // Viewport resized but zoom is valid — still clamp origin to keep map visible
       clampViewBounds(state, width, height);
     }
   }
