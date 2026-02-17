@@ -1,7 +1,9 @@
 import { GameState, Substation, UnitStatus } from "../types";
 import { ThemeColors, getCategoryColorKey } from "./colors";
-import { DrawingConfig, ViewConfig } from "./constants";
+import { DrawingConfig } from "./constants";
 import { LabelOffset } from "./draw-overlays";
+import type { DrawContext } from "./draw-branches";
+import { getDynamicSubstationRadius } from "./view-math";
 
 const TWO_PI = Math.PI * 2;
 const PIE_START = -Math.PI / 2; // 12 o'clock
@@ -35,16 +37,7 @@ export function computeSubGeometry(subs: Record<string, Substation>): Map<string
 const OUTER_FACTOR = DrawingConfig.GENERATOR_OUTER_RADIUS_FACTOR;
 const LOAD_FACTOR = DrawingConfig.LOAD_SIZE_FACTOR;
 const LABEL_OUTLINE_W = DrawingConfig.LABEL_OUTLINE_WIDTH;
-const BASE_R_NORMAL = ViewConfig.BASE_SUBSTATION_RADIUS_NORMAL;
-const BASE_R_HOVER = ViewConfig.BASE_SUBSTATION_RADIUS_HOVER;
-const MIN_R = ViewConfig.MIN_SUBSTATION_RADIUS;
-const MAX_R = ViewConfig.MAX_SUBSTATION_RADIUS;
-const MAX_R_HOVER = ViewConfig.MAX_SUBSTATION_RADIUS_HOVER;
-
-function computeSubRadius(scaleFactor: number, isHover: boolean): number {
-  if (isHover) return Math.max(MIN_R, Math.min(BASE_R_HOVER * scaleFactor, MAX_R_HOVER));
-  return Math.max(MIN_R, Math.min(BASE_R_NORMAL * scaleFactor, MAX_R));
-}
+const computeSubRadius = getDynamicSubstationRadius;
 
 /**
  * Draw all substations + labels in screen space. ctx should have identity transform.
@@ -58,25 +51,28 @@ function computeSubRadius(scaleFactor: number, isHover: boolean): number {
  * Hovered substation is drawn separately last for correct z-order.
  */
 export function drawSubstations(
-  ctx: CanvasRenderingContext2D,
-  state: GameState,
+  dc: DrawContext,
   geoMap: Map<string, SubGeo>,
   labelOffsets: Map<string, LabelOffset> | null,
-  colors: ThemeColors,
-  scaleFactor: number,
-  scaleX: number,
-  x0: number,
-  y0: number,
 ) {
+  const { ctx, state, colors, scaleFactor, scaleX } = dc;
+  const { x0, y0 } = state;
   const normalR = computeSubRadius(scaleFactor, false);
   const hoverR = computeSubRadius(scaleFactor, true);
   const hoverSub = state.hoverSub;
 
-  // ─── Pass 1: Batch substation shapes by layer + color ───
-  const haloBatch = new Path2D();   // all halos — uniform outerRingBg
-  const bgBatch = new Path2D();     // all backgrounds — uniform background
-  const ringBatches = new Map<string, Path2D>();  // keyed by activeColor
-  const fillBatches = new Map<string, Path2D>();  // keyed by catColor
+  // ─── Pass 1: Batch substation shapes by type, then by layer + color ───
+  // Two separate batch sets: generators first (behind), then loads (in front).
+  // This prevents layer interleaving when substations overlap.
+  const genHalo = new Path2D();
+  const genBg = new Path2D();
+  const genRings = new Map<string, Path2D>();
+  const genFills = new Map<string, Path2D>();
+
+  const loadHalo = new Path2D();
+  const loadBg = new Path2D();
+  const loadRings = new Map<string, Path2D>();
+  const loadFills = new Map<string, Path2D>();
 
   let hoverKey: string | null = null;
 
@@ -88,7 +84,6 @@ export function drawSubstations(
     // Skip hovered sub — draw it last for z-order
     if (sub === hoverSub) { hoverKey = key; continue; }
 
-    const r = normalR;
     const sx = (geo.lon - x0) * scaleX;
     const sy = (y0 - geo.lat) * scaleX;
 
@@ -98,21 +93,17 @@ export function drawSubstations(
     const P = getSubstationPower(sub);
 
     if (geo.isLoad) {
-      batchLoadSubstation(haloBatch, bgBatch, ringBatches, fillBatches,
-        activeColor, catColor, allTripped, P, geo.pmax * state.loadLevel, sx, sy, r);
+      batchLoadSubstation(loadHalo, loadBg, loadRings, loadFills,
+        activeColor, catColor, allTripped, P, geo.pmax * state.loadLevel, sx, sy, normalR);
     } else {
-      batchGeneratorSubstation(haloBatch, bgBatch, ringBatches, fillBatches,
-        activeColor, catColor, allTripped, P, geo.pmax, sx, sy, r);
+      batchGeneratorSubstation(genHalo, genBg, genRings, genFills,
+        activeColor, catColor, allTripped, P, geo.pmax, sx, sy, normalR);
     }
   }
 
-  // Flush all batches back-to-front (halo → ring → bg → fill)
-  ctx.fillStyle = colors.outerRingBg;
-  ctx.fill(haloBatch);
-  for (const [color, path] of ringBatches) { ctx.fillStyle = color; ctx.fill(path); }
-  ctx.fillStyle = colors.background;
-  ctx.fill(bgBatch);
-  for (const [color, path] of fillBatches) { ctx.fillStyle = color; ctx.fill(path); }
+  // Flush generators (behind), then loads (in front)
+  flushBatches(ctx, colors, genHalo, genRings, genBg, genFills);
+  flushBatches(ctx, colors, loadHalo, loadRings, loadBg, loadFills);
 
   // Draw hovered substation last (on top, different radius, at most 4 fills)
   if (hoverKey && hoverSub) {
@@ -133,8 +124,8 @@ export function drawSubstations(
   // ─── Pass 2: Labels ───
   if (!state.renderMapLabels || labelOffsets === null) return;
 
-  const fontNormal = `15px ${colors.labelFont}, monospace`;
-  const fontHover = `20px ${colors.labelFont}, monospace`;
+  const fontNormal = `${DrawingConfig.LABEL_FONT_SIZE_NORMAL}px ${colors.labelFont}, monospace`;
+  const fontHover = `${DrawingConfig.LABEL_FONT_SIZE_HOVER}px ${colors.labelFont}, monospace`;
 
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
@@ -162,6 +153,20 @@ export function drawSubstations(
     ctx.strokeText(sub.Name, sx + offset.x, sy + offset.y);
     ctx.fillText(sub.Name, sx + offset.x, sy + offset.y);
   }
+}
+
+// ─── Batch flush (halo → ring → bg → fill) ───
+
+function flushBatches(
+  ctx: CanvasRenderingContext2D, colors: ThemeColors,
+  halo: Path2D, rings: Map<string, Path2D>, bg: Path2D, fills: Map<string, Path2D>,
+) {
+  ctx.fillStyle = colors.outerRingBg;
+  ctx.fill(halo);
+  for (const [color, path] of rings) { ctx.fillStyle = color; ctx.fill(path); }
+  ctx.fillStyle = colors.background;
+  ctx.fill(bg);
+  for (const [color, path] of fills) { ctx.fillStyle = color; ctx.fill(path); }
 }
 
 // ─── Batch geometry accumulators (no draw calls — append to Path2D objects) ───

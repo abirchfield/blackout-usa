@@ -2,8 +2,7 @@
   import Badge from '$components/ui/Badge.svelte';
   import { cn, fmtMoney } from '$lib/utils';
   import type { StatsSnapshot, ResultDetails } from '$lib/types';
-
-  const STAT_VALUE = 'font-numeric font-bold whitespace-nowrap';
+  import { STAT_VALUE } from '$components/theme';
 
   interface Props {
     stats: StatsSnapshot;

@@ -129,6 +129,7 @@ export interface InstantMetrics {
   solarGen: number;
   thermalGen: number;
   nuclearGen: number;
+  totalGeneration: number;
   currentOpCost: number;
   currentFuelCost: number;
   currentUnservedCost: number;
@@ -143,7 +144,7 @@ export interface CumulativeMetrics {
   totalMwh: number;
 }
 
-export type StatsSnapshot = InstantMetrics & CumulativeMetrics & {
+export interface SnapshotMeta {
   day: number;
   timeStr: string;
   timeStep: number;
@@ -151,7 +152,9 @@ export type StatsSnapshot = InstantMetrics & CumulativeMetrics & {
   windAvail: number;
   sunAvail: number;
   blackout: boolean;
-};
+}
+
+export type StatsSnapshot = InstantMetrics & CumulativeMetrics & SnapshotMeta;
 
 export interface ViewState {
   xmax: number;
@@ -207,20 +210,21 @@ export interface SimState {
 export interface GameState extends SimState, ViewState, InputState {}
 
 export type InteractionHandler = (type: 'sub' | 'branch', data: Substation | Branch) => void;
-export type AlertHandler = (alert: { message: string; critical: boolean }, reset?: boolean) => void;
-export type HintHandler = (hint: { message: string }, reset?: boolean) => void;
 
-export interface Alert {
+export interface AlertInput { message: string; critical: boolean }
+export interface HintInput { message: string }
+
+export type AlertHandler = (alert: AlertInput, reset?: boolean) => void;
+export type HintHandler = (hint: HintInput, reset?: boolean) => void;
+
+export interface Alert extends AlertInput {
   id: number;
   time: string;
-  message: string;
-  critical: boolean;
 }
 
-export interface Hint {
+export interface Hint extends HintInput {
   id: number;
   time: string;
-  message: string;
 }
 
 export interface EngineSettings {
@@ -238,13 +242,13 @@ export interface ResultDetails {
 }
 
 /** Common simulation model interface (LibGDX game loop pattern). */
-export interface IModel {
+export interface Model {
   setup(): void;
   tick(dt: number): void;
 }
 
 /** Grid simulation model — shields the engine from computational details. */
-export interface IGridModel extends IModel {
+export interface GridModelApi extends Model {
   readonly state: SimState;
   readonly instant: InstantMetrics;
   reset(onAlert: AlertHandler, onHint: HintHandler): void;
@@ -258,7 +262,7 @@ export interface IGridModel extends IModel {
   toggleBranch(branchId: string): void;
   setSetpoint(subId: string, unitIndex: number, value: number): void;
   shedMinLoad(): void;
-  tripHottestLine(): void;
+  disconnectHottestLine(): void;
   shedMaxLoad(): void;
   rampAllUp(): void;
 
@@ -282,19 +286,19 @@ export interface CostThresholds {
 }
 
 /** Weather model — independent authority for resource availability (windAvail, sunAvail, loadLevel). */
-export interface IWeatherModel {
+export interface WeatherModelApi {
   get(key: WeatherKey): number;
   set(key: WeatherKey, value: number): void;
   nudge(key: WeatherKey, delta: number): void;
 }
 
-export interface IScenario {
+export interface Scenario {
   readonly info: readonly string[];
   readonly costs: CostThresholds;
   readonly hints?: string[];
   readonly weather?: WeatherConfig;
-  start?(t: number, grid: IGridModel, weather: IWeatherModel): void;
-  update?(t: number, grid: IGridModel, weather: IWeatherModel): void;
+  start?(t: number, grid: GridModelApi, weather: WeatherModelApi): void;
+  update?(t: number, grid: GridModelApi, weather: WeatherModelApi): void;
 }
 
 // --- Case Definition Types ---
@@ -319,7 +323,7 @@ export interface TimeConfig {
 export interface GridCase {
   name: string;
   referenceBus: string; // Substation Name used as slack bus / topology root
-  scenarios: Record<number, IScenario>;
+  scenarios: Record<number, Scenario>;
   gridData: GridData;
   mapConfig: MapConfig;
   timeConfig: TimeConfig;

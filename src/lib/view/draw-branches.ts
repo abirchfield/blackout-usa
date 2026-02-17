@@ -2,6 +2,15 @@ import { BranchStatus, GameState } from "../types";
 import { ThemeColors } from "./colors";
 import { DrawingConfig } from "./constants";
 
+/** Shared rendering context passed to all draw functions. */
+export interface DrawContext {
+  ctx: CanvasRenderingContext2D;
+  state: GameState;
+  colors: ThemeColors;
+  scaleFactor: number;
+  scaleX: number;
+}
+
 const TWO_PI = Math.PI * 2;
 
 /** Pre-computed static geometry for a branch. Built once since substations never move. */
@@ -60,6 +69,14 @@ const OFFSET_FACTOR = DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR;
 const CIRCLE_SPACING = DrawingConfig.FLOW_CIRCLE_SPACING;
 const CIRCLE_RADIUS_FACTOR = DrawingConfig.FLOW_CIRCLE_RADIUS_FACTOR;
 
+
+export interface BranchFlowParams {
+  flowOffset: number;
+  hoverFlowOffset: number;
+  isPaused: boolean;
+  flowScale: number;
+}
+
 /**
  * Draw all branches. Must be called with the world transform active on ctx.
  *
@@ -68,18 +85,12 @@ const CIRCLE_RADIUS_FACTOR = DrawingConfig.FLOW_CIRCLE_RADIUS_FACTOR;
  * Flow circles are batched into a single fill call.
  */
 export function drawBranches(
-  ctx: CanvasRenderingContext2D,
-  state: GameState,
+  dc: DrawContext,
   geoMap: Map<string, BranchGeo>,
-  colors: ThemeColors,
-  flowOffset: number,
-  hoverFlowOffset: number,
-  animEnabled: boolean,
-  isPaused: boolean,
-  scaleFactor: number,
-  scaleX: number,
-  flowScale: number,
+  flow: BranchFlowParams,
 ) {
+  const { ctx, state, colors, scaleFactor, scaleX } = dc;
+  const { flowOffset, hoverFlowOffset, isPaused, flowScale } = flow;
   const invScale = 1 / scaleX;
   const normalR = getDynamicBranchRadius(scaleFactor, false);
   const normalW = normalR * invScale;
@@ -184,7 +195,7 @@ export function drawBranches(
   ctx.setLineDash(dashNone);
 
   // ─── Flow circles (batched into single fill) ───
-  if (!animEnabled) return;
+  if (!state.animationsEnabled) return;
 
   const circleR = normalR * CIRCLE_RADIUS_FACTOR * invScale;
   const circleRHover = getDynamicBranchRadius(scaleFactor, true) * CIRCLE_RADIUS_FACTOR * invScale;
@@ -210,7 +221,6 @@ export function drawBranches(
       const off = geo.offset * halfOff;
       lx1 += geo.perpX * off; ly1 += geo.perpY * off;
     }
-
     const r = isHov ? circleRHover : circleR;
     addCircles(ctx, lx1, ly1, geo.dx, geo.dy, geo.invLen, geo.len, start, r, spacing);
   }
@@ -236,7 +246,7 @@ function addCircles(
 }
 
 
-function getDynamicBranchRadius(scaleFactor: number, isHover: boolean): number {
+export function getDynamicBranchRadius(scaleFactor: number, isHover: boolean): number {
   const baseRadius = isHover ? DrawingConfig.BRANCH_RADIUS_HOVER : DrawingConfig.BRANCH_RADIUS_NORMAL;
   const maxRadius = isHover ? DrawingConfig.BRANCH_RADIUS_HOVER_MAX : DrawingConfig.BRANCH_RADIUS_MAX;
   return Math.max(DrawingConfig.BRANCH_RADIUS_MIN, Math.min(baseRadius * scaleFactor, maxRadius));

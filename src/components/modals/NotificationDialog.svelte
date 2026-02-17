@@ -2,8 +2,6 @@
   import { Dialog } from 'bits-ui';
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
-  import DialogTitle from '$components/ui/DialogTitle.svelte';
-  import DialogDescription from '$components/ui/DialogDescription.svelte';
   import Button from '$components/ui/Button.svelte';
   import Badge from '$components/ui/Badge.svelte';
   import { X } from 'lucide-svelte';
@@ -26,10 +24,7 @@
 {#if open}
   <Dialog.Root {open} {onOpenChange}>
     <DialogContent id="notifications-modal" class="sm:max-w-lg">
-      <DialogHeader>
-        <DialogTitle>{title}</DialogTitle>
-        <DialogDescription>{description}</DialogDescription>
-      </DialogHeader>
+      <DialogHeader {title} {description} />
       <div class="max-h-[70vh] overflow-y-auto -mx-6 px-6">
         {#if items.length === 0}
           <div class="p-4 text-center text-muted-foreground">{emptyMessage}</div>
@@ -50,7 +45,7 @@
                     variant="ghost"
                     size="icon"
                     onclick={() => onRemove(item.id)}
-                    class="h-6 w-6 shrink-0 cursor-pointer"
+                    class="h-6 w-6 shrink-0"
                     aria-label="Dismiss: {item.message}"
                   >
                     <X class="h-4 w-4" aria-hidden="true" />

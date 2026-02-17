@@ -1,7 +1,7 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
   import type { Substation, Unit } from '$lib/types';
-  import LoadUnitDetails from '$components/game/LoadUnitDetails.svelte';
+  import LoadUnitDetails from './LoadUnitDetails.svelte';
 
   interface Props {
     sub: Substation;

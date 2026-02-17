@@ -1,14 +1,15 @@
 import {
-  Substation, Unit, UnitStatus, SubstationCategory, IModel,
+  Substation, Unit, UnitStatus, SubstationCategory, Model,
 } from "../types";
 import { isInactive } from "../utils";
 import { GenModel } from "./gen";
 import { LoadModel } from "./load";
 
-export class SubstationModel implements IModel {
+export class SubstationModel implements Model {
   readonly data: Substation;
   private _gens: GenModel[] = [];
   private _loads: LoadModel[] = [];
+  private readonly _balance = { setpoint: 0, min: 0, max: 0 };
 
   constructor(data: Substation) {
     this.data = data;
@@ -66,20 +67,20 @@ export class SubstationModel implements IModel {
 
   tick(_dt: number): void {
     for (const g of this._gens) g.tick();
-    for (const l of this._loads) l.tick();
   }
 
   // --- Balance ---
 
   /** Sum gen dispatch ranges (call after gen.prepare()). */
   genBalance(): { setpoint: number; min: number; max: number } {
-    let setpoint = 0, min = 0, max = 0;
+    const b = this._balance;
+    b.setpoint = 0; b.min = 0; b.max = 0;
     for (const g of this._gens) {
-      setpoint += g.range.setpoint;
-      min += g.range.min;
-      max += g.range.max;
+      b.setpoint += g.range.setpoint;
+      b.min += g.range.min;
+      b.max += g.range.max;
     }
-    return { setpoint, min, max };
+    return b;
   }
 
   // --- Operator Actions ---

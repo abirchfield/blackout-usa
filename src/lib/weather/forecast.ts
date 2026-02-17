@@ -1,6 +1,5 @@
-import { WeatherConfig } from "./index";
-import { Wind, windDiurnal, BASE_WIND } from "./wind";
-import { Solar, solarFraction, DEFAULT_DAY_OF_YEAR } from "./solar";
+import { WeatherConfig, Wind, windDiurnal, BASE_WIND, Solar, solarFraction, DEFAULT_DAY_OF_YEAR } from "./index";
+import { GAME_DURATION_S } from "$lib/grid/constants";
 
 export interface ForecastPoint {
   hour: number;      // 24h clock (e.g. 13.0, 13.5)
@@ -16,7 +15,8 @@ export interface ForecastData {
   hasSolar: boolean;
 }
 
-const DURATION_HOURS = 10;
+const DURATION_HOURS = GAME_DURATION_S / 3600;
+const DEFAULT_FORECAST_SAMPLES = 120;
 
 /**
  * Pre-compute the full day's weather forecast from deterministic models.
@@ -26,7 +26,7 @@ export function computeForecast(
   weatherConfig: WeatherConfig | undefined,
   startHour: number,
   latitude: number,
-  samples = 120,
+  samples = DEFAULT_FORECAST_SAMPLES,
 ): ForecastData {
   const hasWind = weatherConfig?.wind === Wind.DIURNAL;
   const hasSolar = weatherConfig?.sun === Solar.PHYSICAL;

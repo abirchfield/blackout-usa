@@ -2,15 +2,12 @@
   import { Dialog } from 'bits-ui';
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
-  import DialogTitle from '$components/ui/DialogTitle.svelte';
-  import DialogDescription from '$components/ui/DialogDescription.svelte';
   import Button from '$components/ui/Button.svelte';
   import Badge from '$components/ui/Badge.svelte';
-  import UnitTable from '$components/tables/UnitTable.svelte';
-  import CircuitTable from '$components/tables/CircuitTable.svelte';
-  import type { Substation, Branch, Unit } from '$lib/types';
-  import { SubstationCategory, BranchStatus, UnitStatus } from '$lib/types';
-  import { GenerationTypeConfig, LoadTypeConfig, StatusConfig } from '$components/theme';
+  import GeneratorDemo from './help/GeneratorDemo.svelte';
+  import TransmissionDemo from './help/TransmissionDemo.svelte';
+  import { SubstationCategory } from '$lib/types';
+  import { GenerationTypeConfig, LoadTypeConfig } from '$components/theme';
   import { cn } from '$lib/utils';
   import {
     Bell,
@@ -27,44 +24,6 @@
     Power,
   } from 'lucide-svelte';
 
-  // --- Mock data for help examples ---
-
-  const mockSubBase: Substation = {
-    Name: 'Example',
-    Number: '0',
-    idx: 0,
-    Latitude: 0,
-    Longitude: 0,
-    Units: 1,
-    Category: SubstationCategory.Thermal,
-    Pmax: 100,
-    Pmin: 20,
-    pmax: 100,
-    pmin: 20,
-    isLoad: false,
-    isRenewable: false,
-    FixedCost: 500,
-    FuelCost: 50,
-    StartTime: 60,
-    Ramp: 5,
-    U: [],
-  };
-
-  const mockBranch: Branch = {
-    Number: '0',
-    FromNum: '1',
-    ToNum: '2',
-    fromIdx: 0,
-    toIdx: 1,
-    FromSub: 'Example A',
-    ToSub: 'Example B',
-    Status: BranchStatus.IN,
-    P: 450,
-    Pmax: 500,
-    Z: 0.01,
-    ybr: -100,
-  };
-
   const generatorTypes = [
     SubstationCategory.Nuclear,
     SubstationCategory.Thermal,
@@ -72,24 +31,13 @@
     SubstationCategory.Solar,
   ];
 
-  const statusDescriptions: Record<UnitStatus, string> = {
-    [UnitStatus.IN]: 'Generating power',
-    [UnitStatus.DIS]: 'Offline \u2014 click to start',
-    [UnitStatus.STARTUP]: 'Warming up',
-    [UnitStatus.SHUTDOWN]: 'Powering down',
-    [UnitStatus.TRIP]: 'Faulted \u2014 cannot restart',
+  const genDesc: Partial<Record<SubstationCategory, string>> = {
+    [SubstationCategory.Nuclear]: 'Baseload. Slow startup, lowest fuel cost.',
+    [SubstationCategory.Thermal]: 'Workhorse. Moderate startup, adjustable.',
+    [SubstationCategory.Wind]: 'Free fuel. Output varies with conditions.',
+    [SubstationCategory.Solar]: 'Free fuel. Drops to zero after sunset.',
   };
 
-  const genDesc: Record<string, string> = {
-    Nuclear: 'Baseload. Slow startup, lowest fuel cost.',
-    Thermal: 'Workhorse. Moderate startup, adjustable.',
-    Wind: 'Free fuel. Output varies with conditions.',
-    Solar: 'Free fuel. Drops to zero after sunset.',
-  };
-
-  const unitStatuses = [UnitStatus.IN, UnitStatus.DIS, UnitStatus.STARTUP, UnitStatus.SHUTDOWN, UnitStatus.TRIP] as UnitStatus[];
-
-  // --- Help page structure ---
   const helpPageMeta = [
     { title: 'Welcome', icon: Target, subtitle: "You're the operator of a simulated Texas power grid. Your job: keep the lights on." },
     { title: 'The Grid', icon: Zap, subtitle: 'Substations are the building blocks of the grid. They either generate or consume power.' },
@@ -101,147 +49,6 @@
 
   const totalPages = helpPageMeta.length;
 
-  // --- Props ---
-  interface Props {
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-  }
-
-  let { open, onOpenChange }: Props = $props();
-
-  let currentPage = $state(0);
-
-  // Interactive generator demo state
-  const DEMO_START_TIME = 5;
-  const DEMO_TICK_MS = 600;
-
-  const initialUnit: Unit = {
-    Status: UnitStatus.DIS, P: 0, Pset: 0, P0: 0,
-    Status0: UnitStatus.DIS, StatusCount: 0,
-    Pmax: 100, Pmin: 20, Ramp: 5, StartTime: DEMO_START_TIME,
-    FixedCost: 500, FuelCost: 50,
-  };
-
-  let genUnit: Unit = $state({ ...initialUnit });
-  let genSetpointVal = $state(0);
-
-  // Interactive circuit demo state
-  const RAMP_RATE = 30;
-  const RAMP_TICK_MS = 100;
-  const TARGET_FLOW = 450;
-
-  let circuitBranch: Branch = $state({ ...mockBranch });
-
-  // Reset to first page when modal opens
-  $effect(() => {
-    if (open) {
-      currentPage = 0;
-    }
-  });
-
-  // --- Generator demo effects ---
-
-  // Transition countdown (startup / shutdown)
-  $effect(() => {
-    if (genUnit.Status !== UnitStatus.STARTUP && genUnit.Status !== UnitStatus.SHUTDOWN) return;
-    const id = setInterval(() => {
-      const next = genUnit.StatusCount + 1;
-      if (next >= genUnit.StartTime) {
-        if (genUnit.Status === UnitStatus.STARTUP) {
-          genUnit = { ...genUnit, Status: UnitStatus.IN, StatusCount: 0, P: genUnit.Pmin, Pset: genUnit.Pmin };
-        } else {
-          genUnit = { ...genUnit, Status: UnitStatus.DIS, StatusCount: 0, P: 0, Pset: 0 };
-        }
-      } else {
-        genUnit = { ...genUnit, StatusCount: next };
-      }
-    }, DEMO_TICK_MS);
-    return () => clearInterval(id);
-  });
-
-  // Sync slider when coming online / going offline
-  $effect(() => {
-    if (genUnit.Status === UnitStatus.IN) genSetpointVal = genUnit.Pmin;
-    if (genUnit.Status === UnitStatus.DIS) genSetpointVal = 0;
-  });
-
-  // Ramp output toward setpoint
-  $effect(() => {
-    if (genUnit.Status !== UnitStatus.IN) return;
-    const id = setInterval(() => {
-      if (genUnit.Status !== UnitStatus.IN || Math.abs(genUnit.P - genUnit.Pset) < 0.5) return;
-      const step = Math.min(Math.abs(genUnit.Pset - genUnit.P), genUnit.Ramp);
-      genUnit = { ...genUnit, P: +(genUnit.P + Math.sign(genUnit.Pset - genUnit.P) * step).toFixed(1) };
-    }, 150);
-    return () => clearInterval(id);
-  });
-
-  let demoSub: Substation = $derived({ ...mockSubBase, StartTime: DEMO_START_TIME, U: [genUnit] });
-
-  // --- Circuit demo effects ---
-
-  // Ramp flow toward target
-  $effect(() => {
-    const target = circuitBranch.Status === BranchStatus.IN ? TARGET_FLOW : 0;
-    if (Math.abs(circuitBranch.P - target) < 0.5) return;
-    const id = setInterval(() => {
-      const t = circuitBranch.Status === BranchStatus.IN ? TARGET_FLOW : 0;
-      if (Math.abs(circuitBranch.P - t) < 0.5) {
-        circuitBranch = { ...circuitBranch, P: t };
-        return;
-      }
-      const step = Math.min(Math.abs(t - circuitBranch.P), RAMP_RATE);
-      circuitBranch = { ...circuitBranch, P: +(circuitBranch.P + Math.sign(t - circuitBranch.P) * step).toFixed(1) };
-    }, RAMP_TICK_MS);
-    return () => clearInterval(id);
-  });
-
-  // --- Navigation ---
-  function goToNextPage() {
-    currentPage = Math.min(currentPage + 1, totalPages - 1);
-  }
-
-  function goToPrevPage() {
-    currentPage = Math.max(currentPage - 1, 0);
-  }
-
-  // Generator demo handlers
-  function handleGenUnitAction(_subId: string, _unitIndex: number) {
-    if (genUnit.Status === UnitStatus.DIS) {
-      genUnit = { ...genUnit, Status: UnitStatus.STARTUP, StatusCount: 0 };
-    } else if (genUnit.Status === UnitStatus.IN) {
-      genUnit = { ...genUnit, Status: UnitStatus.SHUTDOWN, StatusCount: 0 };
-    }
-  }
-
-  function handleGenAbortTransition(_subId: string, _unitIndex: number) {
-    if (genUnit.Status === UnitStatus.STARTUP) {
-      genUnit = { ...genUnit, Status: UnitStatus.DIS, StatusCount: 0, P: 0, Pset: 0 };
-    } else if (genUnit.Status === UnitStatus.SHUTDOWN) {
-      genUnit = { ...genUnit, Status: UnitStatus.IN, StatusCount: 0 };
-    }
-  }
-
-  function handleGenSetSetpoint(_sid: string, _idx: number, val: number) {
-    genSetpointVal = val;
-    genUnit = { ...genUnit, Pset: val };
-  }
-
-  function handleGenSetpointChange(_idx: number, val: number) {
-    genSetpointVal = val;
-    genUnit = { ...genUnit, Pset: val };
-  }
-
-  // Circuit demo handler
-  function handleCircuitAction(_branchId: string) {
-    if (circuitBranch.Status === BranchStatus.IN) {
-      circuitBranch = { ...circuitBranch, Status: BranchStatus.DIS };
-    } else if (circuitBranch.Status === BranchStatus.DIS) {
-      circuitBranch = { ...circuitBranch, Status: BranchStatus.IN };
-    }
-  }
-
-  // Mock generation bar data for dashboard page
   const genBarExamples = [
     { type: SubstationCategory.Nuclear, output: 70, capacity: 85 },
     { type: SubstationCategory.Thermal, output: 55, capacity: 90 },
@@ -255,6 +62,27 @@
     { value: '< 59.70', color: 'text-destructive', dot: 'bg-destructive', label: 'Danger \u2014 loss of load imminent' },
     { value: '< 58.00', color: 'text-destructive', dot: 'bg-destructive', label: 'Blackout \u2014 grid collapses' },
   ] as const;
+
+  interface Props {
+    open: boolean;
+    onOpenChange: (open: boolean) => void;
+  }
+
+  let { open, onOpenChange }: Props = $props();
+
+  let currentPage = $state(0);
+
+  $effect(() => {
+    if (open) currentPage = 0;
+  });
+
+  function goToNextPage() {
+    currentPage = Math.min(currentPage + 1, totalPages - 1);
+  }
+
+  function goToPrevPage() {
+    currentPage = Math.max(currentPage - 1, 0);
+  }
 </script>
 
 {#snippet sectionLabel(text: string)}
@@ -316,36 +144,6 @@
   </div>
 {/snippet}
 
-{#snippet lineExample(status: 'normal' | 'overloaded' | 'critical' | 'tripped' | 'out', label: string, showFlow?: boolean)}
-  {@const styles = {
-    normal: { stroke: 'var(--foreground)', dasharray: 'none' },
-    overloaded: { stroke: 'var(--color-warning)', dasharray: 'none' },
-    critical: { stroke: 'var(--color-overload-critical)', dasharray: '8,4' },
-    tripped: { stroke: 'var(--color-tripped)', dasharray: '5,5' },
-    out: { stroke: 'var(--foreground)', dasharray: '5,5' },
-  }}
-  {@const style = styles[status]}
-  <div class="flex flex-col items-center gap-1.5 min-w-[80px]">
-    <div class="w-16 h-6 flex items-center justify-center">
-      <svg width="100%" height="6" viewBox="0 0 64 6" class="overflow-visible">
-        <line
-          x1="0" y1="3" x2="64" y2="3"
-          stroke={style.stroke}
-          stroke-width="3"
-          stroke-dasharray={style.dasharray}
-          stroke-linecap="round"
-        />
-        {#if showFlow && status === 'normal'}
-          <circle cx="16" cy="3" r="2.5" fill="var(--color-power-flow)" />
-          <circle cx="32" cy="3" r="2.5" fill="var(--color-power-flow)" />
-          <circle cx="48" cy="3" r="2.5" fill="var(--color-power-flow)" />
-        {/if}
-      </svg>
-    </div>
-    <p class="text-xs font-medium text-center">{label}</p>
-  </div>
-{/snippet}
-
 {#snippet pageDot(active: boolean, onclick: () => void, label: string)}
   <button
     {onclick}
@@ -362,15 +160,12 @@
 
 <Dialog.Root {open} {onOpenChange}>
   <DialogContent id="help-modal" class="sm:max-w-3xl font-sans max-h-[85vh] flex flex-col" overlayClass="bg-black/70">
-    <DialogHeader class="flex-shrink-0">
-      <DialogTitle class="text-xl font-bold flex items-center gap-2">
+    <DialogHeader class="flex-shrink-0" titleClass="text-xl font-bold flex items-center gap-2" description={helpPageMeta[currentPage].subtitle}>
+      {#snippet titleContent()}
         {@const PageIcon = helpPageMeta[currentPage].icon}
         <PageIcon class="h-5 w-5 text-primary" aria-hidden="true" />
         {helpPageMeta[currentPage].title}
-      </DialogTitle>
-      <DialogDescription>
-        {helpPageMeta[currentPage].subtitle}
-      </DialogDescription>
+      {/snippet}
     </DialogHeader>
 
     <div class="flex-1 overflow-y-auto -mx-6 px-6 py-1">
@@ -450,7 +245,7 @@
                   <config.icon class={cn('h-4 w-4 flex-shrink-0 mt-0.5', config.tailwind.text)} aria-hidden="true" />
                   <p class="text-xs">
                     <span class="font-semibold">{config.name}</span>
-                    <span class="text-muted-foreground"> &mdash; {genDesc[config.name]}</span>
+                    <span class="text-muted-foreground"> &mdash; {genDesc[cat]}</span>
                   </p>
                 </div>
               {/each}
@@ -477,79 +272,11 @@
 
       <!-- Page 2: Generator Controls -->
       {:else if currentPage === 2}
-        <div class="space-y-3">
-          <div>
-            {@render sectionLabel('Unit Status')}
-            <div class="grid grid-cols-2 gap-x-4 gap-y-0.5">
-              {#each unitStatuses as status}
-                {@const config = StatusConfig[status]}
-                <div class="flex items-center gap-2 py-1">
-                  <config.icon class={cn('h-4 w-4 flex-shrink-0', config.tailwind.text)} aria-hidden="true" />
-                  <span class="text-xs"><span class="font-semibold">{config.label}</span> <span class="text-muted-foreground">&mdash; {statusDescriptions[status]}</span></span>
-                </div>
-              {/each}
-            </div>
-          </div>
-
-          <div class="border-t pt-3">
-            {@render sectionLabel('Interactive Demo')}
-            <p class="text-xs text-muted-foreground mb-2">
-              Click the power button to start the unit. Once online, drag the slider to set output. Click power again to shut down.
-            </p>
-            <div class="border rounded-lg overflow-hidden bg-background/50">
-              <UnitTable
-                sub={demoSub}
-                onUnitAction={handleGenUnitAction}
-                onAbortTransition={handleGenAbortTransition}
-                onSetSetpoint={handleGenSetSetpoint}
-                setpoints={{ 0: genSetpointVal }}
-                onSetpointChange={handleGenSetpointChange}
-                isPaused={false}
-              />
-            </div>
-          </div>
-        </div>
+        <GeneratorDemo />
 
       <!-- Page 3: Transmission Lines -->
       {:else if currentPage === 3}
-        <div class="space-y-4">
-          <div>
-            {@render sectionLabel('Line Appearance on Map')}
-            <p class="text-xs text-muted-foreground mb-2">
-              Power flows automatically based on physics. Lines have a capacity rating &mdash; if exceeded, they can trip.
-            </p>
-            <div class="flex flex-wrap gap-4 justify-center">
-              {@render lineExample('normal', 'Normal', true)}
-              {@render lineExample('overloaded', 'Overloaded')}
-              {@render lineExample('critical', 'Critical')}
-              {@render lineExample('tripped', 'Tripped')}
-              {@render lineExample('out', 'Out-of-Service')}
-            </div>
-            <p class="text-xs text-muted-foreground text-center mt-2">
-              Above 100%: yellow. Above 120%: red with dashing. Tripped: disconnected.
-            </p>
-          </div>
-
-          <div class="border-t pt-3">
-            {@render sectionLabel('Interactive Demo')}
-            <p class="text-xs text-muted-foreground mb-2">
-              Click the button to open or close the line. Watch flow and loading update in real time.
-            </p>
-            <div class="border rounded-lg overflow-hidden bg-background/50">
-              <CircuitTable
-                branch={circuitBranch}
-                onBranchAction={handleCircuitAction}
-              />
-            </div>
-          </div>
-
-          <div class="rounded-lg bg-destructive/10 border border-destructive/30 p-3">
-            <p class="text-sm">
-              <span class="font-semibold">Cascading failures</span> <span class="text-muted-foreground">&mdash; When a line trips, its power redistributes to other lines.
-              This can push them over capacity too, a chain reaction that can black out entire regions.</span>
-            </p>
-          </div>
-        </div>
+        <TransmissionDemo />
 
       <!-- Page 4: Dashboard -->
       {:else if currentPage === 4}

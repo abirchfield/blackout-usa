@@ -21,6 +21,7 @@ export class GenModel {
   // Per-tick cached invariants (set by prepare(), read by output())
   private _setpoint = 0;
   private _avail = 0;
+  private _rampDown = 0;
   private _rampUp = 0;
   private _isReady = false;
 
@@ -81,6 +82,7 @@ export class GenModel {
     const rampDown = this.unit.P - this.ramp;
     const rampUp = this.unit.P + this.ramp;
     this._setpoint = clamp(pset, rampDown, rampUp);
+    this._rampDown = rampDown;
     this._rampUp = rampUp;
     this._avail = this.isRenewable
       ? availCapacity(this.pmax, this.category, windAvail, sunAvail)
@@ -125,10 +127,10 @@ export class GenModel {
     // Shift by alpha (demand signal scaled by unit size)
     const target = base + alpha * this.pmax;
 
-    // Apply ramp-up limit, then clamp to unit bounds
+    // Apply ramp limits, then clamp to unit bounds
     const lo = this.isRenewable ? 0 : this.pmin;
     const hi = this.isRenewable ? this._avail : this.pmax;
-    return clamp(Math.min(target, this._rampUp), lo, hi);
+    return clamp(clamp(target, this._rampDown, this._rampUp), lo, hi);
   }
 
   // --- Operator Actions ---

@@ -18,7 +18,7 @@ export interface ViewCallbacks {
 }
 
 /** Rendering + input layer — shields the engine from Canvas/DOM details. */
-export interface IGridView {
+export interface GridViewApi {
   init(state: GameState, callbacks: ViewCallbacks): void;
   draw(isPaused: boolean, isFastForward: boolean): void;
   reparent(container: HTMLDivElement): void;
@@ -28,7 +28,7 @@ export interface IGridView {
   destroy(): void;
 }
 
-export class GridView implements IGridView {
+export class GridView implements GridViewApi {
   private container: HTMLDivElement;
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -59,18 +59,20 @@ export class GridView implements IGridView {
   private lastFrameTime: number = 0;
   private lastHoverBranchKey: string | null = null;
 
-  // Dirty tracking
-  private lastSyncV: number = -1;
-  private lastScaleX: number = 0;
-  private lastX0: number = NaN;
-  private lastY0: number = NaN;
+  // Dirty tracking — single object for all last-rendered state
   private cachedScaleFactor: number = 1;
-  private lastSyncHoverBranch: Branch | null = null;
-  private lastSyncHoverSub: import("../types").Substation | null = null;
-  private lastSyncLabels: boolean = true;
-  private lastSyncAnim: boolean = true;
-  private lastFlowOffset: number = -1;
-  private lastHoverFlowOffset: number = -1;
+  private prev = {
+    vSim: -1,
+    scaleX: 0,
+    x0: NaN,
+    y0: NaN,
+    hoverBranch: null as Branch | null,
+    hoverSub: null as import("../types").Substation | null,
+    labels: true,
+    anim: true,
+    flowOffset: -1,
+    hoverFlowOffset: -1,
+  };
 
   constructor(element: HTMLDivElement, interactive = true) {
     this.container = element;
@@ -136,37 +138,38 @@ export class GridView implements IGridView {
 
     // Dirty tracking: skip redraw when nothing changed
     const state = this.state;
+    const p = this.prev;
     const needsRedraw =
       themeChanged ||
-      state._vSim !== this.lastSyncV ||
-      state.scaleX !== this.lastScaleX ||
-      state.x0 !== this.lastX0 ||
-      state.y0 !== this.lastY0 ||
-      state.renderMapLabels !== this.lastSyncLabels ||
-      state.animationsEnabled !== this.lastSyncAnim ||
-      state.hoverBranch !== this.lastSyncHoverBranch ||
-      state.hoverSub !== this.lastSyncHoverSub ||
-      this.flowOffset !== this.lastFlowOffset ||
-      this.hoverFlowOffset !== this.lastHoverFlowOffset;
+      state._vSim !== p.vSim ||
+      state.scaleX !== p.scaleX ||
+      state.x0 !== p.x0 ||
+      state.y0 !== p.y0 ||
+      state.renderMapLabels !== p.labels ||
+      state.animationsEnabled !== p.anim ||
+      state.hoverBranch !== p.hoverBranch ||
+      state.hoverSub !== p.hoverSub ||
+      this.flowOffset !== p.flowOffset ||
+      this.hoverFlowOffset !== p.hoverFlowOffset;
 
     if (!needsRedraw) return;
 
     // Update scale factor cache
-    if (state.scaleX !== this.lastScaleX) {
+    if (state.scaleX !== p.scaleX) {
       this.cachedScaleFactor = Math.sqrt(state.scaleX / state.referenceScale);
     }
 
-    // Update tracking
-    this.lastSyncV = state._vSim;
-    this.lastScaleX = state.scaleX;
-    this.lastX0 = state.x0;
-    this.lastY0 = state.y0;
-    this.lastSyncHoverBranch = state.hoverBranch;
-    this.lastSyncHoverSub = state.hoverSub;
-    this.lastSyncLabels = state.renderMapLabels;
-    this.lastSyncAnim = state.animationsEnabled;
-    this.lastFlowOffset = this.flowOffset;
-    this.lastHoverFlowOffset = this.hoverFlowOffset;
+    // Snapshot current state for next frame comparison
+    p.vSim = state._vSim;
+    p.scaleX = state.scaleX;
+    p.x0 = state.x0;
+    p.y0 = state.y0;
+    p.hoverBranch = state.hoverBranch;
+    p.hoverSub = state.hoverSub;
+    p.labels = state.renderMapLabels;
+    p.anim = state.animationsEnabled;
+    p.flowOffset = this.flowOffset;
+    p.hoverFlowOffset = this.hoverFlowOffset;
 
     const ctx = this.ctx;
     const dpr = this.dpr;
@@ -191,26 +194,25 @@ export class GridView implements IGridView {
       drawBorder(ctx, this.borderPath, state.scaleX, this.colors.foreground);
     }
 
+    const dc = { ctx, state, colors: this.colors, scaleFactor: this.cachedScaleFactor, scaleX: state.scaleX };
+
     if (this.branchGeo) {
-      drawBranches(
-        ctx, state, this.branchGeo, this.colors,
-        this.flowOffset, this.hoverFlowOffset,
-        state.animationsEnabled, isPaused,
-        this.cachedScaleFactor, state.scaleX, this.flowScale,
-      );
+      drawBranches(dc, this.branchGeo, {
+        flowOffset: this.flowOffset,
+        hoverFlowOffset: this.hoverFlowOffset,
+        isPaused,
+        flowScale: this.flowScale,
+      });
     }
 
     // Phase 2: Screen-space drawing (substations + labels + hover label)
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     if (this.subGeo) {
-      drawSubstations(
-        ctx, state, this.subGeo, this.labelOffsets, this.colors,
-        this.cachedScaleFactor, state.scaleX, state.x0, state.y0,
-      );
+      drawSubstations(dc, this.subGeo, this.labelOffsets);
     }
 
-    drawHoverLabel(ctx, state, state.scaleX, state.x0, state.y0, this.colors);
+    drawHoverLabel(dc);
   }
 
   applySettings(s: EngineSettings): void {

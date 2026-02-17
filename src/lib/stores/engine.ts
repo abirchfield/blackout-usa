@@ -10,6 +10,12 @@ export function setEngine(engine: GameEngine) {
   setContext(ENGINE_KEY, engine);
 }
 
+export function getEngine(): GameEngine {
+  const engine = getContext<GameEngine>(ENGINE_KEY);
+  if (!engine) throw new Error('getEngine() must be used within an engine context provider');
+  return engine;
+}
+
 /**
  * Create a readable Svelte store that subscribes to engine state changes.
  * The store updates whenever engine.notify() is called (after commit).
@@ -18,6 +24,58 @@ export function engineStore<T>(engine: GameEngine, selector: (e: GameEngine) => 
   return readable(selector(engine), (set) => {
     return engine.subscribe(() => set(selector(engine)));
   });
+}
+
+/**
+ * Snapshot a Record of mutable objects by shallow-copying each entry.
+ * This produces new references so Svelte's store comparison (`safe_not_equal`)
+ * detects the change and fires subscribers — even though the engine mutates
+ * its state objects in place rather than replacing them.
+ */
+function snapBranches(src: Record<string, Branch>): Record<string, Branch> {
+  const out: Record<string, Branch> = {};
+  for (const key in src) out[key] = { ...src[key] };
+  return out;
+}
+
+/**
+ * Deep-snapshot substations so that every Unit object also gets a new reference.
+ * The engine mutates Unit properties (Status, P, Pset, StatusCount) in place,
+ * and Svelte's `#each` keyed loops won't re-render child components unless the
+ * item reference changes.  Shallow-copying the Substation alone isn't enough
+ * because sub.U would still point to the same Unit[].
+ */
+function snapSubs(src: Record<string, Substation>): Record<string, Substation> {
+  const out: Record<string, Substation> = {};
+  for (const key in src) {
+    const sub = src[key];
+    const copy: Substation = { ...sub, U: sub.U.map(u => ({ ...u })) };
+    if (sub.Loads) {
+      copy.Loads = { ...sub.Loads, U: sub.Loads.U.map(u => ({ ...u })) };
+    }
+    out[key] = copy;
+  }
+  return out;
+}
+
+/**
+ * Version-gate an expensive snapshot selector so it only re-computes when
+ * _vSim changes (simulation ticks / operator actions). Alert dismissals,
+ * playback toggles, and other non-simulation notify() calls return the
+ * cached value, avoiding unnecessary deep-copies and Svelte re-renders.
+ */
+function versionedSnap<T>(
+  snap: (state: GameEngine['state']) => T,
+): (e: GameEngine) => T {
+  let cachedVersion = -1;
+  let cachedValue: T;
+  return (e: GameEngine) => {
+    if (e.state._vSim !== cachedVersion) {
+      cachedVersion = e.state._vSim;
+      cachedValue = snap(e.state);
+    }
+    return cachedValue;
+  };
 }
 
 /** Pre-built derived stores from an engine instance. */
@@ -33,8 +91,8 @@ export function createEngineStores(engine: GameEngine) {
     dayTransitionId: engineStore<number>(engine, e => e.dayTransitionId),
     forecast: engineStore<ForecastData | null>(engine, e => e.forecast),
     simTick: engineStore<number>(engine, e => e.state._vSim),
-    subs: engineStore<Record<string, Substation>>(engine, e => e.state.subs),
-    branches: engineStore<Record<string, Branch>>(engine, e => e.state.branches),
+    subs: engineStore(engine, versionedSnap(s => snapSubs(s.subs))),
+    branches: engineStore(engine, versionedSnap(s => snapBranches(s.branches))),
   };
 }
 
@@ -50,39 +108,4 @@ export function getEngineStores(): EngineStores {
   const stores = getContext<EngineStores>(STORES_KEY);
   if (!stores) throw new Error('getEngineStores() must be used within an engine context provider');
   return stores;
-}
-
-/** Returns stable engine action methods. */
-export function createActions(engine: GameEngine) {
-  return {
-    togglePause: () => engine.togglePause(),
-    toggleFastForward: () => engine.toggleFastForward(),
-    dismissAlert: (id: number) => engine.dismissAlert(id),
-    dismissAllAlerts: () => engine.dismissAllAlerts(),
-    dismissHint: (id: number) => engine.dismissHint(id),
-    dismissAllHints: () => engine.dismissAllHints(),
-    clearAlerts: () => engine.clearAlerts(),
-    navigateToDay: (day: number) => engine.navigateToDay(day),
-    startDay: () => engine.startDay(),
-    advanceToNextDay: () => engine.advanceToNextDay(),
-    toggleUnit: (subId: string, unitIndex: number) => engine.toggleUnit(subId, unitIndex),
-    toggleLoadUnit: (subId: string, unitIndex: number) => engine.toggleLoadUnit(subId, unitIndex),
-    abortTransition: (subId: string, unitIndex: number) => engine.abortTransition(subId, unitIndex),
-    toggleBranch: (branchId: string) => engine.toggleBranch(branchId),
-    setSetpoint: (subId: string, unitIndex: number, value: number) => engine.setSetpoint(subId, unitIndex, value),
-  };
-}
-
-export type EngineActions = ReturnType<typeof createActions>;
-
-const ACTIONS_KEY = Symbol('engine-actions');
-
-export function setEngineActions(actions: EngineActions) {
-  setContext(ACTIONS_KEY, actions);
-}
-
-export function getEngineActions(): EngineActions {
-  const actions = getContext<EngineActions>(ACTIONS_KEY);
-  if (!actions) throw new Error('getEngineActions() must be used within an engine context provider');
-  return actions;
 }

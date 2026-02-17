@@ -6,10 +6,10 @@
   "scripts": {
     "generate": "python data/runme.py",
     "dev": "svelte-kit sync && vite dev",
-    "build": "svelte-kit sync && vite build",
+    "prebuild": "python data/runme.py",
+    "build": "npm run prebuild && svelte-kit sync && vite build",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "lint": "eslint ."
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
   },
   "dependencies": {
     "bits-ui": "^1.0.0",
@@ -19,13 +19,11 @@
     "tailwind-merge": "^3.4.0"
   },
   "devDependencies": {
-    "@sveltejs/adapter-cloudflare": "^4.0.0",
     "@sveltejs/adapter-static": "^3.0.0",
     "@sveltejs/kit": "^2.0.0",
     "@sveltejs/vite-plugin-svelte": "^5.0.0",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
-    "eslint": "^9",
     "svelte": "^5.0.0",
     "svelte-check": "^4.0.0",
     "tailwindcss": "^4",

@@ -18,10 +18,6 @@ export class LoadModel {
 
   // --- Lifecycle ---
 
-  tick(): void {
-    this.unit.StatusCount += 1;
-  }
-
   reset(): void {
     this.unit.Status = this.unit.Status0;
     this.unit.P = this.unit.Pset = this.unit.P0;

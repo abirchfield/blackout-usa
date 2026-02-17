@@ -2,12 +2,12 @@ import {
   SimState, InstantMetrics, CumulativeMetrics,
   UnitStatus, SubstationCategory, LoadCategoryType,
   AlertHandler, HintHandler,
-  IGridModel,
+  GridModelApi,
 } from "../types";
 import { availCapacity, isDispatchable, isInactive } from "../utils";
 import {
   FREQUENCY_DROOP, FREQUENCY_ADJUSTMENT_THRESHOLD_MW,
-  MIN_GENERATION_FOR_FREQ_STABILITY_MW, BASE_FREQUENCY,
+  MIN_GENERATION_FOR_FREQ_STABILITY_MW, BASE_FREQUENCY, FREQUENCY_MAX,
   UNSERVED_COST_PER_MW, TICKS_PER_HOUR,
   FREQ_STEP_LARGE, FREQ_STEP_SMALL,
   FREQ_TRIP_CRITICAL_LOW, FREQ_TRIP_CRITICAL_HIGH, PROB_TRIP_FREQ_CRITICAL,
@@ -33,7 +33,7 @@ const ZERO_INSTANT: InstantMetrics = {
   loadServedResidential: 0, loadServedCommercial: 0,
   loadServedIndustrial: 0, loadServedDatacenter: 0,
   reserves: 0, reservesWind: 0, reservesSolar: 0, reservesThermal: 0, reservesNuclear: 0,
-  windGen: 0, solarGen: 0, thermalGen: 0, nuclearGen: 0,
+  windGen: 0, solarGen: 0, thermalGen: 0, nuclearGen: 0, totalGeneration: 0,
   currentOpCost: 0, currentFuelCost: 0, currentUnservedCost: 0,
 };
 
@@ -52,6 +52,7 @@ function readInstant(state: SimState): InstantMetrics {
   const m: InstantMetrics = { ...ZERO_INSTANT };
   accumulateLoadMetrics(m, state);
   accumulateGenMetrics(m, state);
+  m.totalGeneration = m.windGen + m.solarGen + m.thermalGen + m.nuclearGen;
   m.currentUnservedCost = m.loadUnserved * UNSERVED_COST_PER_MW;
   return m;
 }
@@ -113,7 +114,7 @@ function accumulateGenMetrics(m: InstantMetrics, state: SimState): void {
 
 // --- GridModel ---
 
-export class GridModel implements IGridModel {
+export class GridModel implements GridModelApi {
   state!: SimState;
   private onAlert: AlertHandler = () => {};
   private onHint: HintHandler = () => {};
@@ -193,9 +194,9 @@ export class GridModel implements IGridModel {
 
   tick(dt: number): void {
     // Phase 2 — Integrity: frequency trips (substations), overload trips + islands (network), unit transitions
-    this.tripCheckFrequency();
-    this.network.tick(dt);
-    for (const m of this.subModelList) m.tick(dt);
+    if (dt > 0) this.tripCheckFrequency();
+    this.network.tick(dt);                              // island detection needed even at dt=0 for solver correctness
+    if (dt > 0) for (const m of this.subModelList) m.tick(dt);
 
     // Phase 3 — Balance: prepare gen caches, set load power, compute bounds, adjust frequency
     const bal = this.prepareAndBalance();
@@ -206,7 +207,7 @@ export class GridModel implements IGridModel {
 
     // Phase 5 — Metrics: read instant snapshot, integrate cumulative costs
     this._instant = readInstant(this.state);
-    this.integrate();
+    if (dt > 0) this.integrate();
   }
 
   /** Numeric integration: accumulate instant rates into cumulative totals. */
@@ -294,7 +295,7 @@ export class GridModel implements IGridModel {
     if (excess > 0) {
       // More generation than load — frequency rises
       const step = excess > FREQUENCY_ADJUSTMENT_THRESHOLD_MW ? FREQ_STEP_LARGE : FREQ_STEP_SMALL;
-      this.state.frequency += step;
+      this.state.frequency = Math.min(this.state.frequency + step, FREQUENCY_MAX);
     } else if (deficit > 0) {
       // More load than generation — frequency falls
       const step = deficit > FREQUENCY_ADJUSTMENT_THRESHOLD_MW ? FREQ_STEP_LARGE : FREQ_STEP_SMALL;
@@ -336,9 +337,9 @@ export class GridModel implements IGridModel {
     m.shedAll();
   }
 
-  tripHottestLine(): void {
-    const result = this.network.tripHottestLine();
-    if (result) this.pushAlert(`Tripping most loaded line: ${result.name1}-${result.name2}.`);
+  disconnectHottestLine(): void {
+    const result = this.network.disconnectHottestLine();
+    if (result) this.pushAlert(`Disconnecting most loaded line: ${result.name1}-${result.name2}.`);
   }
 
   shedMaxLoad(): void {

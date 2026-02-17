@@ -1,10 +1,5 @@
 <script lang="ts">
-  import Table from '$components/ui/Table.svelte';
-  import TableHeader from '$components/ui/TableHeader.svelte';
-  import TableBody from '$components/ui/TableBody.svelte';
-  import TableRow from '$components/ui/TableRow.svelte';
-  import TableHead from '$components/ui/TableHead.svelte';
-  import TableCell from '$components/ui/TableCell.svelte';
+  import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$components/ui/table';
   import Button from '$components/ui/Button.svelte';
   import StatusIndicator from '$components/tables/StatusIndicator.svelte';
   import GenerationTypeIcon from '$components/tables/GenerationTypeIcon.svelte';

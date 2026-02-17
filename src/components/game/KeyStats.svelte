@@ -1,9 +1,7 @@
 <script lang="ts">
   import type { StatsSnapshot } from '$lib/types';
-  import { UIThresholds } from '$components/theme';
+  import { UIThresholds, STAT_VALUE } from '$components/theme';
   import { cn, fmtPower } from '$lib/utils';
-
-  const STAT_HERO = 'font-numeric font-bold whitespace-nowrap';
 
   interface Props {
     stats: StatsSnapshot;
@@ -12,8 +10,7 @@
 
   let { stats, class: className }: Props = $props();
 
-  let totalGeneration = $derived(stats.windGen + stats.solarGen + stats.thermalGen + stats.nuclearGen);
-  let genFormatted = $derived(fmtPower(totalGeneration));
+  let genFormatted = $derived(fmtPower(stats.totalGeneration));
   let resFormatted = $derived(fmtPower(stats.reserves));
 </script>
 
@@ -28,7 +25,7 @@
       id="dash-freq"
       class={cn(
         'text-2xl sm:text-3xl',
-        STAT_HERO,
+        STAT_VALUE,
         stats.frequency < UIThresholds.FREQUENCY_WARNING_LOW || stats.frequency > UIThresholds.FREQUENCY_WARNING_HIGH
           ? 'text-destructive'
           : 'text-sidebar-foreground'
@@ -40,7 +37,7 @@
   </div>
   <div>
     <div id="tgen-label" class="text-[0.65rem] text-sidebar-foreground/60 uppercase tracking-wider font-bold">Total Gen.</div>
-    <div id="dash-tgen" class={cn('text-2xl sm:text-3xl text-sidebar-foreground', STAT_HERO)} aria-labelledby="tgen-label">
+    <div id="dash-tgen" class={cn('text-2xl sm:text-3xl text-sidebar-foreground', STAT_VALUE)} aria-labelledby="tgen-label">
       {@render unit(genFormatted[0], genFormatted[1], true)}
     </div>
   </div>
@@ -50,7 +47,7 @@
       id="dash-reserve"
       class={cn(
         'text-2xl sm:text-3xl',
-        STAT_HERO,
+        STAT_VALUE,
         stats.reserves < UIThresholds.RESERVES_CRITICAL_MW
           ? 'text-destructive'
           : stats.reserves < UIThresholds.RESERVES_WARNING_MW

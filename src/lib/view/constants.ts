@@ -1,4 +1,4 @@
-import { KeyBindings } from "../types";
+import type { KeyBindings } from "../types";
 
 export const defaultKeyBindings: KeyBindings = {
   PAN_UP: 'w',
@@ -36,6 +36,8 @@ export const ViewConfig = {
   ZOOM_SENSITIVITY_MIN: 0.1,
   ZOOM_SENSITIVITY_MAX: 2.0,
   ZOOM_SENSITIVITY_STEP: 0.1,
+  // Responsive
+  MOBILE_BREAKPOINT_PX: 768,              // must match Tailwind's `md:` breakpoint
 };
 
 // Drawing and Style Constants
@@ -84,4 +86,64 @@ export const DrawingConfig = {
   LABEL_OFFSET_X: 15,
   LABEL_OFFSET_Y: 5,
   LABEL_OUTLINE_WIDTH: 3,
+
+  // Canvas Typography (px)
+  LABEL_FONT_SIZE_NORMAL: 15,             // substation name labels
+  LABEL_FONT_SIZE_HOVER: 20,              // hovered substation name
+  BRANCH_LABEL_FONT_SIZE: 20,             // branch hover label (overlays)
+
+  // Label placement
+  NEARBY_SUBSTATION_THRESHOLD: 0.8,       // degrees; substations within this distance repel labels
+};
+
+// Forecast Chart Rendering Constants
+export const ChartConfig = {
+  // Layout
+  COMPACT_HEIGHT_THRESHOLD: 50,           // px; below this, use compact padding
+  PAD_LEFT: 6,
+  PAD_RIGHT: 14,
+  PAD_TOP: 14,
+  PAD_TOP_COMPACT: 12,
+  PAD_BOTTOM: 14,
+  PAD_BOTTOM_COMPACT: 12,
+
+  // Font
+  FONT_PREFIX: "bold 9px",                // prepended to resolved font family
+
+  // Grid
+  GRID_DASH: [3, 4] as readonly number[],
+  GRID_LINE_WIDTH: 0.5,
+  GRID_FRACTIONS: [0.25, 0.5, 0.75] as readonly number[],
+
+  // Curves
+  CURVE_LINE_WIDTH: 1.5,
+
+  // Now indicator
+  NOW_GLOW_WIDTH: 4,
+  NOW_CORE_WIDTH: 1,
+  NOW_TRIANGLE_HALF_W: 3,
+  NOW_TRIANGLE_TOP_OFFSET: 1,            // y above chartTop
+  NOW_TRIANGLE_DEPTH: 4,                 // y below chartTop
+
+  // Tick marks
+  TICK_MARK_LENGTH: 3,
+
+  // Legend
+  LEGEND_Y: 2,
+  LEGEND_DOT_SIZE: 5,
+  LEGEND_DOT_Y_OFFSET: 2,
+  LEGEND_LABEL_GAP: 3,
+  LEGEND_ITEM_GAP: 10,
+
+  // Alpha hex suffixes (appended to resolved color strings)
+  ALPHA_GRID: "18",
+  ALPHA_BASELINE: "25",
+  ALPHA_SOLAR_GRAD_TOP: "30",
+  ALPHA_SOLAR_GRAD_BOT: "08",
+  ALPHA_WIND_GRAD_TOP: "35",
+  ALPHA_WIND_GRAD_BOT: "08",
+  ALPHA_NOW_GLOW: "15",
+  ALPHA_NOW_CORE: "90",
+  ALPHA_TICK_MARK: "50",
+  ALPHA_NOW_FILL: "CC",
 };

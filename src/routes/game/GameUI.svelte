@@ -6,20 +6,21 @@
   import type { GameEngine } from '$lib/engine';
   import type { Substation, Branch } from '$lib/types';
   import {
-    setEngine, setEngineStores, setEngineActions,
-    createEngineStores, createActions
+    setEngine, setEngineStores,
+    createEngineStores
   } from '$lib/stores/engine';
-  import { modals } from '$lib/stores/modals';
-  import { settings } from '$lib/stores/settings';
-  import { resolvedTheme } from '$lib/stores/theme';
-  import { isMobile } from '$lib/stores/mobile';
-  import { keyboard } from '$lib/actions/keyboard';
+  import { modals } from '$lib/stores/modals.svelte';
+  import { settings } from '$lib/stores/settings.svelte';
+  import { theme } from '$lib/stores/theme.svelte';
+  import { mobile } from '$lib/stores/mobile.svelte';
+  import { keyboard } from '$lib/keyboard';
 
   import AppHeader from '$components/game/AppHeader.svelte';
   import KeyStats from '$components/game/KeyStats.svelte';
   import Dashboard from '$components/game/Dashboard.svelte';
   import DayTimeDisplay from '$components/game/DayTimeDisplay.svelte';
-  import ForecastPanel from '$components/game/ForecastPanel.svelte';
+  import ForecastChart from '$components/game/ForecastChart.svelte';
+  import { GAME_DURATION_S } from '$lib/grid/constants';
   import SubstationTable from '$components/tables/SubstationTable.svelte';
   import BranchTable from '$components/tables/BranchTable.svelte';
 
@@ -43,16 +44,11 @@
   // svelte-ignore state_referenced_locally
   const stores = createEngineStores(engine);
   setEngineStores(stores);
-  // svelte-ignore state_referenced_locally
-  const actions = createActions(engine);
-  setEngineActions(actions);
 
   // --- Destructure stores ---
-  const { stats, isBlackout, alerts, hints, dayTransitionId, subs, branches } = stores;
-  const activeModal = modals.activeModal;
-  const modalPayload = modals.payload;
-  const isPausingModal = modals.isPausingModal;
-  const isAnyModalOpenStore = modals.isAnyModalOpen;
+  const { stats, isBlackout, alerts, hints, dayTransitionId, subs, branches, forecast } = stores;
+
+  let forecastProgress = $derived($stats.timeStep / GAME_DURATION_S);
 
   // --- State ---
   let mapContainer: HTMLDivElement;
@@ -66,17 +62,17 @@
 
   // --- Sync modal pause to engine ---
   $effect(() => {
-    engine.externalPaused = $isPausingModal;
+    engine.externalPaused = modals.isPausingModal;
   });
 
   // --- Sync settings to engine ---
   $effect(() => {
     engine.applySettings({
-      theme: $resolvedTheme as 'light' | 'dark' | undefined,
-      animationsEnabled: $settings.animationsEnabled,
-      renderMapLabels: $settings.renderMapLabels,
-      keyBindings: $settings.keyBindings,
-      zoomSensitivity: $settings.zoomSensitivity,
+      theme: theme.resolved as 'light' | 'dark' | undefined,
+      animationsEnabled: settings.current.animationsEnabled,
+      renderMapLabels: settings.current.renderMapLabels,
+      keyBindings: settings.current.keyBindings,
+      zoomSensitivity: settings.current.zoomSensitivity,
     });
   });
 
@@ -135,17 +131,16 @@
   }
 
   // --- Keyboard input ---
-  let isAnyModalOpen = $derived($isAnyModalOpenStore);
   let isDayTransitionModal = $derived(
-    $activeModal === 'day-briefing' || $activeModal === 'day-results'
+    modals.activeModal === 'day-briefing' || modals.activeModal === 'day-results'
   );
 
   // Global keyboard handler (use $effect since actions can't go on svelte:window)
   $effect(() => {
     const params = {
       engine,
-      keyBindings: $settings.keyBindings,
-      isBlocked: () => isAnyModalOpen,
+      keyBindings: settings.current.keyBindings,
+      isBlocked: () => modals.isAnyModalOpen,
       isBlackout: $isBlackout,
     };
     const action = keyboard(document.body, params);
@@ -157,15 +152,14 @@
   onOpenModal={modals.openModal}
   onBriefingClick={openBriefing}
   controlsDisabled={isDayTransitionModal}
-  isHighContrast={$settings.isHighContrast}
   isBlackout={$isBlackout}
 />
 
 <div class={cn(
   "flex-1 w-full max-w-[1920px] mx-auto border-x border-border flex overflow-hidden",
-  $isMobile ? "flex-col" : "flex-row"
+  mobile.value ? "flex-col" : "flex-row"
 )}>
-  {#if $isMobile}
+  {#if mobile.value}
     <!-- Mobile: map on top, sidebar below -->
     {@render mainPanel()}
     {@render sidebarPanel()}
@@ -177,7 +171,7 @@
 </div>
 
 <!-- Modals -->
-{#if $activeModal === 'help'}
+{#if modals.activeModal === 'help'}
   <HelpModal
     open={true}
     onOpenChange={(open: boolean) => {
@@ -190,26 +184,23 @@
   />
 {/if}
 
-{#if $activeModal === 'accessibility'}
+{#if modals.activeModal === 'accessibility'}
   <AccessibilityModal
     open={true}
     onOpenChange={(open: boolean) => modals.onOpenChange('accessibility', open)}
-    settings={$settings}
-    onSettingsChange={(patch) => settings.update(patch)}
   />
 {/if}
 
-{#if $activeModal === 'grid'}
+{#if modals.activeModal === 'grid'}
   <GridModal
     open={true}
-    substationId={$modalPayload.substationId}
-    branchId={$modalPayload.branchId}
+    substationId={modals.payload.substationId}
+    branchId={modals.payload.branchId}
     onClose={modals.closeModal}
-    isHighContrast={$settings.isHighContrast}
   />
 {/if}
 
-{#if $activeModal === 'quit'}
+{#if modals.activeModal === 'quit'}
   <QuitModal
     open={true}
     onOpenChange={(open: boolean) => modals.onOpenChange('quit', open)}
@@ -217,19 +208,17 @@
     onQuitToStart={() => goto(`${base}/`)}
     onReplayDay={(day: number) => engine.navigateToDay(day)}
     onNextDay={() => engine.advanceToNextDay()}
-    isHighContrast={$settings.isHighContrast}
   />
 {/if}
 
-{#if $activeModal === 'day-briefing' || $activeModal === 'day-results'}
+{#if modals.activeModal === 'day-briefing' || modals.activeModal === 'day-results'}
   <DayTransitionModal
     open={true}
-    mode={$activeModal === 'day-results' ? 'results' : 'briefing'}
-    targetDay={$modalPayload.targetDay ?? 1}
-    info={$modalPayload.info}
-    resultDetails={$modalPayload.resultDetails}
-    gameStatistics={$modalPayload.gameStatistics ?? engine.stats}
-    isHighContrast={$settings.isHighContrast}
+    mode={modals.activeModal === 'day-results' ? 'results' : 'briefing'}
+    targetDay={modals.payload.targetDay ?? 1}
+    info={modals.payload.info}
+    resultDetails={modals.payload.resultDetails}
+    gameStatistics={modals.payload.gameStatistics ?? engine.stats}
     onStartDay={() => { engine.startDay(); modals.closeModal(); }}
     onClose={modals.closeModal}
     onReplayDay={(day: number) => engine.navigateToDay(day)}
@@ -237,29 +226,29 @@
   />
 {/if}
 
-{#if $activeModal === 'alerts'}
+{#if modals.activeModal === 'alerts'}
   <NotificationDialog
     open={true}
     onOpenChange={(open: boolean) => modals.onOpenChange('alerts', open)}
     title="Alerts"
     description="Critical and informational messages about the grid status."
     items={$alerts}
-    onRemove={actions.dismissAlert}
-    onDismissAll={actions.dismissAllAlerts}
+    onRemove={(id) => engine.dismissAlert(id)}
+    onDismissAll={() => engine.dismissAllAlerts()}
     emptyMessage="No alerts to show"
     ariaLabel="List of alerts"
   />
 {/if}
 
-{#if $activeModal === 'hints'}
+{#if modals.activeModal === 'hints'}
   <NotificationDialog
     open={true}
     onOpenChange={(open: boolean) => modals.onOpenChange('hints', open)}
     title="Hints"
     description="Suggestions and guidance for managing the grid."
     items={$hints}
-    onRemove={actions.dismissHint}
-    onDismissAll={actions.dismissAllHints}
+    onRemove={(id) => engine.dismissHint(id)}
+    onDismissAll={() => engine.dismissAllHints()}
     emptyMessage="No hints to show"
     ariaLabel="List of hints"
   />
@@ -273,7 +262,7 @@
   <aside
     class={cn(
       "bg-sidebar overflow-y-auto",
-      $isMobile
+      mobile.value
         ? "border-t-4 border-border"
         : "w-[clamp(280px,35%,400px)] flex-shrink-0 border-r border-border"
     )}
@@ -293,12 +282,16 @@
 {#snippet mainPanel()}
   <main class="flex-1 min-w-0 h-full flex flex-col" aria-label="Main game area">
     <div class="font-sans relative flex-1 w-full h-full flex flex-col">
-      {#if $settings.viewMode !== 'tabular'}
+      {#if settings.current.viewMode !== 'tabular'}
         <div class="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-5 py-2.5 rounded-md border border-border/50 shadow-sm">
           <DayTimeDisplay day={$stats.day} timeStr={$stats.timeStr} idPrefix="vis" size="lg" />
         </div>
         <div class="absolute top-4 right-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm rounded-md border border-border/50 shadow-md hidden sm:block w-[min(45%,380px)]">
-          <ForecastPanel />
+          {#if $forecast}
+            <section class="px-2.5 py-1.5" aria-label="Demand forecast">
+              <ForecastChart forecast={$forecast} progress={forecastProgress} />
+            </section>
+          {/if}
         </div>
       {/if}
       <div
@@ -306,9 +299,9 @@
         tabindex="-1"
         aria-label="Interactive Texas electrical grid map"
         role="application"
-        class="h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary {$settings.viewMode !== 'map' ? 'hidden' : ''}"
+        class="h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary {settings.current.viewMode !== 'map' ? 'hidden' : ''}"
       ></div>
-      {#if $settings.viewMode === 'tabular'}
+      {#if settings.current.viewMode === 'tabular'}
         <div class="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-sans">
           <div class="flex-1 border-b md:border-b-0 md:border-r p-4 flex flex-col min-h-0">
             <div class="flex justify-between items-baseline mb-4">

@@ -1,4 +1,3 @@
-import { writable, derived } from 'svelte/store';
 import type { ResultDetails, StatsSnapshot } from '$lib/types';
 
 export type ModalId =
@@ -20,21 +19,24 @@ export interface ModalPayload {
   gameStatistics?: StatsSnapshot;
 }
 
-function createModalStore() {
-  const activeModal = writable<ModalId | null>(null);
-  const payload = writable<ModalPayload>({});
+function createModalState() {
+  let activeModal = $state<ModalId | null>(null);
+  let payload = $state<ModalPayload>({});
   let lastFocused: HTMLElement | null = null;
+
+  const isAnyModalOpen = $derived(activeModal !== null);
+  const isPausingModal = $derived(activeModal !== null && activeModal !== 'grid');
 
   function openModal(id: ModalId, newPayload?: ModalPayload) {
     lastFocused = document.activeElement as HTMLElement;
     lastFocused?.blur();
-    payload.set(newPayload || {});
-    activeModal.set(id);
+    payload = newPayload || {};
+    activeModal = id;
   }
 
   function closeModal() {
-    activeModal.set(null);
-    payload.set({});
+    activeModal = null;
+    payload = {};
     requestAnimationFrame(() => {
       if (lastFocused && document.contains(lastFocused)) {
         lastFocused.focus();
@@ -51,28 +53,20 @@ function createModalStore() {
   }
 
   function replaceModal(id: ModalId, newPayload?: ModalPayload) {
-    payload.set(newPayload || {});
-    activeModal.set(id);
+    payload = newPayload || {};
+    activeModal = id;
   }
-
-  function updatePayload(updates: Partial<ModalPayload>) {
-    payload.update(p => ({ ...p, ...updates }));
-  }
-
-  const isAnyModalOpen = derived(activeModal, $m => $m !== null);
-  const isPausingModal = derived(activeModal, $m => $m !== null && $m !== 'grid');
 
   return {
-    activeModal,
-    payload,
+    get activeModal() { return activeModal; },
+    get payload() { return payload; },
+    get isAnyModalOpen() { return isAnyModalOpen; },
+    get isPausingModal() { return isPausingModal; },
     openModal,
     closeModal,
-    replaceModal,
-    updatePayload,
     onOpenChange,
-    isAnyModalOpen,
-    isPausingModal,
+    replaceModal,
   };
 }
 
-export const modals = createModalStore();
+export const modals = createModalState();

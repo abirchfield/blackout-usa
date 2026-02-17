@@ -1,22 +1,23 @@
 <script lang="ts">
   import { HelpCircle, LogOut, PersonStanding, Play, Pause, FastForward, Bell, Lightbulb, FileText, Menu, X, AlertTriangle } from 'lucide-svelte';
   import Button from '$components/ui/Button.svelte';
-  import { cn, hcVariant } from '$lib/utils';
-  import { getEngineStores, getEngineActions } from '$lib/stores/engine';
-  import type { ModalId } from '$lib/stores/modals';
+  import { cn } from '$lib/utils';
+  import { getEngineStores, getEngine } from '$lib/stores/engine';
+  import { settings } from '$lib/stores/settings.svelte';
+  import { UIThresholds } from '$components/theme';
+  import type { ModalId } from '$lib/stores/modals.svelte';
 
   interface Props {
     onOpenModal: (id: ModalId) => void;
     onBriefingClick: () => void;
     controlsDisabled?: boolean;
-    isHighContrast?: boolean;
     isBlackout?: boolean;
   }
 
-  let { onOpenModal, onBriefingClick, controlsDisabled, isHighContrast, isBlackout }: Props = $props();
+  let { onOpenModal, onBriefingClick, controlsDisabled, isBlackout }: Props = $props();
 
   const { isPaused, isFastForward, alerts, hints } = getEngineStores();
-  const actions = getEngineActions();
+  const engine = getEngine();
 
   let alertsCount = $derived($alerts.length);
   let hintsCount = $derived($hints.length);
@@ -36,7 +37,7 @@
     visibleAlert = { id: latest.id, message: latest.message };
     lastShownId = latest.id;
 
-    const timer = setTimeout(() => { visibleAlert = null; }, 5000);
+    const timer = setTimeout(() => { visibleAlert = null; }, UIThresholds.ALERT_DISPLAY_DURATION_MS);
     return () => clearTimeout(timer);
   });
 </script>
@@ -51,14 +52,14 @@
 {/snippet}
 
 {#snippet timeControls()}
-  <Button variant="ghost" size="icon" onclick={() => actions.togglePause()} aria-label={$isPaused ? 'Resume game' : 'Pause game'} disabled={controlsDisabled}>
+  <Button variant="ghost" size="icon" onclick={() => engine.togglePause()} aria-label={$isPaused ? 'Resume game' : 'Pause game'} disabled={controlsDisabled}>
     {#if $isPaused}
       <Play class="h-5 w-5 fill-current" />
     {:else}
       <Pause class="h-5 w-5 fill-current" />
     {/if}
   </Button>
-  <Button variant={$isFastForward ? hcVariant(isHighContrast ?? false) : 'ghost'} size="icon" onclick={() => actions.toggleFastForward()} aria-label={$isFastForward ? 'Disable fast forward' : 'Enable fast forward'} disabled={$isPaused || controlsDisabled}>
+  <Button variant={$isFastForward ? settings.hcVariant : 'ghost'} size="icon" onclick={() => engine.toggleFastForward()} aria-label={$isFastForward ? 'Disable fast forward' : 'Enable fast forward'} disabled={$isPaused || controlsDisabled}>
     <FastForward class="h-5 w-5 {$isFastForward ? 'fill-current' : ''}" />
   </Button>
 {/snippet}

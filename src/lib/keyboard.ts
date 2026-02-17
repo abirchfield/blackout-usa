@@ -9,37 +9,31 @@ interface KeyboardParams {
 }
 
 export function keyboard(_node: HTMLElement, params: KeyboardParams) {
-  let { engine, keyBindings, isBlocked, isBlackout } = params;
+  let current = params;
 
   function handleKeyDown(e: KeyboardEvent) {
     const target = e.target as HTMLElement;
     const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
       target.tagName === 'SELECT' || target.isContentEditable;
 
-    if (isTyping || isBlocked() || isBlackout) return;
-
-    // Don't intercept browser shortcuts
+    if (isTyping || current.isBlocked() || current.isBlackout) return;
     if (e.ctrlKey || e.metaKey) return;
 
     const key = e.key.toLowerCase();
-    const action = (Object.keys(keyBindings) as GameAction[]).find(
-      (act) => keyBindings[act] === key
+    const action = (Object.keys(current.keyBindings) as GameAction[]).find(
+      (act) => current.keyBindings[act] === key
     );
 
     if (action) {
       e.preventDefault();
-      engine.performAction(action);
+      current.engine.performAction(action);
     }
   }
 
   document.addEventListener('keydown', handleKeyDown);
 
   return {
-    update(newParams: KeyboardParams) {
-      ({ engine, keyBindings, isBlocked, isBlackout } = newParams);
-    },
-    destroy() {
-      document.removeEventListener('keydown', handleKeyDown);
-    },
+    update(newParams: KeyboardParams) { current = newParams; },
+    destroy() { document.removeEventListener('keydown', handleKeyDown); },
   };
 }

@@ -1,9 +1,11 @@
 import { Branch, BranchStatus, GameState, Substation } from "../types";
 import { ThemeColors } from "./colors";
 import { DrawingConfig } from "./constants";
+import type { DrawContext } from "./draw-branches";
 
 const TWO_PI = Math.PI * 2;
-const NEARBY_THRESHOLD_SQ = 0.8 * 0.8;
+const NEARBY_THRESHOLD_SQ = DrawingConfig.NEARBY_SUBSTATION_THRESHOLD ** 2;
+const dashNone: number[] = [];
 
 export interface LabelOffset {
   x: number;
@@ -103,7 +105,7 @@ export function drawBorder(
 ) {
   ctx.strokeStyle = color;
   ctx.lineWidth = DrawingConfig.BORDER_LINE_WIDTH / scaleX;
-  ctx.setLineDash([]);
+  ctx.setLineDash(dashNone);
   ctx.stroke(borderPath);
 }
 
@@ -116,14 +118,9 @@ function toScreenY(lat: number, y0: number, scaleX: number): number {
 }
 
 /** Draw the hover label for a hovered branch at its midpoint. */
-export function drawHoverLabel(
-  ctx: CanvasRenderingContext2D,
-  state: GameState,
-  scaleX: number,
-  x0: number,
-  y0: number,
-  colors: ThemeColors,
-) {
+export function drawHoverLabel(dc: DrawContext) {
+  const { ctx, state, colors, scaleX } = dc;
+  const { x0, y0 } = state;
   if (!state.hoverBranch) return;
   const branch = state.hoverBranch;
   if (!branch.sub1 || !branch.sub2) return;
@@ -142,10 +139,10 @@ export function drawHoverLabel(
     text = "Out of Service";
   } else if (overloadRatio > DrawingConfig.BRANCH_OVERLOAD_CRITICAL_THRESHOLD_LABEL) {
     fillColor = colors.overloadCritical;
-    text += " (Critically Overloaded)";
+    text += " Critical Overload";
   } else if (overloadRatio > DrawingConfig.BRANCH_OVERLOAD_NORMAL_THRESHOLD) {
     fillColor = colors.warning;
-    text += " (Overloaded)";
+    text += " Overloaded";
   }
 
   // Position at branch midpoint in screen space
@@ -154,7 +151,7 @@ export function drawHoverLabel(
   const sx = toScreenX(midLon, x0, scaleX) + DrawingConfig.LABEL_OFFSET_X;
   const sy = toScreenY(midLat, y0, scaleX) + DrawingConfig.LABEL_OFFSET_Y;
 
-  ctx.font = `20px ${colors.labelFont}, monospace`;
+  ctx.font = `${DrawingConfig.BRANCH_LABEL_FONT_SIZE}px ${colors.labelFont}, monospace`;
   ctx.textAlign = "left";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
