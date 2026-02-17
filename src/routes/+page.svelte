@@ -3,19 +3,17 @@
   import Button from '$components/ui/Button.svelte';
   import { GameEngine } from '$lib/engine';
   import { loadCase, DEFAULT_CASE, CASE_NAMES } from '$data/_out/registry';
-  import { resolvedTheme } from '$lib/stores/theme';
-  import { settings } from '$lib/stores/settings';
-  import { modals } from '$lib/stores/modals';
+  import { theme } from '$lib/stores/theme.svelte';
+  import { settings } from '$lib/stores/settings.svelte';
+  import { modals } from '$lib/stores/modals.svelte';
   import { PersonStanding, ExternalLink } from 'lucide-svelte';
-
-  const activeModal = modals.activeModal;
 
   let mapContainer: HTMLDivElement;
   let engine: GameEngine | null = null;
   let selectedCase = $state(DEFAULT_CASE);
 
-  let gameUrl = $derived(`${base}/game?case=${selectedCase}`);
-  let tutorialUrl = $derived(`${base}/game?tutorial=true&case=${selectedCase}`);
+  let gameUrl = $derived(`${base}/game/${selectedCase}`);
+  let tutorialUrl = $derived(`${base}/game/${selectedCase}?tutorial=true`);
 
   // Create a non-interactive preview engine for the background map
   $effect(() => {
@@ -27,43 +25,41 @@
     engine = null;
 
     let cancelled = false;
-    let animationFrameId: number;
 
     loadCase(caseName).then(gridCase => {
       if (cancelled || !mapContainer) return;
 
       engine = new GameEngine(mapContainer, gridCase, { interactive: false });
       engine.applySettings({
-        theme: $resolvedTheme || 'dark',
-        animationsEnabled: $settings.animationsEnabled,
+        theme: theme.resolved || 'dark',
+        animationsEnabled: settings.current.animationsEnabled,
         renderMapLabels: false,
-        keyBindings: $settings.keyBindings,
+        keyBindings: settings.current.keyBindings,
       });
-      engine.userPaused = false;
+      engine.navigateToDay(1);
       engine.startDay();
-
-      const animate = () => {
-        engine?.draw();
-        animationFrameId = requestAnimationFrame(animate);
-      };
-      animationFrameId = requestAnimationFrame(animate);
+      engine.startLoop();
     });
 
     return () => {
       cancelled = true;
-      cancelAnimationFrame(animationFrameId);
       engine?.destroy();
       engine = null;
     };
   });
 
-  // Sync settings (including theme) to engine
+  // Sync settings (including theme) to engine.
+  // Read reactive values BEFORE the optional chain so Svelte always tracks them
+  // (engine is a plain `let`, so `engine?.` short-circuits and skips the reads
+  //  when engine is null — leaving the effect with zero dependencies).
   $effect(() => {
+    const resolvedTheme = theme.resolved;
+    const s = settings.current;
     engine?.applySettings({
-      theme: $resolvedTheme || 'dark',
-      animationsEnabled: $settings.animationsEnabled,
-      renderMapLabels: $settings.renderMapLabels,
-      keyBindings: $settings.keyBindings,
+      theme: resolvedTheme || 'dark',
+      animationsEnabled: s.animationsEnabled,
+      renderMapLabels: s.renderMapLabels,
+      keyBindings: s.keyBindings,
     });
   });
 </script>
@@ -121,10 +117,10 @@
       </div>
     {/if}
     <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
-      <Button variant="secondary" href={tutorialUrl} class="text-xl py-6 cursor-pointer">
+      <Button variant="secondary" href={tutorialUrl} data-sveltekit-preload-data="tap" class="text-xl py-6 cursor-pointer">
         How to Play
       </Button>
-      <Button href={gameUrl} class="text-xl py-6 cursor-pointer">
+      <Button href={gameUrl} data-sveltekit-preload-data="tap" class="text-xl py-6 cursor-pointer">
         Start my first shift!
       </Button>
     </div>
@@ -137,13 +133,11 @@
       class="h-full w-full"
     ></div>
   </div>
-  {#if $activeModal === 'accessibility'}
+  {#if modals.activeModal === 'accessibility'}
     {#await import('$components/modals/AccessibilityModal.svelte') then { default: AccessibilityModal }}
       <AccessibilityModal
         open={true}
         onOpenChange={(open: boolean) => modals.onOpenChange('accessibility', open)}
-        settings={$settings}
-        onSettingsChange={(patch) => settings.update(patch)}
       />
     {/await}
   {/if}

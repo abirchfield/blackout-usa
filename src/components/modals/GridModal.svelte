@@ -2,9 +2,8 @@
   import { Dialog } from 'bits-ui';
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
-  import DialogTitle from '$components/ui/DialogTitle.svelte';
-  import DialogDescription from '$components/ui/DialogDescription.svelte';
   import { Cable } from 'lucide-svelte';
+  import { untrack } from 'svelte';
   import type { Substation, Branch, Unit } from '$lib/types';
   import { SubstationCategory, LoadCategoryType, UnitStatus } from '$lib/types';
   import GeneratorUnitsTable from '$components/tables/UnitTable.svelte';
@@ -12,20 +11,19 @@
   import CircuitTable from '$components/tables/CircuitTable.svelte';
   import { GenerationTypeConfig, LoadTypeConfig } from '$components/theme';
   import { cn, branchLoading, isBranchActive } from '$lib/utils';
-  import { getEngineStores, getEngineActions } from '$lib/stores/engine';
+  import { getEngineStores, getEngine } from '$lib/stores/engine';
 
   interface Props {
     open: boolean;
     substationId?: string;
     branchId?: string;
     onClose: () => void;
-    isHighContrast?: boolean;
   }
 
-  let { open, substationId, branchId, onClose, isHighContrast }: Props = $props();
+  let { open, substationId, branchId, onClose }: Props = $props();
 
   const { subs: subsStore, branches: branchesStore, stats: statsStore, userPaused: userPausedStore } = getEngineStores();
-  const actions = getEngineActions();
+  const engine = getEngine();
 
   // Derived entity lookups
   let sub = $derived(substationId ? $subsStore[substationId] : undefined);
@@ -33,18 +31,26 @@
   let siblingBranch = $derived(branch?.sibling ? $branchesStore[branch.sibling] : undefined);
   let windAvail = $derived($statsStore.windAvail);
   let sunAvail = $derived($statsStore.sunAvail);
-  let isPaused = $derived($userPausedStore);
 
   // Setpoints state for SubstationContent
   let setpoints: Record<number, number> = $state({});
 
+  // Only re-initialize setpoints when the substation ID changes (e.g. opening a
+  // different modal), NOT every tick.  snapRecord() gives `sub` a new reference
+  // each tick, so reading it inside the effect body would reset sliders mid-drag.
   $effect(() => {
-    if (sub) {
-      const initial: Record<number, number> = {};
-      sub.U.forEach((unit: Unit, index: number) => {
-        initial[index] = unit.Pset;
+    const id = substationId;
+    if (id) {
+      untrack(() => {
+        const s = $subsStore[id];
+        if (s) {
+          const initial: Record<number, number> = {};
+          s.U.forEach((unit: Unit, index: number) => {
+            initial[index] = unit.Pset;
+          });
+          setpoints = initial;
+        }
       });
-      setpoints = initial;
     }
   });
 
@@ -53,29 +59,29 @@
   }
 
   function onUnitAction(sid: string, unitIndex: number) {
-    actions.toggleUnit(sid, unitIndex);
+    engine.toggleUnit(sid, unitIndex);
   }
 
   function onLoadUnitAction(sid: string, unitIndex: number) {
-    actions.toggleLoadUnit(sid, unitIndex);
+    engine.toggleLoadUnit(sid, unitIndex);
   }
 
   function onAbortTransition(sid: string, unitIndex: number) {
-    actions.abortTransition(sid, unitIndex);
+    engine.abortTransition(sid, unitIndex);
   }
 
   function onSetSetpoint(sid: string, unitIndex: number, value: number) {
-    actions.setSetpoint(sid, unitIndex, value);
+    engine.setSetpoint(sid, unitIndex, value);
   }
 
   function onBranchAction(bid: string) {
-    actions.toggleBranch(bid);
+    engine.toggleBranch(bid);
   }
 </script>
 
 {#snippet generationTypeIcon(category: string, className?: string)}
   {@const config = GenerationTypeConfig[category as SubstationCategory] || GenerationTypeConfig[SubstationCategory.Thermal]}
-  <config.icon class={cn(`w-5 h-5 ${config.tailwind.text}`, className)} />
+  <config.icon class={cn('w-5 h-5', config.tailwind.text, className)} />
 {/snippet}
 
 {#snippet subDescription(substation: Substation)}
@@ -142,7 +148,7 @@
 {#snippet substationContent(substation: Substation)}
   <div class="text-sm text-muted-foreground mb-2">{@render subDescription(substation)}</div>
   {#if substation.isLoad}
-    <LoadUnitsTable sub={substation} {onUnitAction} {isPaused} stickyHeader={true} />
+    <LoadUnitsTable sub={substation} {onUnitAction} isPaused={$userPausedStore} stickyHeader={true} />
   {:else}
     <GeneratorUnitsTable
       sub={substation}
@@ -151,13 +157,12 @@
       {onSetSetpoint}
       {setpoints}
       onSetpointChange={handleSetpointChange}
-      {isPaused}
-      {isHighContrast}
+      isPaused={$userPausedStore}
       stickyHeader={true}
     />
     {#if substation.Loads}
       <h3 class="text-sm font-semibold mt-4 mb-2">Load Circuits</h3>
-      <LoadUnitsTable sub={substation} units={substation.Loads.U} onUnitAction={onLoadUnitAction} {isPaused} stickyHeader={true} />
+      <LoadUnitsTable sub={substation} units={substation.Loads.U} onUnitAction={onLoadUnitAction} isPaused={$userPausedStore} stickyHeader={true} />
     {/if}
   {/if}
 {/snippet}
@@ -178,18 +183,17 @@
     <span class="mx-1.5 opacity-40">&middot;</span>
     <span>Loading <span class={cn('font-mono', loading > 100 ? 'text-destructive' : '')}>{loading.toFixed(0)}%</span> of {totalCapacity.toFixed(0)} MW</span>
   </div>
-  <CircuitTable branch={br} {sibling} {onBranchAction} {isPaused} {isHighContrast} />
+  <CircuitTable branch={br} {sibling} {onBranchAction} isPaused={$userPausedStore} />
 {/snippet}
 
 {#if open && sub}
   <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
     <DialogContent id="grid-modal" class="sm:max-w-3xl canvas-center">
-      <DialogHeader>
-        <DialogTitle class="flex items-center gap-2">
+      <DialogHeader titleClass="flex items-center gap-2" description="Controls and details for {sub.Name}." descriptionClass="sr-only">
+        {#snippet titleContent()}
           {@render generationTypeIcon(sub.Category)}
           <span class="text-lg font-semibold leading-none tracking-tight">{sub.Name} Substation</span>
-        </DialogTitle>
-        <DialogDescription class="sr-only">Controls and details for {sub.Name}.</DialogDescription>
+        {/snippet}
       </DialogHeader>
       <div role="region" aria-label="{sub.Name} Controls" class="max-h-[70vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
         {#if sub.isLoad}
@@ -204,12 +208,11 @@
   {@const toSub = branch.sub2?.Name || branch.ToSub}
   <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
     <DialogContent id="grid-modal" class="sm:max-w-3xl canvas-center">
-      <DialogHeader>
-        <DialogTitle class="flex items-center gap-2">
+      <DialogHeader titleClass="flex items-center gap-2" description="Controls and details for this transmission line." descriptionClass="sr-only">
+        {#snippet titleContent()}
           <Cable class="w-5 h-5 text-muted-foreground" aria-hidden="true" />
           <span class="text-lg font-semibold leading-none tracking-tight">{fromSub} &mdash; {toSub}</span>
-        </DialogTitle>
-        <DialogDescription class="sr-only">Controls and details for this transmission line.</DialogDescription>
+        {/snippet}
       </DialogHeader>
       <div role="region" aria-label="Line Controls" class="max-h-[70vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
         {@render branchContent(branch, siblingBranch)}

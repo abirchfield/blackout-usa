@@ -1,8 +1,9 @@
 import { GameState, InteractionHandler, GameAction } from "../types";
 import { ViewConfig, DrawingConfig } from "./constants";
 import { clampViewBounds, clampPan, getDynamicSubstationRadius } from "./view-math";
+import { getDynamicBranchRadius } from "./draw-branches";
 
-export interface IGridHandler {
+export interface GridHandler {
   onInteract?: InteractionHandler;
   onTripHottestLine?: () => void;
   onShedMinLoad?: () => void;
@@ -21,7 +22,7 @@ export interface IGridHandler {
 
 const CLICK_DRAG_THRESHOLD_SQ = ViewConfig.CLICK_DRAG_THRESHOLD * ViewConfig.CLICK_DRAG_THRESHOLD;
 
-export class InputHandler implements IGridHandler {
+export class InputHandler implements GridHandler {
   private canvas: HTMLCanvasElement;
   private state: GameState;
   public onInteract?: InteractionHandler;
@@ -178,8 +179,7 @@ export class InputHandler implements IGridHandler {
     if (this.state.hoverSub === null) {
       let mindist = ViewConfig.BRANCH_HOVER_RADIUS;
 
-      const normalRadius = Math.max(DrawingConfig.BRANCH_RADIUS_MIN,
-        Math.min(DrawingConfig.BRANCH_RADIUS_NORMAL * scaleFactor, DrawingConfig.BRANCH_RADIUS_MAX));
+      const normalRadius = getDynamicBranchRadius(scaleFactor, false);
       const halfOffPx = normalRadius * DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR / 2;
 
       for (const branch of this.branchArray) {

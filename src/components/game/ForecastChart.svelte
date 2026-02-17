@@ -1,5 +1,6 @@
 <script lang="ts">
-  import { resolvedTheme } from '$lib/stores/theme';
+  import { theme } from '$lib/stores/theme.svelte';
+  import { ChartConfig } from '$lib/view/constants';
   import type { ForecastData } from '$lib/weather/forecast';
 
   interface Props {
@@ -90,7 +91,7 @@
 
   function formatHourLabel(hour24: number): string {
     const h = Math.round(hour24) % 24;
-    if (h === 0 || h === 24) return "12A";
+    if (h === 0) return "12A";
     if (h === 12) return "12P";
     return h > 12 ? `${h - 12}P` : `${h}A`;
   }
@@ -105,26 +106,28 @@
     progress: number,
     colors: ChartColors,
   ) {
+    const C = ChartConfig;
     ctx.clearRect(0, 0, w, h);
 
-    const compact = h < 50;
-    const pad = { left: 6, right: 14, top: compact ? 12 : 14, bottom: compact ? 12 : 14 };
-    const chartLeft = pad.left;
-    const chartTop = pad.top;
-    const chartWidth = w - pad.left - pad.right;
-    const chartHeight = h - pad.top - pad.bottom;
+    const compact = h < C.COMPACT_HEIGHT_THRESHOLD;
+    const padTop = compact ? C.PAD_TOP_COMPACT : C.PAD_TOP;
+    const padBottom = compact ? C.PAD_BOTTOM_COMPACT : C.PAD_BOTTOM;
+    const chartLeft = C.PAD_LEFT;
+    const chartTop = padTop;
+    const chartWidth = w - C.PAD_LEFT - C.PAD_RIGHT;
+    const chartHeight = h - padTop - padBottom;
     const chartBottom = chartTop + chartHeight;
     const dur = forecast.durationHours;
 
     // --- Grid lines (subtle horizontal dashes) ---
-    ctx.setLineDash([3, 4]);
-    ctx.lineWidth = 0.5;
-    for (const frac of [0.25, 0.5, 0.75]) {
+    ctx.setLineDash(C.GRID_DASH as number[]);
+    ctx.lineWidth = C.GRID_LINE_WIDTH;
+    for (const frac of C.GRID_FRACTIONS) {
       const y = yForValue(frac, chartTop, chartHeight);
       ctx.beginPath();
       ctx.moveTo(chartLeft, y);
       ctx.lineTo(chartLeft + chartWidth, y);
-      ctx.strokeStyle = colors.fg + "18";
+      ctx.strokeStyle = colors.fg + C.ALPHA_GRID;
       ctx.stroke();
     }
     ctx.setLineDash([]);
@@ -133,8 +136,8 @@
     ctx.beginPath();
     ctx.moveTo(chartLeft, chartBottom);
     ctx.lineTo(chartLeft + chartWidth, chartBottom);
-    ctx.strokeStyle = colors.fg + "25";
-    ctx.lineWidth = 0.5;
+    ctx.strokeStyle = colors.fg + C.ALPHA_BASELINE;
+    ctx.lineWidth = C.GRID_LINE_WIDTH;
     ctx.stroke();
 
     // --- Map forecast points to canvas coords ---
@@ -152,21 +155,21 @@
     // --- Solar area + line (draw first so wind overlays on top) ---
     if (forecast.hasSolar) {
       const grad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
-      grad.addColorStop(0, colors.solar + "30");
-      grad.addColorStop(1, colors.solar + "08");
-      drawCurveWithFill(ctx, solarPts, chartBottom, colors.solar, grad, 1.5);
+      grad.addColorStop(0, colors.solar + C.ALPHA_SOLAR_GRAD_TOP);
+      grad.addColorStop(1, colors.solar + C.ALPHA_SOLAR_GRAD_BOT);
+      drawCurveWithFill(ctx, solarPts, chartBottom, colors.solar, grad, C.CURVE_LINE_WIDTH);
     }
 
     // --- Wind area + line ---
     {
       const grad = ctx.createLinearGradient(0, chartTop, 0, chartBottom);
-      grad.addColorStop(0, colors.wind + "35");
-      grad.addColorStop(1, colors.wind + "08");
-      drawCurveWithFill(ctx, windPts, chartBottom, colors.wind, grad, 1.5);
+      grad.addColorStop(0, colors.wind + C.ALPHA_WIND_GRAD_TOP);
+      grad.addColorStop(1, colors.wind + C.ALPHA_WIND_GRAD_BOT);
+      drawCurveWithFill(ctx, windPts, chartBottom, colors.wind, grad, C.CURVE_LINE_WIDTH);
     }
 
     // --- Hour tick marks & labels ---
-    ctx.font = `bold 9px ${colors.font}`;
+    ctx.font = `${C.FONT_PREFIX} ${colors.font}`;
     ctx.textAlign = "center";
     ctx.textBaseline = "top";
     ctx.fillStyle = colors.mutedFg;
@@ -177,12 +180,12 @@
       // Tick mark
       ctx.beginPath();
       ctx.moveTo(x, chartBottom);
-      ctx.lineTo(x, chartBottom + 3);
-      ctx.strokeStyle = colors.mutedFg + "50";
-      ctx.lineWidth = 0.5;
+      ctx.lineTo(x, chartBottom + C.TICK_MARK_LENGTH);
+      ctx.strokeStyle = colors.mutedFg + C.ALPHA_TICK_MARK;
+      ctx.lineWidth = C.GRID_LINE_WIDTH;
       ctx.stroke();
       // Label
-      ctx.fillText(formatHourLabel(h), x, chartBottom + 3);
+      ctx.fillText(formatHourLabel(h), x, chartBottom + C.TICK_MARK_LENGTH);
     }
 
     // --- "Now" indicator ---
@@ -193,49 +196,47 @@
       ctx.beginPath();
       ctx.moveTo(nowX, chartTop);
       ctx.lineTo(nowX, chartBottom);
-      ctx.strokeStyle = colors.fg + "15";
-      ctx.lineWidth = 4;
+      ctx.strokeStyle = colors.fg + C.ALPHA_NOW_GLOW;
+      ctx.lineWidth = C.NOW_GLOW_WIDTH;
       ctx.stroke();
 
       // Core line
       ctx.beginPath();
       ctx.moveTo(nowX, chartTop);
       ctx.lineTo(nowX, chartBottom);
-      ctx.strokeStyle = colors.fg + "90";
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = colors.fg + C.ALPHA_NOW_CORE;
+      ctx.lineWidth = C.NOW_CORE_WIDTH;
       ctx.stroke();
 
       // Downward triangle at top
       ctx.beginPath();
-      ctx.moveTo(nowX - 3, chartTop - 1);
-      ctx.lineTo(nowX + 3, chartTop - 1);
-      ctx.lineTo(nowX, chartTop + 4);
+      ctx.moveTo(nowX - C.NOW_TRIANGLE_HALF_W, chartTop - C.NOW_TRIANGLE_TOP_OFFSET);
+      ctx.lineTo(nowX + C.NOW_TRIANGLE_HALF_W, chartTop - C.NOW_TRIANGLE_TOP_OFFSET);
+      ctx.lineTo(nowX, chartTop + C.NOW_TRIANGLE_DEPTH);
       ctx.closePath();
-      ctx.fillStyle = colors.fg + "CC";
+      ctx.fillStyle = colors.fg + C.ALPHA_NOW_FILL;
       ctx.fill();
     }
 
     // --- Legend: colored squares + labels above chart area ---
-    ctx.font = `bold 9px ${colors.font}`;
+    ctx.font = `${C.FONT_PREFIX} ${colors.font}`;
     ctx.textBaseline = "top";
     ctx.textAlign = "left";
 
-    const legendY = 2;
-    const dotSize = 5;
-    const dotY = legendY + 2;
-    let lx = pad.left;
+    const dotY = C.LEGEND_Y + C.LEGEND_DOT_Y_OFFSET;
+    let lx = C.PAD_LEFT;
 
     // Wind
     ctx.fillStyle = colors.wind;
-    ctx.fillRect(lx, dotY, dotSize, dotSize);
-    ctx.fillText("WIND", lx + dotSize + 3, legendY);
-    lx += dotSize + 3 + ctx.measureText("WIND").width + 10;
+    ctx.fillRect(lx, dotY, C.LEGEND_DOT_SIZE, C.LEGEND_DOT_SIZE);
+    ctx.fillText("WIND", lx + C.LEGEND_DOT_SIZE + C.LEGEND_LABEL_GAP, C.LEGEND_Y);
+    lx += C.LEGEND_DOT_SIZE + C.LEGEND_LABEL_GAP + ctx.measureText("WIND").width + C.LEGEND_ITEM_GAP;
 
     // Solar (if active)
     if (forecast.hasSolar) {
       ctx.fillStyle = colors.solar;
-      ctx.fillRect(lx, dotY, dotSize, dotSize);
-      ctx.fillText("SOLAR", lx + dotSize + 3, legendY);
+      ctx.fillRect(lx, dotY, C.LEGEND_DOT_SIZE, C.LEGEND_DOT_SIZE);
+      ctx.fillText("SOLAR", lx + C.LEGEND_DOT_SIZE + C.LEGEND_LABEL_GAP, C.LEGEND_Y);
     }
   }
 
@@ -244,10 +245,12 @@
   let canvasEl: HTMLCanvasElement;
   let containerEl: HTMLDivElement;
   let cachedColors: ChartColors | null = null;
+  let cachedW = 0;
+  let cachedH = 0;
 
   // Invalidate colors on theme change
   $effect(() => {
-    $resolvedTheme;
+    theme.resolved;
     cachedColors = null;
   });
 
@@ -256,7 +259,7 @@
     // Track reactive dependencies
     const _forecast = forecast;
     const _progress = progress;
-    const _theme = $resolvedTheme;
+    const _theme = theme.resolved;
 
     if (!canvasEl || !containerEl) return;
 
@@ -266,13 +269,18 @@
     const h = rect.height;
     if (w === 0 || h === 0) return;
 
-    canvasEl.width = w * dpr;
-    canvasEl.height = h * dpr;
-    canvasEl.style.width = `${w}px`;
-    canvasEl.style.height = `${h}px`;
+    // Only reset canvas dimensions (trashes GPU surface) when size actually changed
+    if (w !== cachedW || h !== cachedH) {
+      cachedW = w;
+      cachedH = h;
+      canvasEl.width = w * dpr;
+      canvasEl.height = h * dpr;
+      canvasEl.style.width = `${w}px`;
+      canvasEl.style.height = `${h}px`;
+    }
 
     const ctx = canvasEl.getContext("2d")!;
-    ctx.scale(dpr, dpr);
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     if (!cachedColors) {
       cachedColors = resolveChartColors();

@@ -2,10 +2,11 @@
   import Button from '$components/ui/Button.svelte';
   import PowerSlider from '$components/game/PowerSlider.svelte';
   import { Timer, Power, X } from 'lucide-svelte';
-  import { cn, hcVariant } from '$lib/utils';
+  import { cn } from '$lib/utils';
   import type { Substation, Unit } from '$lib/types';
   import { UnitStatus } from '$lib/types';
   import { StatusConfig } from '$components/theme';
+  import { settings } from '$lib/stores/settings.svelte';
   import type { ColumnConfig } from './UnitTable.svelte';
 
   interface Props {
@@ -18,8 +19,7 @@
     setpointValue: number;
     onSetpointChange: (index: number, value: number) => void;
     isPaused?: boolean;
-    isHighContrast?: boolean;
-    columnConfig?: ColumnConfig;
+    columnConfig: Required<ColumnConfig>;
   }
 
   let {
@@ -32,30 +32,19 @@
     setpointValue,
     onSetpointChange,
     isPaused,
-    isHighContrast,
-    columnConfig: rawColumnConfig,
+    columnConfig: cols,
   }: Props = $props();
 
-  const defaultColumnConfig: Required<ColumnConfig> = {
-    unit: true,
-    status: true,
-    output: true,
-    setpoint: false,
-    actual: true,
-    time: true,
-    action: true,
-  };
-
-  let cols = $derived({ ...defaultColumnConfig, ...rawColumnConfig });
-
-  let pmax_unit = $derived(unit.Pmax);
-  let pmin_unit = $derived(unit.Pmin);
-
   // Coerce the setpoint from props to a number and clamp it to be safe for the UI.
-  let numericSetpoint = $derived(Math.max(pmin_unit, Math.min(pmax_unit, Number(setpointValue) || 0)));
+  // Only clamp to Pmin when the unit is online — offline units should show 0.
+  let numericSetpoint = $derived(
+    unit.Status === UnitStatus.IN
+      ? Math.max(unit.Pmin, Math.min(unit.Pmax, Number(setpointValue) || 0))
+      : Number(setpointValue) || 0
+  );
 
   function handleSliderChange(newValue: number) {
-    const clampedValue = Math.max(pmin_unit, Math.min(pmax_unit, newValue));
+    const clampedValue = Math.max(unit.Pmin, Math.min(unit.Pmax, newValue));
     onSetpointChange(index, clampedValue);
   }
 
@@ -94,7 +83,7 @@
         <PowerSlider
           setpoint={numericSetpoint}
           actual={unit.P}
-          pmax={pmax_unit}
+          pmax={unit.Pmax}
           disabled={!!isPaused}
           onValueChange={handleSliderChange}
           onValueCommit={handleSliderCommit}
@@ -103,21 +92,21 @@
         <PowerSlider
           setpoint={numericSetpoint}
           actual={0}
-          pmax={pmax_unit}
+          pmax={unit.Pmax}
           disabled={true}
         />
       {:else if unit.Status === UnitStatus.STARTUP}
         <PowerSlider
           setpoint={numericSetpoint}
           actual={unit.P}
-          pmax={pmax_unit}
+          pmax={unit.Pmax}
           disabled={true}
         />
       {:else if unit.Status === UnitStatus.SHUTDOWN}
         <PowerSlider
           setpoint={numericSetpoint}
           actual={unit.P}
-          pmax={pmax_unit}
+          pmax={unit.Pmax}
           disabled={true}
         />
       {/if}
@@ -188,7 +177,7 @@
           <Power class="h-5 w-5" aria-hidden="true" />
         </Button>
       {:else if unit.Status === UnitStatus.DIS}
-        <Button variant={hcVariant(isHighContrast ?? false)} size="icon" onclick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Start Up Unit ${index + 1}`}>
+        <Button variant={settings.hcVariant} size="icon" onclick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Start Up Unit ${index + 1}`}>
           <Power class="h-5 w-5" aria-hidden="true" />
         </Button>
       {:else if unit.Status === UnitStatus.STARTUP}

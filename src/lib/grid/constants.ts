@@ -4,6 +4,7 @@ export const BASE_MVA = 100.0;
 
 // --- Stability & Blackout ---
 export const FREQUENCY_BLACKOUT_THRESHOLD = 58.0;
+export const FREQUENCY_MAX = 66.0;
 export const FREQUENCY_DROOP = 0.2;
 export const FREQUENCY_ADJUSTMENT_THRESHOLD_MW = 500;
 export const MIN_GENERATION_FOR_FREQ_STABILITY_MW = 5;
@@ -50,3 +51,6 @@ export const SECONDS_PER_TICK = 60;              // Each tick = 1 game-minute
 export const GAME_DURATION_S = 36_000;           // 10 hours in seconds
 /** Costs are $/hr; divide by TICKS_PER_HOUR for per-tick contribution. */
 export const TICKS_PER_HOUR = 60;
+export const TICK_SPEED_NORMAL_MS = 500;         // Real-time ms per game tick
+export const TICK_SPEED_FAST_MS = 50;            // Real-time ms per game tick (fast-forward)
+export const DEFAULT_START_HOUR = 13;            // 24h clock, default scenario start

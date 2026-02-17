@@ -16,7 +16,7 @@
   let outputPercentage = $derived(pmax > 0 ? (actual / pmax) * 100 : 0);
 </script>
 
-<div class={cn("w-full flex items-center gap-2", disabled && "opacity-60")}>
+<div class={cn("w-full flex items-center gap-2", disabled && "opacity-75")}>
   <div class="relative flex-1 h-6 flex items-center">
     <!-- Actual output bar - shown underneath -->
     <div

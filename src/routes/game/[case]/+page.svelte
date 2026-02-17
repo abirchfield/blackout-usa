@@ -1,32 +1,21 @@
 <script lang="ts">
   import { onDestroy } from 'svelte';
   import { GameEngine } from '$lib/engine';
-  import { loadCase } from '$data/_out/registry';
-  import GameUI from './GameUI.svelte';
+  import GameUI from '../GameUI.svelte';
 
   let { data } = $props();
 
   let initContainer = $state<HTMLDivElement>();
   let engine = $state<GameEngine | null>(null);
 
-  // Load engine once the init container mounts
+  // Create engine once the init container mounts (data already loaded by SvelteKit)
   $effect(() => {
     if (!initContainer || engine) return;
-
-    const container = initContainer;
-    let cancelled = false;
-
-    loadCase(data.caseName).then(gridCase => {
-      if (cancelled) return;
-      const e = new GameEngine(container, gridCase, { interactive: true });
-      e.startLoop();
-      engine = e;
-    });
-
-    return () => { cancelled = true; };
+    const e = new GameEngine(initContainer, data.gridCase, { interactive: true });
+    e.startLoop();
+    engine = e;
   });
 
-  // Clean up engine on component destroy (not on initContainer unmount)
   onDestroy(() => {
     engine?.destroy();
   });

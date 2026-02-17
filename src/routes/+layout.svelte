@@ -1,23 +1,23 @@
 <script lang="ts">
 	import '../app.css';
-	import { resolvedTheme } from '$lib/stores/theme';
-	import { settings, FONT_SIZE_MAP } from '$lib/stores/settings';
+	import { theme } from '$lib/stores/theme.svelte';
+	import { settings, FONT_SIZE_MAP } from '$lib/stores/settings.svelte';
 
 	let { children } = $props();
 
 	// Sync theme class to <html>
 	$effect(() => {
-		document.documentElement.classList.toggle('dark', $resolvedTheme === 'dark');
+		document.documentElement.classList.toggle('dark', theme.resolved === 'dark');
 	});
 
 	// Sync high-contrast class to <html>
 	$effect(() => {
-		document.documentElement.classList.toggle('high-contrast', $settings.isHighContrast);
+		document.documentElement.classList.toggle('high-contrast', settings.current.isHighContrast);
 	});
 
 	// Sync font size to <html>
 	$effect(() => {
-		document.documentElement.style.fontSize = FONT_SIZE_MAP[$settings.fontSize] || '16px';
+		document.documentElement.style.fontSize = FONT_SIZE_MAP[settings.current.fontSize] || '16px';
 	});
 </script>
 

@@ -1,9 +1,5 @@
 <script lang="ts">
-  import Table from '$components/ui/Table.svelte';
-  import TableHeader from '$components/ui/TableHeader.svelte';
-  import TableBody from '$components/ui/TableBody.svelte';
-  import TableRow from '$components/ui/TableRow.svelte';
-  import TableHead from '$components/ui/TableHead.svelte';
+  import { Table, TableHeader, TableBody, TableRow, TableHead } from '$components/ui/table';
   import BranchRecord from './BranchRecord.svelte';
   import type { Branch } from '$lib/types';
 
@@ -12,10 +8,9 @@
     sibling?: Branch;
     onBranchAction: (branchId: string) => void;
     isPaused?: boolean;
-    isHighContrast?: boolean;
   }
 
-  let { branch, sibling, onBranchAction, isPaused, isHighContrast }: Props = $props();
+  let { branch, sibling, onBranchAction, isPaused }: Props = $props();
 </script>
 
 <Table class="w-full table-fixed">
@@ -31,9 +26,9 @@
     </TableRow>
   </TableHeader>
   <TableBody>
-    <BranchRecord {branch} label="1" {onBranchAction} {isPaused} {isHighContrast} />
+    <BranchRecord {branch} label="1" {onBranchAction} {isPaused} />
     {#if sibling}
-      <BranchRecord branch={sibling} label="2" {onBranchAction} {isPaused} {isHighContrast} />
+      <BranchRecord branch={sibling} label="2" {onBranchAction} {isPaused} />
     {/if}
   </TableBody>
 </Table>

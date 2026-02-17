@@ -1,5 +1,5 @@
 import {
-  SimState, BranchStatus, AlertHandler, IModel,
+  SimState, BranchStatus, AlertHandler, Model,
 } from "../types";
 import { isInactive } from "../utils";
 import {
@@ -21,7 +21,7 @@ function overloadTripProbability(absFlow: number, capacity: number): number {
 
 // --- NetworkModel ---
 
-export class NetworkModel implements IModel {
+export class NetworkModel implements Model {
   private state: SimState;
   private subModels: SubstationModel[];
   private genModels: SubstationModel[];
@@ -94,7 +94,11 @@ export class NetworkModel implements IModel {
   solve(totalLoad: number): void {
     const alpha = this.findAlpha(totalLoad);
     this.buildInjections(alpha);
-    if (this.dirty) this.buildYbus();
+    if (this.dirty && !this.buildYbus()) {
+      // Cholesky failed — zero all flows as a safe fallback
+      for (const br of this.state.branchList) br.P = 0;
+      return;
+    }
     // Cholesky was factorized on -Ybus (positive definite), so solve with -pvec
     const n = this.n;
     for (let i = 0; i < n; i++) this.bNeg[i] = -this.pvec[i];
@@ -141,7 +145,7 @@ export class NetworkModel implements IModel {
     }
   }
 
-  private buildYbus(): void {
+  private buildYbus(): boolean {
     const n = this.n;
     const Y = this.Ybus;
     Y.fill(0);
@@ -164,8 +168,10 @@ export class NetworkModel implements IModel {
     for (let i = 0; i < len; i++) Y[i] = -Y[i];
     if (!choleskyFactorize(Y, n)) {
       console.warn('Ybus Cholesky factorization failed (matrix not positive definite)');
+      return false;  // dirty stays true → rebuilt next tick
     }
     this.dirty = false;
+    return true;
   }
 
   private addAdmittance(i: number, j: number, y: number): void {
@@ -246,7 +252,7 @@ export class NetworkModel implements IModel {
     this.invalidate();
   }
 
-  tripHottestLine(): { name1: string; name2: string } | null {
+  disconnectHottestLine(): { name1: string; name2: string } | null {
     let best = null as typeof this.state.branchList[0] | null;
     let maxLoading = -1;
 
@@ -294,8 +300,10 @@ export class NetworkModel implements IModel {
   readyBranch(branchId: string): void {
     const br = this.state.branches[branchId];
     if (!br) return;
-    if (br.Status === BranchStatus.TRIP) br.Status = BranchStatus.DIS;
-    this.invalidate();
+    if (br.Status === BranchStatus.TRIP) {
+      br.Status = BranchStatus.DIS;
+      this.invalidate();
+    }
   }
 
 }

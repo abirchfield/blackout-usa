@@ -2,11 +2,9 @@
   import { Dialog } from 'bits-ui';
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
-  import DialogTitle from '$components/ui/DialogTitle.svelte';
-  import DialogDescription from '$components/ui/DialogDescription.svelte';
   import { RotateCw, ArrowRight } from 'lucide-svelte';
   import Button from '$components/ui/Button.svelte';
-  import { hcVariant } from '$lib/utils';
+  import { settings } from '$lib/stores/settings.svelte';
   import DayResults from '$components/game/DayResults.svelte';
   import type { ResultDetails, StatsSnapshot } from '$lib/types';
 
@@ -17,7 +15,6 @@
     info: string[] | null | undefined;
     resultDetails: ResultDetails | null | undefined;
     gameStatistics: StatsSnapshot;
-    isHighContrast: boolean;
     onStartDay: () => void;
     onClose: () => void;
     onReplayDay: (day: number) => void;
@@ -31,7 +28,6 @@
     info,
     resultDetails,
     gameStatistics,
-    isHighContrast,
     onStartDay,
     onClose,
     onReplayDay,
@@ -48,7 +44,7 @@
 </script>
 
 {#if open}
-  <Dialog.Root {open}>
+  <Dialog.Root {open} onOpenChange={(isOpen) => { if (!isOpen && canDismiss) onClose(); }}>
     <DialogContent
       id="day-transition-modal"
       class="sm:max-w-lg font-sans"
@@ -58,16 +54,13 @@
       onEscapeKeyDown={(e: Event) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
     >
       {#if mode === 'results' && resultDetails}
-        <DialogHeader class="sr-only">
-          <DialogTitle>Day {gameStatistics.day} Results</DialogTitle>
-          <DialogDescription>Review your performance for this day.</DialogDescription>
-        </DialogHeader>
+        <DialogHeader class="sr-only" title="Day {gameStatistics.day} Results" description="Review your performance for this day." />
         <div class="space-y-6">
           <DayResults stats={gameStatistics} day={gameStatistics.day} {resultDetails} />
           <div class="grid grid-cols-2 gap-3 pt-2">
             <Button
               onclick={() => onReplayDay(gameStatistics.day)}
-              variant={hcVariant(isHighContrast)}
+              variant={settings.hcVariant}
               class="flex items-center justify-center gap-2"
             >
               <RotateCw class="h-4 w-4" aria-hidden="true" />
@@ -83,10 +76,7 @@
           </div>
         </div>
       {:else if info}
-        <DialogHeader>
-          <DialogTitle class="text-2xl">Day {targetDay} Briefing</DialogTitle>
-          <DialogDescription class="sr-only">Read the briefing and start the day when ready.</DialogDescription>
-        </DialogHeader>
+        <DialogHeader title="Day {targetDay} Briefing" titleClass="text-2xl" description="Read the briefing and start the day when ready." descriptionClass="sr-only" />
         <div class="space-y-6">
           <div class="bg-muted/20 p-4 rounded-lg border border-border text-sm">
             {#if info.length > 1}

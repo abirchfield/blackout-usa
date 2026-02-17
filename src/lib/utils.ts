@@ -21,11 +21,6 @@ export function fmtMoney(val: number): [string, string] {
   return [`$${val.toFixed(0)}`, ""];
 }
 
-/** Returns "outline" in high-contrast mode, otherwise the base variant. */
-export function hcVariant(isHighContrast: boolean, base: "secondary" | "ghost" = "secondary"): "outline" | "secondary" | "ghost" {
-  return isHighContrast ? "outline" : base;
-}
-
 /** Returns the Tailwind background class for a loading bar based on percentage. */
 export function getLoadingBarColor(loading: number): string {
   return loading > 100 ? 'bg-[var(--color-warning)]' : 'bg-[var(--color-status-in)]';

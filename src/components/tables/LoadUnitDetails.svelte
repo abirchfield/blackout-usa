@@ -64,11 +64,11 @@
   </td>
   <td class="p-2 align-middle text-center">
     {#if unit.Status === UnitStatus.IN}
-      <Button variant="destructive" size="icon" onclick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Disconnect Circuit ${index + 1}`} class="cursor-pointer">
+      <Button variant="destructive" size="icon" onclick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Disconnect Circuit ${index + 1}`}>
         <Power class="h-5 w-5" />
       </Button>
     {:else if unit.Status === UnitStatus.DIS}
-      <Button variant="secondary" size="icon" onclick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Connect Circuit ${index + 1}`} class="cursor-pointer">
+      <Button variant="secondary" size="icon" onclick={() => onUnitAction(sub.Number, index)} disabled={isPaused} aria-label={`Connect Circuit ${index + 1}`}>
         <Power class="h-5 w-5" />
       </Button>
     {:else}

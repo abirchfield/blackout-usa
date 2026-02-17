@@ -2,10 +2,8 @@
   import { Dialog } from 'bits-ui';
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
-  import DialogTitle from '$components/ui/DialogTitle.svelte';
-  import DialogDescription from '$components/ui/DialogDescription.svelte';
   import Button from '$components/ui/Button.svelte';
-  import { hcVariant } from '$lib/utils';
+  import { settings } from '$lib/stores/settings.svelte';
   import { RotateCw, ArrowRight, LogOut, Play } from 'lucide-svelte';
 
   interface Props {
@@ -15,18 +13,14 @@
     onQuitToStart: () => void;
     onReplayDay: (currentDay: number) => void;
     onNextDay: (currentDay: number) => void;
-    isHighContrast?: boolean;
   }
 
-  let { open, onOpenChange, day, onQuitToStart, onReplayDay, onNextDay, isHighContrast }: Props = $props();
+  let { open, onOpenChange, day, onQuitToStart, onReplayDay, onNextDay }: Props = $props();
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
   <DialogContent id="quit-modal" class="sm:max-w-lg font-sans" overlayClass="bg-black/70">
-    <DialogHeader>
-      <DialogTitle class="text-2xl">Quit the game?</DialogTitle>
-      <DialogDescription>Choose how to continue your session.</DialogDescription>
-    </DialogHeader>
+    <DialogHeader title="Quit the game?" titleClass="text-2xl" description="Choose how to continue your session." />
     <div role="group" aria-label="Quit actions" class="grid grid-cols-1 gap-2 pt-2">
       <Button
         class="w-full justify-center gap-2"
@@ -37,7 +31,7 @@
       </Button>
       <div class="grid grid-cols-2 gap-2">
         <Button
-          variant={hcVariant(isHighContrast ?? false)}
+          variant={settings.hcVariant}
           class="w-full justify-center gap-2"
           onclick={() => onReplayDay(day)}
         >
@@ -45,7 +39,7 @@
           <span>Replay Day</span>
         </Button>
         <Button
-          variant={hcVariant(isHighContrast ?? false)}
+          variant={settings.hcVariant}
           class="w-full justify-center gap-2"
           onclick={() => onNextDay(day)}
         >

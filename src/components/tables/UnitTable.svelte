@@ -3,7 +3,6 @@
     unit?: boolean;
     status?: boolean;
     output?: boolean;
-    setpoint?: boolean;
     actual?: boolean;
     time?: boolean;
     action?: boolean;
@@ -25,7 +24,6 @@
     setpoints: Record<number, number>;
     onSetpointChange: (index: number, value: number) => void;
     isPaused?: boolean;
-    isHighContrast?: boolean;
     stickyHeader?: boolean;
     columnConfig?: CC;
   }
@@ -38,7 +36,6 @@
     setpoints,
     onSetpointChange,
     isPaused,
-    isHighContrast,
     stickyHeader = false,
     columnConfig: rawColumnConfig,
   }: Props = $props();
@@ -47,7 +44,6 @@
     unit: true,
     status: true,
     output: true,
-    setpoint: false,
     actual: true,
     time: true,
     action: true,
@@ -93,7 +89,6 @@
         setpointValue={setpoints[index] ?? 0}
         {onSetpointChange}
         {isPaused}
-        {isHighContrast}
         columnConfig={cols}
       />
     {/each}

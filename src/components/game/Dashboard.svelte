@@ -1,11 +1,8 @@
 <script lang="ts">
   import type { StatsSnapshot } from '$lib/types';
   import { SubstationCategory, LoadCategoryType } from '$lib/types';
-  import { GenerationTypeConfig, LoadTypeConfig } from '$components/theme';
+  import { GenerationTypeConfig, LoadTypeConfig, STAT_VALUE } from '$components/theme';
   import { cn, fmtPower, fmtMoney } from '$lib/utils';
-
-  const STAT_HERO = 'font-numeric font-bold whitespace-nowrap';
-  const STAT_VALUE = 'font-numeric font-bold whitespace-nowrap';
 
   interface Props {
     stats: StatsSnapshot;
@@ -25,8 +22,7 @@
     { type: SubstationCategory.Wind, value: stats.windGen, reserve: stats.reservesWind },
   ]);
 
-  let totalGeneration = $derived(stats.windGen + stats.solarGen + stats.thermalGen + stats.nuclearGen);
-  let totalSystemCapacity = $derived(totalGeneration + stats.reserves);
+  let totalSystemCapacity = $derived(stats.totalGeneration + stats.reserves);
 
   // Load mix
   let loadMix = $derived([

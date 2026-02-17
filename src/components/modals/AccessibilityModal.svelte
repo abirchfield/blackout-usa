@@ -2,8 +2,6 @@
   import { Dialog } from 'bits-ui';
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
-  import DialogTitle from '$components/ui/DialogTitle.svelte';
-  import DialogDescription from '$components/ui/DialogDescription.svelte';
   import Switch from '$components/ui/Switch.svelte';
   import Slider from '$components/ui/Slider.svelte';
   import { Select } from 'bits-ui';
@@ -13,22 +11,20 @@
   import Button from '$components/ui/Button.svelte';
   import KeybindSettings from '$components/modals/KeybindSettings.svelte';
   import { ViewConfig, defaultKeyBindings } from '$lib/view/constants';
-  import type { AppSettings, FontSize } from '$lib/stores/settings';
+  import type { FontSize } from '$lib/stores/settings.svelte';
+  import { settings } from '$lib/stores/settings.svelte';
   import { cn } from '$lib/utils';
   import { RotateCcw } from 'lucide-svelte';
-  import { theme } from '$lib/stores/theme';
+  import { theme } from '$lib/stores/theme.svelte';
 
   interface Props {
     open: boolean;
     onOpenChange: (open: boolean) => void;
-    settings: AppSettings;
-    onSettingsChange: (patch: Partial<AppSettings>) => void;
   }
 
-  let { open, onOpenChange, settings, onSettingsChange }: Props = $props();
+  let { open, onOpenChange }: Props = $props();
 
-  let currentTheme = $derived($theme);
-  let isTabular = $derived(settings.viewMode === 'tabular');
+  let isTabular = $derived(settings.current.viewMode === 'tabular');
 </script>
 
 {#snippet settingRow(label: string, description: string | undefined, htmlFor: string | undefined, disabled: boolean | undefined, children: import('svelte').Snippet)}
@@ -51,12 +47,7 @@
 {#if open}
   <Dialog.Root {open} {onOpenChange}>
     <DialogContent id="accessibility-modal" class="sm:max-w-lg" overlayClass="bg-black/70">
-      <DialogHeader>
-        <DialogTitle>Settings</DialogTitle>
-        <DialogDescription>
-          Customize your experience with display and accessibility options.
-        </DialogDescription>
-      </DialogHeader>
+      <DialogHeader title="Settings" description="Customize your experience with display and accessibility options." />
       <div class="space-y-6 py-4 max-h-[65vh] overflow-y-auto -mx-6 px-6">
         <!-- Display Section -->
         <section class="space-y-1">
@@ -92,7 +83,7 @@
             <Button
               variant="ghost"
               size="sm"
-              onclick={() => onSettingsChange({ keyBindings: defaultKeyBindings })}
+              onclick={() => settings.update({ keyBindings: defaultKeyBindings })}
               class="h-7 px-2 text-xs"
             >
               <RotateCcw class="h-3 w-3 mr-1.5" />
@@ -100,8 +91,8 @@
             </Button>
           </div>
           <KeybindSettings
-            bindings={settings.keyBindings}
-            onBindingsChange={(bindings) => onSettingsChange({ keyBindings: bindings })}
+            bindings={settings.current.keyBindings}
+            onBindingsChange={(bindings) => settings.update({ keyBindings: bindings })}
           />
         </section>
       </div>
@@ -110,9 +101,9 @@
 {/if}
 
 {#snippet themeSelect()}
-  <Select.Root type="single" value={currentTheme} onValueChange={(value) => { if (value) theme.set(value as any); }}>
+  <Select.Root type="single" value={theme.current} onValueChange={(value) => { if (value) theme.current = value as any; }}>
     <SelectTrigger id="theme-select-modal" class="w-32">
-      <span data-slot="select-value">{currentTheme === 'light' ? 'Light' : currentTheme === 'dark' ? 'Dark' : 'System'}</span>
+      <span data-slot="select-value">{theme.current === 'light' ? 'Light' : theme.current === 'dark' ? 'Dark' : 'System'}</span>
     </SelectTrigger>
     <SelectContent>
       <SelectItem value="light">Light</SelectItem>
@@ -123,9 +114,9 @@
 {/snippet}
 
 {#snippet fontSizeSelect()}
-  <Select.Root type="single" value={settings.fontSize} onValueChange={(value) => { if (value) onSettingsChange({ fontSize: value as FontSize }); }}>
+  <Select.Root type="single" value={settings.current.fontSize} onValueChange={(value) => { if (value) settings.update({ fontSize: value as FontSize }); }}>
     <SelectTrigger id="font-size-select-modal" class="w-32">
-      <span data-slot="select-value">{settings.fontSize === 'sm' ? 'Small' : settings.fontSize === 'base' ? 'Default' : settings.fontSize === 'lg' ? 'Large' : 'Extra Large'}</span>
+      <span data-slot="select-value">{settings.current.fontSize === 'sm' ? 'Small' : settings.current.fontSize === 'base' ? 'Default' : settings.current.fontSize === 'lg' ? 'Large' : 'Extra Large'}</span>
     </SelectTrigger>
     <SelectContent>
       <SelectItem value="sm">Small</SelectItem>
@@ -139,15 +130,15 @@
 {#snippet highContrastToggle()}
   <Switch
     id="high-contrast-toggle-modal"
-    checked={settings.isHighContrast}
-    onCheckedChange={(checked) => onSettingsChange({ isHighContrast: checked })}
+    checked={settings.current.isHighContrast}
+    onCheckedChange={(checked) => settings.update({ isHighContrast: checked })}
   />
 {/snippet}
 
 {#snippet viewModeSelect()}
-  <Select.Root type="single" value={settings.viewMode} onValueChange={(value) => { if (value) onSettingsChange({ viewMode: value as 'map' | 'tabular' }); }}>
+  <Select.Root type="single" value={settings.current.viewMode} onValueChange={(value) => { if (value) settings.update({ viewMode: value as 'map' | 'tabular' }); }}>
     <SelectTrigger id="view-mode-select" class="w-32">
-      <span data-slot="select-value">{settings.viewMode === 'map' ? 'Map' : 'Tabular'}</span>
+      <span data-slot="select-value">{settings.current.viewMode === 'map' ? 'Map' : 'Tabular'}</span>
     </SelectTrigger>
     <SelectContent>
       <SelectItem value="map">Map</SelectItem>
@@ -159,8 +150,8 @@
 {#snippet animationsToggle()}
   <Switch
     id="animations-toggle-modal"
-    checked={settings.animationsEnabled}
-    onCheckedChange={(checked) => onSettingsChange({ animationsEnabled: checked })}
+    checked={settings.current.animationsEnabled}
+    onCheckedChange={(checked) => settings.update({ animationsEnabled: checked })}
     disabled={isTabular}
   />
 {/snippet}
@@ -168,8 +159,8 @@
 {#snippet mapLabelsToggle()}
   <Switch
     id="map-labels-toggle-modal"
-    checked={settings.renderMapLabels}
-    onCheckedChange={(checked) => onSettingsChange({ renderMapLabels: checked })}
+    checked={settings.current.renderMapLabels}
+    onCheckedChange={(checked) => settings.update({ renderMapLabels: checked })}
     disabled={isTabular}
   />
 {/snippet}
@@ -181,14 +172,14 @@
       min={ViewConfig.ZOOM_SENSITIVITY_MIN}
       max={ViewConfig.ZOOM_SENSITIVITY_MAX}
       step={ViewConfig.ZOOM_SENSITIVITY_STEP}
-      value={settings.zoomSensitivity}
-      onValueChange={(value) => onSettingsChange({ zoomSensitivity: value })}
+      value={settings.current.zoomSensitivity}
+      onValueChange={(value) => settings.update({ zoomSensitivity: value })}
       disabled={isTabular}
       aria-label="Zoom speed"
       class="flex-1"
     />
     <span class="text-xs text-muted-foreground w-6 text-right tabular-nums font-mono">
-      {settings.zoomSensitivity.toFixed(1)}
+      {settings.current.zoomSensitivity.toFixed(1)}
     </span>
   </div>
 {/snippet}

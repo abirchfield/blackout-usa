@@ -63,15 +63,15 @@
   --popover-foreground: oklch(0.145 0 0);
   --primary: oklch(0.205 0 0);
   --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
+  --secondary: oklch(0.93 0 0);
   --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
+  --muted: oklch(0.93 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
+  --accent: oklch(0.93 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
+  --border: oklch(0.87 0 0);
+  --input: oklch(0.87 0 0);
   --ring: oklch(0.708 0 0);
   --color-load-1: oklch(0.73 0.14 258); /* blue-400 */
   --color-load-2: oklch(0.7 0.18 283); /* indigo-400 */
@@ -81,7 +81,7 @@
   --color-overload-critical: oklch(0.7 0.22 45); /* orange-500 */
   /* Status Colors */
   --color-status-in: oklch(0.75 0.2 145); /* green-400 */
-  --color-status-dis: oklch(0.7 0 0); /* gray-400 */
+  --color-status-dis: oklch(0.55 0 0); /* gray-500 — improved light-mode contrast */
   --color-status-startup: oklch(0.62 0.13 85); /* yellow-700, for light mode contrast */
   --color-status-trip: oklch(0.63 0.3 29); /* true red */
   /* UI Semantic Colors */
