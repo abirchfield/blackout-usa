@@ -7,11 +7,20 @@ function getInitialTheme(): Theme {
 
 function createThemeState() {
   let current = $state<Theme>(getInitialTheme());
+  let systemDark = $state(
+    typeof window !== 'undefined'
+      ? window.matchMedia('(prefers-color-scheme: dark)').matches
+      : true
+  );
+
+  if (typeof window !== 'undefined') {
+    window.matchMedia('(prefers-color-scheme: dark)')
+      .addEventListener('change', (e) => { systemDark = e.matches; });
+  }
 
   const resolved = $derived.by(() => {
     if (current !== 'system') return current;
-    if (typeof window === 'undefined') return 'dark' as const;
-    return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' as const : 'light' as const;
+    return systemDark ? 'dark' as const : 'light' as const;
   });
 
   return {

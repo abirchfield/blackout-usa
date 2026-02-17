@@ -12,7 +12,7 @@
     day: number;
     onQuitToStart: () => void;
     onReplayDay: (currentDay: number) => void;
-    onNextDay: (currentDay: number) => void;
+    onNextDay: () => void;
   }
 
   let { open, onOpenChange, day, onQuitToStart, onReplayDay, onNextDay }: Props = $props();
@@ -41,7 +41,7 @@
         <Button
           variant={settings.hcVariant}
           class="w-full justify-center gap-2"
-          onclick={() => onNextDay(day)}
+          onclick={() => onNextDay()}
         >
           <span>Next Day</span>
           <ArrowRight class="h-4 w-4" aria-hidden="true" />
