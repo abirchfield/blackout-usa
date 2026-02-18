@@ -88,7 +88,7 @@ export function drawSubstations(
     const sy = (y0 - geo.lat) * scaleX;
 
     const catColor = colors[geo.colorKey] as string;
-    const allTripped = isSubstationTripped(sub);
+    const allTripped = isAllUnitsTripped(sub);
     const activeColor = allTripped ? colors.tripped : catColor;
     const P = getSubstationPower(sub);
 
@@ -105,20 +105,24 @@ export function drawSubstations(
   flushBatches(ctx, colors, genHalo, genRings, genBg, genFills);
   flushBatches(ctx, colors, loadHalo, loadRings, loadBg, loadFills);
 
-  // Draw hovered substation last (on top, different radius, at most 4 fills)
+  // Draw hovered substation last (on top, different radius)
+  // Reuses batch functions with single-element Path2D objects to avoid duplicating geometry logic.
   if (hoverKey && hoverSub) {
     const geo = geoMap.get(hoverKey)!;
     const sx = (geo.lon - x0) * scaleX;
     const sy = (y0 - geo.lat) * scaleX;
     const catColor = colors[geo.colorKey] as string;
-    const allTripped = isSubstationTripped(hoverSub);
+    const allTripped = isAllUnitsTripped(hoverSub);
     const activeColor = allTripped ? colors.tripped : catColor;
     const P = getSubstationPower(hoverSub);
+    const hHalo = new Path2D(), hBg = new Path2D();
+    const hRings = new Map<string, Path2D>(), hFills = new Map<string, Path2D>();
     if (geo.isLoad) {
-      drawLoadSubstation(ctx, colors, activeColor, catColor, allTripped, P, geo.pmax * state.loadLevel, sx, sy, hoverR);
+      batchLoadSubstation(hHalo, hBg, hRings, hFills, activeColor, catColor, allTripped, P, geo.pmax * state.loadLevel, sx, sy, hoverR);
     } else {
-      drawGeneratorSubstation(ctx, colors, activeColor, catColor, allTripped, P, geo.pmax, sx, sy, hoverR);
+      batchGeneratorSubstation(hHalo, hBg, hRings, hFills, activeColor, catColor, allTripped, P, geo.pmax, sx, sy, hoverR);
     }
+    flushBatches(ctx, colors, hHalo, hRings, hBg, hFills);
   }
 
   // ─── Pass 2: Labels ───
@@ -245,96 +249,6 @@ function batchLoadSubstation(
   }
 }
 
-// ─── Immediate-draw helpers (used only for hovered substation) ───
-
-function drawGeneratorSubstation(
-  ctx: CanvasRenderingContext2D,
-  colors: ThemeColors,
-  activeColor: string,
-  catColor: string,
-  allTripped: boolean,
-  P: number,
-  pmax: number,
-  sx: number, sy: number,
-  r: number,
-) {
-  const outerR = r * OUTER_FACTOR;
-
-  // White halo (concentric fill at larger radius)
-  ctx.beginPath();
-  ctx.arc(sx, sy, outerR + 2, 0, TWO_PI);
-  ctx.fillStyle = colors.outerRingBg;
-  ctx.fill();
-
-  // Colored outer ring (fill)
-  ctx.beginPath();
-  ctx.arc(sx, sy, outerR, 0, TWO_PI);
-  ctx.fillStyle = activeColor;
-  ctx.fill();
-
-  // Background circle (creates inner boundary of the ring)
-  // +0.5 overlap into the colored ring to eliminate anti-aliasing fringe
-  ctx.beginPath();
-  ctx.arc(sx, sy, r + 1, 0, TWO_PI);
-  ctx.fillStyle = colors.background;
-  ctx.fill();
-
-  // Pie chart wedge
-  if (!allTripped && pmax > 0 && P > 0) {
-    const fillRatio = Math.min(P / pmax, 1);
-    if (fillRatio >= 0.01) {
-      ctx.fillStyle = catColor;
-      ctx.beginPath();
-      if (fillRatio >= 0.99) {
-        ctx.arc(sx, sy, r, 0, TWO_PI);
-      } else {
-        ctx.moveTo(sx, sy);
-        ctx.arc(sx, sy, r, PIE_START, PIE_START + TWO_PI * fillRatio);
-        ctx.closePath();
-      }
-      ctx.fill();
-    }
-  }
-}
-
-function drawLoadSubstation(
-  ctx: CanvasRenderingContext2D,
-  colors: ThemeColors,
-  activeColor: string,
-  catColor: string,
-  allTripped: boolean,
-  P: number,
-  effectivePmax: number,
-  sx: number, sy: number,
-  r: number,
-) {
-  const loadR = r * LOAD_FACTOR;
-  const outerR = loadR * OUTER_FACTOR;
-
-  // White halo (slightly larger rectangle)
-  ctx.fillStyle = colors.outerRingBg;
-  ctx.fillRect(sx - outerR - 2, sy - outerR - 2, (outerR + 2) * 2, (outerR + 2) * 2);
-
-  // Colored outer ring (filled square)
-  ctx.fillStyle = activeColor;
-  ctx.fillRect(sx - outerR, sy - outerR, outerR * 2, outerR * 2);
-
-  // Background square (creates inner boundary of the ring)
-  // +0.5 overlap into the colored ring to eliminate anti-aliasing fringe
-  ctx.fillStyle = colors.background;
-  ctx.fillRect(sx - loadR - 0.5, sy - loadR - 0.5, loadR * 2 + 1, loadR * 2 + 1);
-
-  // Fill bar (bottom-to-top rectangle)
-  if (!allTripped && effectivePmax > 0 && P > 0) {
-    const fillRatio = Math.min(P / effectivePmax, 1);
-    if (fillRatio >= 0.01) {
-      ctx.fillStyle = catColor;
-      const height = loadR * 2 * fillRatio;
-      ctx.fillRect(sx - loadR, sy + loadR - height, loadR * 2, height);
-    }
-  }
-}
-
 // ─── Data helpers ───
 
 function getSubstationPower(sub: Substation): number {
@@ -343,7 +257,7 @@ function getSubstationPower(sub: Substation): number {
   return p;
 }
 
-function isSubstationTripped(sub: Substation): boolean {
+function isAllUnitsTripped(sub: Substation): boolean {
   if (sub.U.length === 0) return false;
   for (let i = 0; i < sub.U.length; i++) {
     if (sub.U[i].Status !== UnitStatus.TRIP) return false;

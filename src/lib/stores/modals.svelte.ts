@@ -27,6 +27,7 @@ function createModalState() {
   const isAnyModalOpen = $derived(activeModal !== null);
   const isPausingModal = $derived(activeModal !== null && activeModal !== 'grid');
 
+  /** Open a modal by ID, optionally with payload data. */
   function openModal(id: ModalId, newPayload?: ModalPayload) {
     lastFocused = document.activeElement as HTMLElement;
     lastFocused?.blur();
@@ -34,6 +35,7 @@ function createModalState() {
     activeModal = id;
   }
 
+  /** Close the active modal and restore focus to the previously focused element. */
   function closeModal() {
     activeModal = null;
     payload = {};
@@ -44,6 +46,7 @@ function createModalState() {
     });
   }
 
+  /** Toggle callback for bits-ui Dialog open state. */
   function onOpenChange(id: ModalId, open: boolean) {
     if (open) {
       openModal(id);
@@ -52,6 +55,7 @@ function createModalState() {
     }
   }
 
+  /** Swap the active modal without focus save/restore. */
   function replaceModal(id: ModalId, newPayload?: ModalPayload) {
     payload = newPayload || {};
     activeModal = id;
@@ -69,4 +73,5 @@ function createModalState() {
   };
 }
 
+/** Singleton modal state manager (open/close/replace modals with payload). */
 export const modals = createModalState();

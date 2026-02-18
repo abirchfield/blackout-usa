@@ -1,5 +1,6 @@
 <script lang="ts">
   import Button from '$components/ui/Button.svelte';
+  import ProgressBar from '$components/ui/ProgressBar.svelte';
   import { Power } from 'lucide-svelte';
   import { cn } from '$lib/utils';
   import type { Substation, Unit } from '$lib/types';
@@ -45,17 +46,7 @@
     {#if unit.Status === UnitStatus.IN && unit.Pmax > 0}
       {@const loadPercent = (unit.P / unit.Pmax) * 100}
       <div class="flex items-center gap-2">
-        <div
-          role="progressbar"
-          aria-valuenow={loadPercent}
-          aria-valuemin={0}
-          aria-valuemax={100}
-          aria-label={`Circuit ${index + 1} loading: ${loadPercent.toFixed(0)}%`}
-          title={`Loading: ${loadPercent.toFixed(0)}%`}
-          class="h-2 w-full rounded-full bg-muted overflow-hidden"
-        >
-          <div class={cn("h-full rounded-full transition-all", typeConfig.tailwind.bg)} style="width: {Math.min(100, loadPercent)}%"></div>
-        </div>
+        <ProgressBar value={loadPercent} colorClass={typeConfig.tailwind.bg} label={`Circuit ${index + 1} loading: ${loadPercent.toFixed(0)}%`} />
         <span class="text-xs font-mono text-muted-foreground w-8 text-right" aria-hidden="true">{loadPercent.toFixed(0)}%</span>
       </div>
     {:else}

@@ -1,6 +1,7 @@
 <script lang="ts">
   import { branchLoading, getLoadingBarColor } from '$lib/utils';
   import Button from '$components/ui/Button.svelte';
+  import ProgressBar from '$components/ui/ProgressBar.svelte';
   import StatusIndicator from '$components/tables/StatusIndicator.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import type { Branch } from '$lib/types';
@@ -52,16 +53,7 @@
   <td data-slot="table-cell" class="p-2 align-middle whitespace-nowrap text-right font-mono">{branch.Pmax.toFixed(0)} MW</td>
   <td data-slot="table-cell" class="p-2 align-middle whitespace-nowrap">
     <div class="flex items-center gap-2" title={`Loading: ${loading.toFixed(0)}%`} aria-label={`Branch loading: ${loading.toFixed(0)}%`}>
-      <div
-        role="progressbar"
-        aria-valuenow={loading}
-        aria-valuemin={0}
-        aria-valuemax={100}
-        aria-label="Branch loading progress bar"
-        class="h-2 w-full rounded-full bg-muted"
-      >
-        <div class="h-2 rounded-full {barColor} transition-all" style="width: {Math.min(100, loading)}%"></div>
-      </div>
+      <ProgressBar value={loading} colorClass={barColor} label="Branch loading progress bar" />
       <span class="text-xs font-mono text-right">{loading.toFixed(0)}%</span>
     </div>
   </td>

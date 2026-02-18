@@ -1,4 +1,4 @@
-import { IGridModel, IScenario, UnitStatus } from "$lib/types";
+import { GridModelApi, Scenario, UnitStatus } from "$lib/types";
 import { Wind, Solar, Demand } from "$lib/weather";
 import { SUB, LINE } from "../_out/texas/lookups";
 
@@ -14,7 +14,7 @@ type TimedRestoration =
     | { at: number; sub: string; units?: { from?: number; count?: number } };
 
 function processTimedTrips(
-    t: number, grid: IGridModel, trips: TimedUnitTrip[],
+    t: number, grid: GridModelApi, trips: TimedUnitTrip[],
     msg?: (name: string, unit: number) => string,
 ) {
     for (const { at, sub, unit } of trips) {
@@ -26,7 +26,7 @@ function processTimedTrips(
     }
 }
 
-function processTimedRestorations(t: number, grid: IGridModel, restorations: TimedRestoration[]) {
+function processTimedRestorations(t: number, grid: GridModelApi, restorations: TimedRestoration[]) {
     for (const r of restorations) {
         if (t !== r.at) continue;
         if ('branch' in r) grid.readyBranch(r.branch);
@@ -39,7 +39,7 @@ function processTimedRestorations(t: number, grid: IGridModel, restorations: Tim
 // Load rises, wind steady, solar fades in the evening
 // ============================================================
 
-const day1: IScenario = {
+const day1: Scenario = {
     info: [
         "Your goal is to avoid a blackout and keep operating costs as low as possible.",
         "Your shift runs from 1pm to 11pm.",
@@ -71,7 +71,7 @@ const day1: IScenario = {
 // High wind coming, but Abilene-Ft Worth lines go down at 2:30 PM
 // ============================================================
 
-const day2: IScenario = {
+const day2: Scenario = {
     info: [
         "Your goal is to avoid a blackout and keep operating costs as low as possible.",
         "Wind availability will rise steadily this afternoon, up to nearly 100% by 4pm and remain high for the rest of your shift.",
@@ -112,7 +112,7 @@ const TORNADO_BRANCHES = [
     LINE.FtWorth_Snyder,
 ];
 
-const day3: IScenario = {
+const day3: Scenario = {
     info: [
         "Your goal is to avoid a blackout and keep operating costs as low as possible.",
         "Wind is expected to be high, as yesterday.",
@@ -182,7 +182,7 @@ const COLD_WEATHER_TRIPS: TimedUnitTrip[] = [
     { at: time(4, 0),  sub: SUB.Mission, unit: 0 },
 ];
 
-const day4: IScenario = {
+const day4: Scenario = {
     info: [
         "Your goal is to avoid a blackout and keep operating costs as low as possible.",
         "Generators will be tripping significantly due to cold weather.",
@@ -218,15 +218,15 @@ const HURRICANE_RESTORATIONS: TimedRestoration[] = [
     { at: time(3, 30), branch: LINE.Armstrong_CorpusChristi },
     { at: time(3, 50), branch: LINE.Mission_Brownsville },
     { at: time(4, 10), sub: SUB.Pasadena,      units: { count: 2 } },
-    { at: time(4, 20), sub: SUB.Houston,        units: { from: 3, count: 8 } },
-    { at: time(4, 50), sub: SUB.Katy,           units: { from: 2, count: 5 } },
+    { at: time(4, 20), sub: SUB.Houston,        units: { from: 3, count: 5 } },
+    { at: time(4, 50), sub: SUB.Katy,           units: { from: 2, count: 3 } },
     { at: time(5, 10), branch: LINE.Brownsville_Armstrong },
-    { at: time(5, 30), sub: SUB.Pasadena,       units: { from: 2, count: 4 } },
-    { at: time(6, 0),  sub: SUB.Mission,        units: { from: 1, count: 4 } },
+    { at: time(5, 30), sub: SUB.Pasadena,       units: { from: 2, count: 2 } },
+    { at: time(6, 0),  sub: SUB.Mission,        units: { from: 1, count: 3 } },
     { at: time(7, 0),  sub: SUB.Galveston,      units: { count: 2 } },
     { at: time(7, 30), branch: LINE.Galveston_Pasadena },
-    { at: time(8, 0),  sub: SUB.Armstrong,      units: { from: 3, count: 5 } },
-    { at: time(8, 10), sub: SUB.Galveston,      units: { from: 2, count: 4 } },
+    { at: time(8, 0),  sub: SUB.Armstrong,      units: { from: 3, count: 2 } },
+    { at: time(8, 10), sub: SUB.Galveston,      units: { from: 2, count: 2 } },
     { at: time(8, 20), branch: LINE.CorpusChristi_ElCampo },
     { at: time(8, 30), branch: LINE.ElCampo_Katy },
     { at: time(8, 40), branch: LINE.CorpusChristi_Wadsworth },
@@ -236,7 +236,7 @@ const HURRICANE_RESTORATIONS: TimedRestoration[] = [
     { at: time(10, 0), branch: LINE.Katy_Rockdale },
 ];
 
-const day5: IScenario = {
+const day5: Scenario = {
     info: [
         "Ready for the last challenge? On Day 5, your shift starts after an extreme hurricane hit this morning. Many loads, lines, and generators along the gulf coast are tripped. Throughout the day, crews are working tirelessly to get these tripped elements ready for restoration. Your job is to get service restored to customers as quickly and safely as possible. Note that when a line or substation turns from red to white it is eligible to be restored.",
     ],
@@ -301,7 +301,7 @@ const day5: IScenario = {
 // Export all scenarios
 // ============================================================
 
-export const scenarios: Record<number, IScenario> = {
+export const scenarios: Record<number, Scenario> = {
     1: day1,
     2: day2,
     3: day3,

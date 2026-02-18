@@ -146,15 +146,16 @@ def compile_scenarios_template(case_name, case_dir):
     if dest.exists():
         return False
     title = json.load(open(case_dir / "case.json", encoding="utf-8")).get("name", case_name.title())
-    dest.write_text(f"""import {{ IScenario }} from "$lib/types";
+    dest.write_text(f"""import {{ Scenario }} from "$lib/types";
+import {{ Wind, Solar, Demand }} from "$lib/weather";
 
-const day1: IScenario = {{
-    briefing: {{ title: "{title} - Day 1", isList: true, points: ["Welcome to the {title} grid!"] }},
+const day1: Scenario = {{
+    info: ["Welcome to the {title} grid!"],
     costs: {{ record: 1.0, good: 2.0, okay: 5.0 }},
-    weather: ['load'],
+    weather: {{ load: Demand.EVENING_PEAK, sun: Solar.PHYSICAL, wind: Wind.DIURNAL }},
 }};
 
-export const scenarios: Record<number, IScenario> = {{ 1: day1 }};
+export const scenarios: Record<number, Scenario> = {{ 1: day1 }};
 """, encoding="utf-8", newline="\n")
     return True
 

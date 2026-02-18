@@ -5,6 +5,7 @@ import { availCapacity, isInactive } from "../utils";
 import { SHUTDOWN_THRESHOLD_MW } from "./constants";
 import { clamp } from "./utils";
 
+/** Per-unit generator model: manages status transitions, ramp limits, and dispatch output. */
 export class GenModel {
   readonly unit: Unit;
 
@@ -42,6 +43,7 @@ export class GenModel {
 
   // --- Lifecycle ---
 
+  /** Advance startup/shutdown transitions by one step. */
   tick(): void {
     this.unit.StatusCount += 1;
 
@@ -56,6 +58,7 @@ export class GenModel {
     }
   }
 
+  /** Restore unit to its initial status and power output. */
   reset(): void {
     this.unit.Status = this.unit.Status0;
     this.unit.P = this.unit.Pset = this.unit.P0;
@@ -87,8 +90,8 @@ export class GenModel {
     this._avail = this.isRenewable
       ? availCapacity(this.pmax, this.category, windAvail, sunAvail)
       : this.pmax;
-    this._isReady = status === UnitStatus.IN ||
-      (status === UnitStatus.STARTUP && this.unit.StatusCount >= this.startTime);
+    // tick() already advances STARTUP→IN before prepare() runs
+    this._isReady = status === UnitStatus.IN;
 
     // Dispatch range: what power can this unit deliver this tick?
     if (status === UnitStatus.SHUTDOWN) {
@@ -135,6 +138,7 @@ export class GenModel {
 
   // --- Operator Actions ---
 
+  /** Start up (DIS→STARTUP) or shut down (IN/STARTUP→SHUTDOWN) the generator. */
   toggle(): void {
     if (this.unit.Status === UnitStatus.DIS) {
       this.unit.Status = UnitStatus.STARTUP;
@@ -145,6 +149,7 @@ export class GenModel {
     }
   }
 
+  /** Cancel an in-progress startup or shutdown. */
   abortTransition(): void {
     if (this.unit.Status === UnitStatus.STARTUP) {
       this.unit.Status = UnitStatus.DIS;
@@ -157,11 +162,13 @@ export class GenModel {
     }
   }
 
+  /** Set the target power output, clamped to unit bounds. */
   setSetpoint(value: number): void {
     if (isNaN(value)) return;
     this.unit.Pset = clamp(value, this.pmin, this.pmax);
   }
 
+  /** Immediately trip the unit (frequency/island event). */
   forceTrip(): void {
     this.unit.Status = UnitStatus.TRIP;
     this.unit.P = 0;

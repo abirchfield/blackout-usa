@@ -130,6 +130,11 @@ export interface InstantMetrics {
   thermalGen: number;
   nuclearGen: number;
   totalGeneration: number;
+  capacityNuclear: number;
+  capacityThermal: number;
+  capacitySolar: number;
+  capacityWind: number;
+  totalCapacity: number;
   currentOpCost: number;
   currentFuelCost: number;
   currentUnservedCost: number;
@@ -227,16 +232,10 @@ export interface Hint extends HintInput {
   time: string;
 }
 
-export interface EngineSettings {
-  theme?: 'light' | 'dark';
-  animationsEnabled?: boolean;
-  renderMapLabels?: boolean;
-  zoomSensitivity?: number;
-  keyBindings?: KeyBindings;
-}
+export type EngineSettings = Partial<Pick<ViewState, 'theme' | 'animationsEnabled' | 'renderMapLabels' | 'zoomSensitivity' | 'keyBindings'>>;
 
 export interface ResultDetails {
-  performance: 'record' | 'good' | 'okay' | 'bad';
+  performance: 'record' | 'good' | 'okay' | 'bad' | 'blackout';
   costM: string;
   message: string;
 }

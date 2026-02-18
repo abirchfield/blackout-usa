@@ -11,7 +11,7 @@
   import CircuitTable from '$components/tables/CircuitTable.svelte';
   import { GenerationTypeConfig, LoadTypeConfig } from '$components/theme';
   import { cn, branchLoading, isBranchActive } from '$lib/utils';
-  import { getEngineStores, getEngine } from '$lib/stores/engine';
+  import { getEngineState, getEngine } from '$lib/stores/engine.svelte';
 
   interface Props {
     open: boolean;
@@ -22,15 +22,15 @@
 
   let { open, substationId, branchId, onClose }: Props = $props();
 
-  const { subs: subsStore, branches: branchesStore, stats: statsStore, userPaused: userPausedStore } = getEngineStores();
+  const engineState = getEngineState();
   const engine = getEngine();
 
   // Derived entity lookups
-  let sub = $derived(substationId ? $subsStore[substationId] : undefined);
-  let branch = $derived(branchId ? $branchesStore[branchId] : undefined);
-  let siblingBranch = $derived(branch?.sibling ? $branchesStore[branch.sibling] : undefined);
-  let windAvail = $derived($statsStore.windAvail);
-  let sunAvail = $derived($statsStore.sunAvail);
+  let sub = $derived(substationId ? engineState.subs[substationId] : undefined);
+  let branch = $derived(branchId ? engineState.branches[branchId] : undefined);
+  let siblingBranch = $derived(branch?.sibling ? engineState.branches[branch.sibling] : undefined);
+  let windAvail = $derived(engineState.stats.windAvail);
+  let sunAvail = $derived(engineState.stats.sunAvail);
 
   // Setpoints state for SubstationContent
   let setpoints: Record<number, number> = $state({});
@@ -42,7 +42,7 @@
     const id = substationId;
     if (id) {
       untrack(() => {
-        const s = $subsStore[id];
+        const s = engineState.subs[id];
         if (s) {
           const initial: Record<number, number> = {};
           s.U.forEach((unit: Unit, index: number) => {
@@ -148,7 +148,7 @@
 {#snippet substationContent(substation: Substation)}
   <div class="text-sm text-muted-foreground mb-2">{@render subDescription(substation)}</div>
   {#if substation.isLoad}
-    <LoadUnitsTable sub={substation} {onUnitAction} isPaused={$userPausedStore} stickyHeader={true} />
+    <LoadUnitsTable sub={substation} {onUnitAction} isPaused={engineState.userPaused} stickyHeader={true} />
   {:else}
     <GeneratorUnitsTable
       sub={substation}
@@ -157,12 +157,12 @@
       {onSetSetpoint}
       {setpoints}
       onSetpointChange={handleSetpointChange}
-      isPaused={$userPausedStore}
+      isPaused={engineState.userPaused}
       stickyHeader={true}
     />
     {#if substation.Loads}
       <h3 class="text-sm font-semibold mt-4 mb-2">Load Circuits</h3>
-      <LoadUnitsTable sub={substation} units={substation.Loads.U} onUnitAction={onLoadUnitAction} isPaused={$userPausedStore} stickyHeader={true} />
+      <LoadUnitsTable sub={substation} units={substation.Loads.U} onUnitAction={onLoadUnitAction} isPaused={engineState.userPaused} stickyHeader={true} />
     {/if}
   {/if}
 {/snippet}
@@ -183,7 +183,7 @@
     <span class="mx-1.5 opacity-40">&middot;</span>
     <span>Loading <span class={cn('font-mono', loading > 100 ? 'text-destructive' : '')}>{loading.toFixed(0)}%</span> of {totalCapacity.toFixed(0)} MW</span>
   </div>
-  <CircuitTable branch={br} {sibling} {onBranchAction} isPaused={$userPausedStore} />
+  <CircuitTable branch={br} {sibling} {onBranchAction} isPaused={engineState.userPaused} />
 {/snippet}
 
 {#if open && sub}

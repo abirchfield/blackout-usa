@@ -2,7 +2,7 @@
   import { HelpCircle, LogOut, PersonStanding, Play, Pause, FastForward, Bell, Lightbulb, FileText, Menu, X, AlertTriangle } from 'lucide-svelte';
   import Button from '$components/ui/Button.svelte';
   import { cn } from '$lib/utils';
-  import { getEngineStores, getEngine } from '$lib/stores/engine';
+  import { getEngineState, getEngine } from '$lib/stores/engine.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { UIThresholds } from '$components/theme';
   import type { ModalId } from '$lib/stores/modals.svelte';
@@ -16,11 +16,11 @@
 
   let { onOpenModal, onBriefingClick, controlsDisabled, isBlackout }: Props = $props();
 
-  const { isPaused, isFastForward, alerts, hints } = getEngineStores();
+  const engineState = getEngineState();
   const engine = getEngine();
 
-  let alertsCount = $derived($alerts.length);
-  let hintsCount = $derived($hints.length);
+  let alertsCount = $derived(engineState.alerts.length);
+  let hintsCount = $derived(engineState.hints.length);
 
   let isMenuOpen = $state(false);
 
@@ -29,8 +29,8 @@
   let lastShownId: number | null = $state(null);
 
   $effect(() => {
-    if ($alerts.length === 0) return;
-    const latest = $alerts[0];
+    if (engineState.alerts.length === 0) return;
+    const latest = engineState.alerts[0];
     if (!latest.critical) return;
     if (latest.id === lastShownId) return;
 
@@ -54,15 +54,15 @@
 {/snippet}
 
 {#snippet timeControls()}
-  <Button variant="ghost" size="icon" onclick={() => engine.togglePause()} aria-label={$isPaused ? 'Resume game' : 'Pause game'} disabled={controlsDisabled}>
-    {#if $isPaused}
+  <Button variant="ghost" size="icon" onclick={() => engine.togglePause()} aria-label={engineState.isPaused ? 'Resume game' : 'Pause game'} disabled={controlsDisabled}>
+    {#if engineState.isPaused}
       <Play class="h-5 w-5 fill-current" />
     {:else}
       <Pause class="h-5 w-5 fill-current" />
     {/if}
   </Button>
-  <Button variant={$isFastForward ? settings.hcVariant : 'ghost'} size="icon" onclick={() => engine.toggleFastForward()} aria-label={$isFastForward ? 'Disable fast forward' : 'Enable fast forward'} disabled={$isPaused || controlsDisabled}>
-    <FastForward class="h-5 w-5 {$isFastForward ? 'fill-current' : ''}" />
+  <Button variant={engineState.isFastForward ? settings.hcVariant : 'ghost'} size="icon" onclick={() => engine.toggleFastForward()} aria-label={engineState.isFastForward ? 'Disable fast forward' : 'Enable fast forward'} disabled={engineState.isPaused || controlsDisabled}>
+    <FastForward class="h-5 w-5 {engineState.isFastForward ? 'fill-current' : ''}" />
   </Button>
 {/snippet}
 

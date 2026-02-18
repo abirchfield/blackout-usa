@@ -3,6 +3,7 @@
  * Dense solvers (LU, Cholesky) and Union-Find, all using typed arrays for zero-GC-pressure.
  */
 
+/** Clamp a value between lo and hi. */
 export function clamp(value: number, lo: number, hi: number): number {
   return value < lo ? lo : value > hi ? hi : value;
 }
@@ -11,6 +12,7 @@ export function clamp(value: number, lo: number, hi: number): number {
 // Union-Find (disjoint-set with path halving + union by rank)
 // =========================================================================
 
+/** Disjoint-set data structure with path halving and union by rank. */
 export class UnionFind {
   private parent: Int32Array;
   private rank: Int32Array;
@@ -20,16 +22,19 @@ export class UnionFind {
     this.rank = new Int32Array(n);
   }
 
+  /** Reset all elements to be their own parent (no sets). */
   reset(): void {
     for (let i = 0; i < this.parent.length; i++) { this.parent[i] = i; this.rank[i] = 0; }
   }
 
+  /** Find the root representative of the set containing x. */
   find(x: number): number {
     const p = this.parent;
     while (p[x] !== x) { p[x] = p[p[x]]; x = p[x]; } // path halving
     return x;
   }
 
+  /** Merge the sets containing a and b. */
   union(a: number, b: number): void {
     const p = this.parent, r = this.rank;
     let ra = this.find(a), rb = this.find(b);

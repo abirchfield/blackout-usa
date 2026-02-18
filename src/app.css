@@ -248,6 +248,36 @@
   font-variant-numeric: tabular-nums lining-nums;
 }
 
+/* Section heading base: uppercase bold tracking.
+   Size + color added by the SectionLabel component's CVA variants. */
+@utility section-label {
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+/* Progress bar track (container) */
+@utility progress-track {
+  width: 100%;
+  border-radius: 9999px;
+  background-color: var(--muted);
+  overflow: hidden;
+}
+
+/* Progress bar fill (inner bar) */
+@utility progress-fill {
+  height: 100%;
+  border-radius: 9999px;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Modal scroll container — negative margins bleed content to dialog edges */
+@utility modal-scroll {
+  overflow-y: auto;
+  margin-inline: -1.5rem;
+  padding-inline: 1.5rem;
+}
+
 /* --- 4. Base Layer Defaults --- */
 @layer base {
   * {
@@ -262,7 +292,7 @@
   }
   /* Custom high-contrast focus indicator for accessibility */
   *:focus-visible {
-    @apply outline-2 outline-offset-2 outline-blue-500;
+    @apply outline-2 outline-offset-2 outline-ring;
   }
 
 }

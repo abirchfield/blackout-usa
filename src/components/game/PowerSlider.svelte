@@ -1,5 +1,6 @@
 <script lang="ts">
   import Slider from '$components/ui/Slider.svelte';
+  import ProgressBar from '$components/ui/ProgressBar.svelte';
   import { cn } from '$lib/utils';
 
   interface Props {
@@ -23,12 +24,7 @@
       class="absolute inset-y-0 left-0 flex items-center w-full pointer-events-none"
       title={`Actual Output: ${actual.toFixed(0)} MW`}
     >
-      <div class="h-1.5 w-full rounded-full bg-muted overflow-hidden">
-        <div
-          class="h-full rounded-full bg-primary/70 transition-all duration-300"
-          style="width: {outputPercentage}%"
-        ></div>
-      </div>
+      <ProgressBar value={outputPercentage} height="sm" colorClass="bg-primary/70" />
     </div>
     <!-- Slider control - on top with higher z-index -->
     <div class="relative z-10 w-full">

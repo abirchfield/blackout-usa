@@ -22,6 +22,7 @@ export interface GridHandler {
 
 const CLICK_DRAG_THRESHOLD_SQ = ViewConfig.CLICK_DRAG_THRESHOLD * ViewConfig.CLICK_DRAG_THRESHOLD;
 
+/** Handles mouse/wheel input for panning, zooming, hover detection, and click interactions. */
 export class InputHandler implements GridHandler {
   private canvas: HTMLCanvasElement;
   private state: GameState;
@@ -77,6 +78,7 @@ export class InputHandler implements GridHandler {
     window.addEventListener("scroll", this.boundInvalidateRect, { passive: true });
   }
 
+  /** Remove all event listeners and observers. */
   public destroy() {
     this.canvas.removeEventListener("mousedown", this.boundHandleMouseDown);
     this.canvas.removeEventListener("mousemove", this.boundHandleMouseMove);
@@ -252,6 +254,7 @@ export class InputHandler implements GridHandler {
     this.zoom(offsetX, offsetY, zoomFactor);
   }
 
+  /** Execute a game action (pan, zoom, pause, emergency ops). */
   public performAction(action: GameAction) {
     const panAmount = ViewConfig.KEYBOARD_PAN_AMOUNT;
     const rect = this.getRect();
@@ -300,6 +303,7 @@ export class InputHandler implements GridHandler {
     // No hard clamp here — soft clamp in the frame loop handles boundary return smoothly
   }
 
+  /** Center the viewport on a world coordinate and optionally set zoom level. */
   public centerAndZoomOn(longitude: number, latitude: number, zoomLevel: number = this.state.referenceScale * ViewConfig.DETAIL_ZOOM_RATIO) {
     this.state.scaleX = zoomLevel;
     this.state.scaleY = zoomLevel;
@@ -319,12 +323,14 @@ export class InputHandler implements GridHandler {
     clampPan(this.state, prevX0, prevY0, rect.width, rect.height);
   }
 
+  /** Zoom in by one keyboard step around a screen point. */
   public zoomIn(x: number, y: number) {
     // Keyboard zoom: ~35% per press (matches one mouse wheel notch at default sensitivity)
     const zoomFactor = Math.exp(0.3 * this.state.zoomSensitivity);
     this.zoom(x, y, zoomFactor);
   }
 
+  /** Zoom out by one keyboard step around a screen point. */
   public zoomOut(x: number, y: number) {
     const zoomFactor = Math.exp(-0.3 * this.state.zoomSensitivity);
     this.zoom(x, y, zoomFactor);

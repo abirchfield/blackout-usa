@@ -2,6 +2,8 @@
   import { Dialog } from 'bits-ui';
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
+  import SettingRow from '$components/ui/SettingRow.svelte';
+  import CardContainer from '$components/ui/CardContainer.svelte';
   import Switch from '$components/ui/Switch.svelte';
   import Slider from '$components/ui/Slider.svelte';
   import { Select } from 'bits-ui';
@@ -13,7 +15,6 @@
   import { ViewConfig, defaultKeyBindings } from '$lib/view/constants';
   import type { FontSize } from '$lib/stores/settings.svelte';
   import { settings } from '$lib/stores/settings.svelte';
-  import { cn } from '$lib/utils';
   import { RotateCcw } from 'lucide-svelte';
   import { theme } from '$lib/stores/theme.svelte';
 
@@ -27,39 +28,22 @@
   let isTabular = $derived(settings.current.viewMode === 'tabular');
 </script>
 
-{#snippet settingRow(label: string, description: string | undefined, htmlFor: string | undefined, disabled: boolean | undefined, children: import('svelte').Snippet)}
-  <div class={cn(
-    'flex items-center justify-between gap-4 py-2.5 px-3 rounded-lg transition-colors hover:bg-accent/50',
-    disabled && 'opacity-60'
-  )}>
-    <div class="flex-1 min-w-0">
-      <label for={htmlFor} class="text-sm font-medium cursor-pointer">
-        {label}
-      </label>
-      {#if description}
-        <p class="text-xs text-muted-foreground">{description}</p>
-      {/if}
-    </div>
-    {@render children()}
-  </div>
-{/snippet}
-
 {#if open}
   <Dialog.Root {open} {onOpenChange}>
-    <DialogContent id="accessibility-modal" class="sm:max-w-lg" overlayClass="bg-black/70">
+    <DialogContent id="accessibility-modal" class="sm:max-w-lg">
       <DialogHeader title="Settings" description="Customize your experience with display and accessibility options." />
-      <div class="space-y-6 py-4 max-h-[65vh] overflow-y-auto -mx-6 px-6">
+      <div class="space-y-6 py-4 max-h-[65vh] modal-scroll">
         <!-- Display Section -->
         <section class="space-y-1">
           <div class="mb-3">
             <h3 class="text-sm font-semibold text-foreground">Display</h3>
             <p class="text-xs text-muted-foreground">Customize colors, contrast, and text size</p>
           </div>
-          <div class="space-y-0.5 rounded-lg border bg-card/50 p-1">
-            {@render settingRow('Color Theme', 'Light, dark, or match system', 'theme-select-modal', undefined, themeSelect)}
-            {@render settingRow('Font Size', 'Adjust text size across the app', 'font-size-select-modal', undefined, fontSizeSelect)}
-            {@render settingRow('High Contrast', 'Increase visual distinction', 'high-contrast-toggle-modal', undefined, highContrastToggle)}
-          </div>
+          <CardContainer class="space-y-0.5 p-1">
+            <SettingRow label="Color Theme" description="Light, dark, or match system" htmlFor="theme-select-modal" class="hover:bg-accent/50">{@render themeSelect()}</SettingRow>
+            <SettingRow label="Font Size" description="Adjust text size across the app" htmlFor="font-size-select-modal" class="hover:bg-accent/50">{@render fontSizeSelect()}</SettingRow>
+            <SettingRow label="High Contrast" description="Increase visual distinction" htmlFor="high-contrast-toggle-modal" class="hover:bg-accent/50">{@render highContrastToggle()}</SettingRow>
+          </CardContainer>
         </section>
 
         <!-- Grid View Section -->
@@ -68,12 +52,12 @@
             <h3 class="text-sm font-semibold text-foreground">Grid View</h3>
             <p class="text-xs text-muted-foreground">Configure how the power grid is displayed</p>
           </div>
-          <div class="space-y-0.5 rounded-lg border bg-card/50 p-1">
-            {@render settingRow('Display Mode', 'Interactive map or data tables', 'view-mode-select', undefined, viewModeSelect)}
-            {@render settingRow('Animations', 'Animated power flow on lines', 'animations-toggle-modal', isTabular, animationsToggle)}
-            {@render settingRow('Map Labels', 'Show substation names on map', 'map-labels-toggle-modal', isTabular, mapLabelsToggle)}
-            {@render settingRow('Zoom Speed', 'Mouse wheel sensitivity', 'zoom-sensitivity-slider', isTabular, zoomSlider)}
-          </div>
+          <CardContainer class="space-y-0.5 p-1">
+            <SettingRow label="Display Mode" description="Interactive map or data tables" htmlFor="view-mode-select" class="hover:bg-accent/50">{@render viewModeSelect()}</SettingRow>
+            <SettingRow label="Animations" description="Animated power flow on lines" htmlFor="animations-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render animationsToggle()}</SettingRow>
+            <SettingRow label="Map Labels" description="Show substation names on map" htmlFor="map-labels-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render mapLabelsToggle()}</SettingRow>
+            <SettingRow label="Zoom Speed" description="Mouse wheel sensitivity" htmlFor="zoom-sensitivity-slider" disabled={isTabular} class="hover:bg-accent/50">{@render zoomSlider()}</SettingRow>
+          </CardContainer>
         </section>
 
         <!-- Keyboard Shortcuts Section -->

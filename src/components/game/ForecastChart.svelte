@@ -20,14 +20,21 @@
     font: string;
   }
 
+  /** Normalize any CSS color to #rrggbb hex so alpha suffixes work on canvas. */
+  function toHex(color: string): string {
+    const ctx = document.createElement('canvas').getContext('2d')!;
+    ctx.fillStyle = color;
+    return ctx.fillStyle;
+  }
+
   function resolveChartColors(): ChartColors {
     const cs = getComputedStyle(document.documentElement);
     const v = (name: string) => cs.getPropertyValue(name).trim();
     return {
-      wind: v("--color-gen-wind") || "#22d3ee",
-      solar: v("--color-gen-solar") || "#facc15",
-      fg: v("--foreground") || "#000",
-      mutedFg: v("--muted-foreground") || "#888",
+      wind: toHex(v("--color-gen-wind") || "#22d3ee"),
+      solar: toHex(v("--color-gen-solar") || "#facc15"),
+      fg: toHex(v("--foreground") || "#000"),
+      mutedFg: toHex(v("--muted-foreground") || "#888"),
       font: v("--font-sans") || "'Jura', sans-serif",
     };
   }
