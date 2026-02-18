@@ -138,9 +138,11 @@ export function drawBranches(
     if (isHov) {
       hx1 = lx1; hy1 = ly1; hx2 = lx2; hy2 = ly2;
       hasHover = true;
-      // Overload style takes priority over hover highlight
+      // Overload/status style takes priority over hover highlight
       if (br.Status === BranchStatus.TRIP) {
         hoverColor = colors.tripped; hoverDash = dashTrip;
+      } else if (br.Status === BranchStatus.DIS) {
+        hoverColor = colors.lineHover; hoverDash = dashTrip;
       } else if (isIn && ratio > CRIT_THRESHOLD) {
         hoverColor = colors.overloadCritical; hoverDash = dashCritical;
       } else if (isIn && ratio > NORMAL_THRESHOLD) {
@@ -179,8 +181,10 @@ export function drawBranches(
   ctx.setLineDash(dashTrip);
   ctx.stroke(batchTripped);
 
+  // DIS lines: same dash as tripped, foreground color (matches help modal: dasharray '5,5')
   ctx.strokeStyle = colors.foreground;
-  ctx.stroke(batchDis); // dashTrip still active
+  ctx.stroke(batchDis);
+  ctx.setLineDash(dashNone);
 
   if (hasHover) {
     ctx.beginPath();
@@ -246,6 +250,7 @@ function addCircles(
 }
 
 
+/** Dynamic branch hit-test/draw radius based on zoom level. */
 export function getDynamicBranchRadius(scaleFactor: number, isHover: boolean): number {
   const baseRadius = isHover ? DrawingConfig.BRANCH_RADIUS_HOVER : DrawingConfig.BRANCH_RADIUS_NORMAL;
   const maxRadius = isHover ? DrawingConfig.BRANCH_RADIUS_HOVER_MAX : DrawingConfig.BRANCH_RADIUS_MAX;

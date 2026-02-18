@@ -34,6 +34,7 @@ const ZERO_INSTANT: InstantMetrics = {
   loadServedIndustrial: 0, loadServedDatacenter: 0,
   reserves: 0, reservesWind: 0, reservesSolar: 0, reservesThermal: 0, reservesNuclear: 0,
   windGen: 0, solarGen: 0, thermalGen: 0, nuclearGen: 0, totalGeneration: 0,
+  capacityNuclear: 0, capacityThermal: 0, capacitySolar: 0, capacityWind: 0, totalCapacity: 0,
   currentOpCost: 0, currentFuelCost: 0, currentUnservedCost: 0,
 };
 
@@ -42,6 +43,7 @@ const ZERO_CUMULATIVE: CumulativeMetrics = {
   totalCost: 0, avgCost: 0, totalMwh: 0,
 };
 
+/** Create a zeroed CumulativeMetrics object. */
 export function emptyCumulative(): CumulativeMetrics {
   return { ...ZERO_CUMULATIVE };
 }
@@ -79,7 +81,23 @@ function accumulateLoadMetrics(m: InstantMetrics, state: SimState): void {
 
 function accumulateGenMetrics(m: InstantMetrics, state: SimState): void {
   for (const sub of state.genSubs) {
+    // Resolve category bucket once per substation (constant across all units)
+    const cat = sub.Category;
+    const isWind = cat === SubstationCategory.Wind;
+    const isSolar = cat === SubstationCategory.Solar;
+    const isNuclear = cat === SubstationCategory.Nuclear;
+
     for (const u of sub.U) {
+      const cap = sub.isRenewable
+        ? availCapacity(u.Pmax, cat, state.windAvail, state.sunAvail)
+        : u.Pmax;
+
+      // Capacity by type (all units regardless of status)
+      if (isWind) m.capacityWind += cap;
+      else if (isSolar) m.capacitySolar += cap;
+      else if (isNuclear) m.capacityNuclear += cap;
+      else m.capacityThermal += cap;
+
       // Running units incur fixed + fuel costs
       if (u.Status === UnitStatus.IN || u.Status === UnitStatus.STARTUP || u.Status === UnitStatus.SHUTDOWN) {
         m.currentOpCost += u.FixedCost;
@@ -88,32 +106,27 @@ function accumulateGenMetrics(m: InstantMetrics, state: SimState): void {
 
       // Online units contribute reserves
       if (u.Status === UnitStatus.IN) {
-        const cap = sub.isRenewable
-          ? availCapacity(u.Pmax, sub.Category, state.windAvail, state.sunAvail)
-          : u.Pmax;
         const reserve = cap - u.P;
         m.reserves += reserve;
-        switch (sub.Category) {
-          case SubstationCategory.Wind:    m.reservesWind += reserve; break;
-          case SubstationCategory.Solar:   m.reservesSolar += reserve; break;
-          case SubstationCategory.Nuclear: m.reservesNuclear += reserve; break;
-          default:                         m.reservesThermal += reserve; break;
-        }
+        if (isWind) m.reservesWind += reserve;
+        else if (isSolar) m.reservesSolar += reserve;
+        else if (isNuclear) m.reservesNuclear += reserve;
+        else m.reservesThermal += reserve;
       }
 
-      // All units contribute to generation by category
-      switch (sub.Category) {
-        case SubstationCategory.Wind:    m.windGen += u.P; break;
-        case SubstationCategory.Solar:   m.solarGen += u.P; break;
-        case SubstationCategory.Nuclear: m.nuclearGen += u.P; break;
-        default:                         m.thermalGen += u.P; break;
-      }
+      // Generation by category
+      if (isWind) m.windGen += u.P;
+      else if (isSolar) m.solarGen += u.P;
+      else if (isNuclear) m.nuclearGen += u.P;
+      else m.thermalGen += u.P;
     }
   }
+  m.totalCapacity = m.capacityNuclear + m.capacityThermal + m.capacitySolar + m.capacityWind;
 }
 
 // --- GridModel ---
 
+/** Grid simulation model: owns substations, network solver, and tick-level metrics. */
 export class GridModel implements GridModelApi {
   state!: SimState;
   private onAlert: AlertHandler = () => {};
@@ -135,6 +148,7 @@ export class GridModel implements GridModelApi {
     this.state = state;
   }
 
+  /** Initialize substation/network models and build typed arrays from state. */
   setup(): void {
     // Create SubstationModel wrappers and call their setup()
     const models: Record<string, SubstationModel> = {};
@@ -163,6 +177,7 @@ export class GridModel implements GridModelApi {
     this.network.setup();
   }
 
+  /** Reset all units and network to initial state for a new day. */
   reset(onAlert: AlertHandler, onHint: HintHandler): void {
     this.onAlert = onAlert;
     this.onHint = onHint;
@@ -186,12 +201,10 @@ export class GridModel implements GridModelApi {
     }
   }
 
-  // NOTE TO SELF: DO NOT DELETE THE FOLLOWING NOTE
-  // I intentionally designed this using the
-  // LibGDX architecture that I learned nearly a decade ago
-  // and I just realized, this design pattern
-  // is functionally equivilent to a numeric integrator.
+  // Architecture: the setup()/tick()/reset() lifecycle mirrors LibGDX's game loop pattern,
+  // which is functionally equivalent to a numeric integrator.
 
+  /** Run one simulation step: integrity checks, balance, DC power flow, metrics. */
   tick(dt: number): void {
     // Phase 2 — Integrity: frequency trips (substations), overload trips + islands (network), unit transitions
     if (dt > 0) this.tripCheckFrequency();
@@ -222,16 +235,19 @@ export class GridModel implements GridModelApi {
     if (c.totalMwh > 0) c.avgCost = c.totalCost / c.totalMwh;
   }
 
+  /** Mark network topology as dirty (forces Ybus rebuild on next solve). */
   invalidate(): void {
     this.network.invalidate();
   }
 
   // --- Notifications ---
 
+  /** Send an alert to the engine's notification handler. */
   pushAlert(message: string, critical = false): void {
     this.onAlert({ message, critical });
   }
 
+  /** Send a hint to the engine's notification handler. */
   pushHint(message: string, reset = false): void {
     this.onHint({ message }, reset);
   }
@@ -314,26 +330,32 @@ export class GridModel implements GridModelApi {
 
   // --- Operator Actions (user-facing) ---
 
+  /** Toggle a generator unit between startup and shutdown. */
   toggleUnit(subId: string, unitIndex: number): void {
     this.subModels[subId]?.toggleUnit(unitIndex);
   }
 
+  /** Toggle a load unit between connected and disconnected. */
   toggleLoadUnit(subId: string, unitIndex: number): void {
     this.subModels[subId]?.toggleLoadUnit(unitIndex);
   }
 
+  /** Cancel an in-progress startup or shutdown for a generator unit. */
   abortTransition(subId: string, unitIndex: number): void {
     this.subModels[subId]?.abortTransition(unitIndex);
   }
 
+  /** Open or close a transmission branch. */
   toggleBranch(branchId: string): void {
     this.network.toggleBranch(branchId);
   }
 
+  /** Set a generator's target power output. */
   setSetpoint(subId: string, unitIndex: number, value: number): void {
     this.subModels[subId]?.setSetpoint(unitIndex, value);
   }
 
+  /** Disconnect the smallest active load substation. */
   shedMinLoad(): void {
     const m = this.findLoadModel('smallest');
     if (!m) return;
@@ -341,11 +363,13 @@ export class GridModel implements GridModelApi {
     m.shedAll();
   }
 
+  /** Open the most heavily loaded branch (and its sibling circuit). */
   disconnectHottestLine(): void {
     const result = this.network.disconnectHottestLine();
     if (result) this.pushAlert(`Disconnecting most loaded line: ${result.name1}-${result.name2}.`);
   }
 
+  /** Emergency: disconnect the largest active load substation. */
   shedMaxLoad(): void {
     const m = this.findLoadModel('largest');
     if (!m) return;
@@ -353,6 +377,7 @@ export class GridModel implements GridModelApi {
     m.shedAll();
   }
 
+  /** Set all dispatchable generators to maximum output. */
   rampAllUp(): void {
     this.pushAlert("Ramping all available generation to maximum.");
     for (const m of this.genModels) {
@@ -366,26 +391,32 @@ export class GridModel implements GridModelApi {
 
   // --- Scenario Mutations (scripted) ---
 
+  /** Set unit status for scenario scripting (single index or range). */
   setUnitStatus(subId: string, status: UnitStatus, range?: number | { from?: number; count?: number }): void {
     this.subModels[subId]?.setUnitsStatus(status, range);
   }
 
+  /** Force-trip a branch (scenario scripting). */
   tripBranch(branchId: string): void {
     this.network.tripBranch(branchId);
   }
 
+  /** Randomly trip branches by probability (scenario scripting). */
   randomTrips(branchIds: string[], probability: number, reason?: string): void {
     this.network.randomTrips(branchIds, probability, reason);
   }
 
+  /** Move tripped units to out-of-service so they can be manually restarted. */
   readyUnits(subId: string, range?: { from?: number; count?: number }): void {
     this.subModels[subId]?.readyUnits(range);
   }
 
+  /** Move a tripped branch to out-of-service (allows manual re-close). */
   readyBranch(branchId: string): void {
     this.network.readyBranch(branchId);
   }
 
+  /** Directly set unit power output (scenario scripting). */
   setUnitPower(subId: string, power: number, range?: { from?: number; count?: number }): void {
     this.subModels[subId]?.setUnitPower(power, range);
   }

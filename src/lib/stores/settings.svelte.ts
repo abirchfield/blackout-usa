@@ -37,7 +37,8 @@ function loadSettings(): AppSettings {
   try {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (!stored) return { ...defaultAppSettings };
-    return { ...defaultAppSettings, ...JSON.parse(stored) };
+    const parsed = JSON.parse(stored);
+    return { ...defaultAppSettings, ...parsed, keyBindings: { ...defaultAppSettings.keyBindings, ...parsed.keyBindings } };
   } catch {
     return { ...defaultAppSettings };
   }
@@ -53,6 +54,7 @@ function saveSettings(s: AppSettings) {
 function createSettingsState() {
   let current = $state<AppSettings>(loadSettings());
 
+  /** Merge a partial settings patch and persist to localStorage. */
   function update(patch: Partial<AppSettings>) {
     current = { ...current, ...patch };
     saveSettings(current);
@@ -68,4 +70,5 @@ function createSettingsState() {
   };
 }
 
+/** Singleton app settings state with localStorage persistence. */
 export const settings = createSettingsState();

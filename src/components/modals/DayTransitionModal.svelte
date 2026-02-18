@@ -54,7 +54,6 @@
     <DialogContent
       id="day-transition-modal"
       class="sm:max-w-lg font-sans"
-      overlayClass="bg-black/70"
       showCloseButton={canDismiss}
       onPointerDownOutside={(e: Event) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
       onEscapeKeyDown={(e: Event) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
@@ -65,7 +64,7 @@
           <DayResults stats={gameStatistics} day={gameStatistics.day} {resultDetails} />
           <div class="grid grid-cols-2 gap-3 pt-2">
             <Button
-              onclick={() => onReplayDay(gameStatistics.day)}
+              onclick={() => onReplayDay(targetDay)}
               variant={settings.hcVariant}
               class="flex items-center justify-center gap-2"
             >

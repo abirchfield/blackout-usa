@@ -1,5 +1,6 @@
 <script lang="ts">
   import CircuitTable from '$components/tables/CircuitTable.svelte';
+  import SectionLabel from '$components/ui/SectionLabel.svelte';
   import type { Branch } from '$lib/types';
   import { BranchStatus } from '$lib/types';
 
@@ -81,7 +82,7 @@
 
 <div class="space-y-4">
   <div>
-    <h5 class="text-[0.65rem] text-muted-foreground uppercase tracking-wider font-bold mb-2">Line Appearance on Map</h5>
+    <SectionLabel>Line Appearance on Map</SectionLabel>
     <p class="text-xs text-muted-foreground mb-2">
       Power flows automatically based on physics. Lines have a capacity rating &mdash; if exceeded, they can trip.
     </p>
@@ -98,7 +99,7 @@
   </div>
 
   <div class="border-t pt-3">
-    <h5 class="text-[0.65rem] text-muted-foreground uppercase tracking-wider font-bold mb-2">Interactive Demo</h5>
+    <SectionLabel>Interactive Demo</SectionLabel>
     <p class="text-xs text-muted-foreground mb-2">
       Click the button to open or close the line. Watch flow and loading update in real time.
     </p>

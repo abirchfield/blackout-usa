@@ -33,12 +33,12 @@ export function computeForecast(
   const points: ForecastPoint[] = new Array(samples);
 
   for (let i = 0; i < samples; i++) {
-    const elapsed = (i / (samples - 1)) * DURATION_HOURS;
+    const elapsed = samples <= 1 ? 0 : (i / (samples - 1)) * DURATION_HOURS;
     const hour = startHour + elapsed;
     points[i] = {
       hour,
       windAvail: hasWind ? windDiurnal(hour, startHour) : BASE_WIND,
-      sunAvail: hasSolar ? solarFraction(latitude, DEFAULT_DAY_OF_YEAR, hour) : 0,
+      sunAvail: hasSolar ? solarFraction(latitude, DEFAULT_DAY_OF_YEAR, hour) : 1,
     };
   }
 

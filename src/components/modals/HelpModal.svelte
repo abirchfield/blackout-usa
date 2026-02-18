@@ -4,6 +4,9 @@
   import DialogHeader from '$components/ui/DialogHeader.svelte';
   import Button from '$components/ui/Button.svelte';
   import Badge from '$components/ui/Badge.svelte';
+  import SectionLabel from '$components/ui/SectionLabel.svelte';
+  import UnitSuffix from '$components/ui/UnitSuffix.svelte';
+  import CardContainer from '$components/ui/CardContainer.svelte';
   import GeneratorDemo from './help/GeneratorDemo.svelte';
   import TransmissionDemo from './help/TransmissionDemo.svelte';
   import { SubstationCategory } from '$lib/types';
@@ -85,10 +88,6 @@
   }
 </script>
 
-{#snippet sectionLabel(text: string)}
-  <h5 class="text-[0.65rem] text-muted-foreground uppercase tracking-wider font-bold mb-2">{text}</h5>
-{/snippet}
-
 {#snippet substationExample(category: SubstationCategory, fillPercent: number, label: string, sublabel?: string)}
   {@const isLoad = category === SubstationCategory.Load}
   {@const config = GenerationTypeConfig[category]}
@@ -159,7 +158,7 @@
 {/snippet}
 
 <Dialog.Root {open} {onOpenChange}>
-  <DialogContent id="help-modal" class="sm:max-w-3xl font-sans max-h-[85vh] flex flex-col" overlayClass="bg-black/70">
+  <DialogContent id="help-modal" class="sm:max-w-3xl font-sans max-h-[85vh] flex flex-col">
     <DialogHeader class="flex-shrink-0" titleClass="text-xl font-bold flex items-center gap-2" description={helpPageMeta[currentPage].subtitle}>
       {#snippet titleContent()}
         {@const PageIcon = helpPageMeta[currentPage].icon}
@@ -168,7 +167,7 @@
       {/snippet}
     </DialogHeader>
 
-    <div class="flex-1 overflow-y-auto -mx-6 px-6 py-1">
+    <div class="flex-1 modal-scroll py-1">
       <!-- Page 0: Welcome -->
       {#if currentPage === 0}
         <div class="space-y-4">
@@ -181,7 +180,7 @@
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-5 gap-y-3">
             <div>
-              {@render sectionLabel('Your Two Goals')}
+              <SectionLabel>Your Two Goals</SectionLabel>
               <div class="space-y-2 text-sm">
                 <div class="flex items-start gap-2.5">
                   <Zap class="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
@@ -195,7 +194,7 @@
             </div>
 
             <div>
-              {@render sectionLabel('Help Along the Way')}
+              <SectionLabel>Help Along the Way</SectionLabel>
               <div class="space-y-2 text-sm">
                 <div class="flex items-start gap-2.5">
                   <Bell class="h-4 w-4 text-[var(--color-warning)] flex-shrink-0 mt-0.5" aria-hidden="true" />
@@ -215,7 +214,7 @@
         <div class="space-y-4">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 items-start">
             <div>
-              {@render sectionLabel('Generators (Circles)')}
+              <SectionLabel>Generators (Circles)</SectionLabel>
               <p class="text-xs text-muted-foreground mb-2">
                 Produce electricity. Colored ring = fuel type. Pie fill = output level.
               </p>
@@ -226,7 +225,7 @@
               </div>
             </div>
             <div>
-              {@render sectionLabel('Loads (Squares)')}
+              <SectionLabel>Loads (Squares)</SectionLabel>
               <p class="text-xs text-muted-foreground mb-2">
                 Consume electricity. Fill level = how much demand is being served.
               </p>
@@ -263,11 +262,11 @@
             </div>
           </div>
 
-          <div class="rounded-lg border p-3 bg-card/50 text-sm">
+          <CardContainer class="p-3 text-sm">
             <span class="font-semibold">Tip</span> <span class="text-muted-foreground">&mdash; Click any substation on the map to open its control panel.
             For generators, you can start/stop units and adjust output.
             For loads, you can see demand and shed load in emergencies.</span>
-          </div>
+          </CardContainer>
         </div>
 
       <!-- Page 2: Generator Controls -->
@@ -282,29 +281,29 @@
       {:else if currentPage === 4}
         <div class="space-y-4">
           <div>
-            {@render sectionLabel('Key Indicators')}
+            <SectionLabel>Key Indicators</SectionLabel>
             <p class="text-xs text-muted-foreground mb-2">
               These three numbers sit at the top of the sidebar. They tell you the health of the grid at a glance.
             </p>
-            <div class="grid grid-cols-3 gap-3 rounded-lg border bg-card/50 p-3">
+            <CardContainer class="grid grid-cols-3 gap-3 p-3">
               <div>
-                <div class="text-[0.6rem] text-muted-foreground/60 uppercase tracking-wider font-bold">Frequency</div>
-                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">60.00<span class="text-[0.6em] opacity-50 ml-[0.15em]">Hz</span></div>
+                <SectionLabel variant="compact">Frequency</SectionLabel>
+                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">60.00<UnitSuffix hero>Hz</UnitSuffix></div>
               </div>
               <div>
-                <div class="text-[0.6rem] text-muted-foreground/60 uppercase tracking-wider font-bold">Total Gen.</div>
-                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">6.97<span class="text-[0.6em] opacity-50 ml-[0.15em]">GW</span></div>
+                <SectionLabel variant="compact">Total Gen.</SectionLabel>
+                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">6.97<UnitSuffix hero>GW</UnitSuffix></div>
               </div>
               <div>
-                <div class="text-[0.6rem] text-muted-foreground/60 uppercase tracking-wider font-bold">Reserves</div>
-                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">938<span class="text-[0.6em] opacity-50 ml-[0.15em]">MW</span></div>
+                <SectionLabel variant="compact">Reserves</SectionLabel>
+                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">938<UnitSuffix hero>MW</UnitSuffix></div>
               </div>
-            </div>
+            </CardContainer>
           </div>
 
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-3 items-start">
             <div>
-              {@render sectionLabel('Frequency Thresholds')}
+              <SectionLabel>Frequency Thresholds</SectionLabel>
               <p class="text-xs text-muted-foreground mb-2">
                 Frequency reflects supply vs. demand balance. When generation falls short, frequency drops.
               </p>
@@ -317,14 +316,14 @@
                   </div>
                 {/each}
               </div>
-              <div class="rounded-lg border p-2.5 bg-card/50 text-xs mt-3">
+              <CardContainer class="p-2.5 text-xs mt-3">
                 <span class="font-semibold">Reserves</span> <span class="text-muted-foreground">&mdash; Keep at least <strong class="text-foreground font-numeric">500 MW</strong> of spare capacity to absorb sudden trips or demand spikes.</span>
-              </div>
+              </CardContainer>
             </div>
 
             <div class="space-y-3">
               <div>
-                {@render sectionLabel('Generation Bars')}
+                <SectionLabel>Generation Bars</SectionLabel>
                 <p class="text-xs text-muted-foreground mb-2">
                   Each fuel type shows current output (solid) and available capacity (faded).
                 </p>
@@ -345,9 +344,9 @@
                 </div>
               </div>
 
-              <div class="rounded-lg border p-2.5 bg-card/50 text-xs mt-2">
+              <CardContainer class="p-2.5 text-xs mt-2">
                 <span class="font-semibold">Costs</span> <span class="text-muted-foreground">&mdash; Each running unit charges a <strong class="text-foreground">fixed cost</strong> per hour plus a <strong class="text-foreground">fuel cost</strong> per MW. Unserved load incurs a steep <strong class="text-foreground">penalty</strong>. Your goal is to minimize total cost while keeping the lights on.</span>
-              </div>
+              </CardContainer>
             </div>
           </div>
         </div>
@@ -372,8 +371,8 @@
             </div>
           </div>
 
-          <div class="rounded-lg border p-3 bg-card/50">
-            {@render sectionLabel('Keyboard Shortcuts')}
+          <CardContainer class="p-3">
+            <SectionLabel>Keyboard Shortcuts</SectionLabel>
             <div class="grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-1 text-xs">
               <div><Badge variant="secondary" class="mr-1.5 font-mono text-[10px]">Space</Badge> Pause / Resume</div>
               <div><Badge variant="secondary" class="mr-1.5 font-mono text-[10px]">F</Badge> Fast forward (10x)</div>
@@ -385,7 +384,7 @@
               <div><Badge variant="outline" class="mr-1.5 text-[10px]">Click + Drag</Badge> Pan</div>
               <div><Badge variant="outline" class="mr-1.5 text-[10px]">Scroll</Badge> Zoom</div>
             </div>
-          </div>
+          </CardContainer>
         </div>
       {/if}
     </div>

@@ -21,6 +21,7 @@ function overloadTripProbability(absFlow: number, capacity: number): number {
 
 // --- NetworkModel ---
 
+/** Network topology and DC power flow solver using Cholesky factorization. */
 export class NetworkModel implements Model {
   private state: SimState;
   private subModels: SubstationModel[];
@@ -48,6 +49,7 @@ export class NetworkModel implements Model {
     this.genModels = genModels;
   }
 
+  /** Resolve branch endpoint references and allocate solver buffers. */
   setup(): void {
     // All derived fields (fromIdx, toIdx, ybr, dist) are pre-computed in grid-data.json.
     // Only set sub1/sub2 object references (can't be serialized in JSON).
@@ -68,6 +70,7 @@ export class NetworkModel implements Model {
     this.dirty = true;
   }
 
+  /** Reset all branches to in-service with zero flow. */
   reset(): void {
     for (const br of this.state.branchList) {
       br.P = 0;
@@ -79,10 +82,12 @@ export class NetworkModel implements Model {
     this.dirty = true;
   }
 
+  /** Mark Ybus as dirty so it's rebuilt on the next solve. */
   invalidate(): void {
     this.dirty = true;
   }
 
+  /** Set the callback for branch-level alerts. */
   setAlertHandler(handler: AlertHandler): void {
     this.onAlert = handler;
   }
@@ -91,11 +96,13 @@ export class NetworkModel implements Model {
   // DC Power Flow
   // =========================================================================
 
+  /** Run DC power flow: find dispatch alpha, build injections, Cholesky-solve Ybus. */
   solve(totalLoad: number): void {
     const alpha = this.findAlpha(totalLoad);
     this.buildInjections(alpha);
     if (this.dirty && !this.buildYbus()) {
       // Cholesky failed — zero all flows as a safe fallback
+      console.warn('Cholesky factorization failed — zeroing all branch flows');
       for (const br of this.state.branchList) br.P = 0;
       return;
     }
@@ -145,6 +152,12 @@ export class NetworkModel implements Model {
     }
   }
 
+  /**
+   * Build the bus admittance matrix (Ybus) and Cholesky-factorize it in-place.
+   * Ybus is negated before factorization so it becomes positive-definite,
+   * which is the requirement for Cholesky decomposition (LL^T).
+   * Returns false if factorization fails (singular matrix due to disconnected topology).
+   */
   private buildYbus(): boolean {
     const n = this.n;
     const Y = this.Ybus;
@@ -167,7 +180,6 @@ export class NetworkModel implements Model {
     const len = n * n;
     for (let i = 0; i < len; i++) Y[i] = -Y[i];
     if (!choleskyFactorize(Y, n)) {
-      console.warn('Ybus Cholesky factorization failed (matrix not positive definite)');
       return false;  // dirty stays true → rebuilt next tick
     }
     this.dirty = false;
@@ -183,6 +195,7 @@ export class NetworkModel implements Model {
     Y[j * n + j] += y;
   }
 
+  /** Compute branch MW flows from voltage angles: P_ij = y_ij * (θ_i − θ_j) * S_base. */
   private calcFlows(): void {
     const theta = this.theta;
     for (const br of this.state.branchList) {
@@ -196,6 +209,7 @@ export class NetworkModel implements Model {
   // Topology: tick, island detection, overload trips
   // =========================================================================
 
+  /** Check for overload trips and detect electrical islands. */
   tick(_dt: number): void {
     this.tripOverloads();
     this.findIslands();
@@ -245,6 +259,7 @@ export class NetworkModel implements Model {
   // Operator Actions (user-facing)
   // =========================================================================
 
+  /** Open or close a branch (operator action). */
   toggleBranch(branchId: string): void {
     const br = this.state.branches[branchId];
     if (!br || br.Status === BranchStatus.TRIP) return;
@@ -252,6 +267,7 @@ export class NetworkModel implements Model {
     this.invalidate();
   }
 
+  /** Open the branch with the highest loading percentage (and its sibling). */
   disconnectHottestLine(): { name1: string; name2: string } | null {
     let best = null as typeof this.state.branchList[0] | null;
     let maxLoading = -1;
@@ -278,6 +294,7 @@ export class NetworkModel implements Model {
   // Scenario Mutations (scripted)
   // =========================================================================
 
+  /** Force-trip a branch (scenario scripting). */
   tripBranch(branchId: string): void {
     const br = this.state.branches[branchId];
     if (!br) return;
@@ -285,6 +302,7 @@ export class NetworkModel implements Model {
     this.invalidate();
   }
 
+  /** Randomly trip branches by probability (scenario scripting). */
   randomTrips(branchIds: string[], probability: number, reason?: string): void {
     for (const id of branchIds) {
       if (Math.random() >= probability) continue;
@@ -297,6 +315,7 @@ export class NetworkModel implements Model {
     }
   }
 
+  /** Move a tripped branch to out-of-service (allows manual re-close). */
   readyBranch(branchId: string): void {
     const br = this.state.branches[branchId];
     if (!br) return;

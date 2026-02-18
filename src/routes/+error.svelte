@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { page } from '$app/stores';
+  import { page } from '$app/state';
   import Button from '$components/ui/Button.svelte';
 </script>
 
@@ -8,12 +8,17 @@
   <p class="text-muted-foreground max-w-md">
     The game encountered an unexpected error. Try refreshing the page.
   </p>
-  {#if $page.error?.message}
+  {#if page.error?.message}
     <pre role="alert" class="text-sm text-destructive max-w-lg overflow-auto p-4 bg-muted rounded">
-      {$page.error.message}
+      {page.error.message}
     </pre>
   {/if}
-  <Button onclick={() => window.location.reload()}>
-    Reload Page
-  </Button>
+  <div class="flex gap-3">
+    <Button onclick={() => window.location.reload()}>
+      Reload Page
+    </Button>
+    <Button variant="secondary" onclick={() => window.location.href = '/'}>
+      Back to Home
+    </Button>
+  </div>
 </div>

@@ -12,8 +12,8 @@
   let engine: GameEngine | null = null;
   let selectedCase = $state(DEFAULT_CASE);
 
-  let gameUrl = $derived(`${base}/game/${selectedCase}`);
-  let tutorialUrl = $derived(`${base}/game/${selectedCase}?tutorial=true`);
+  let gameUrl = $derived(`${base}/${selectedCase}`);
+  let tutorialUrl = $derived(`${base}/${selectedCase}?tutorial=true`);
 
   // Create a non-interactive preview engine for the background map
   $effect(() => {

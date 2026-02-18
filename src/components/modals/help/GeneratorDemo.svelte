@@ -1,5 +1,6 @@
 <script lang="ts">
   import UnitTable from '$components/tables/UnitTable.svelte';
+  import SectionLabel from '$components/ui/SectionLabel.svelte';
   import { cn } from '$lib/utils';
   import type { Substation, Unit } from '$lib/types';
   import { SubstationCategory, UnitStatus } from '$lib/types';
@@ -114,7 +115,7 @@
 
 <div class="space-y-3">
   <div>
-    <h5 class="text-[0.65rem] text-muted-foreground uppercase tracking-wider font-bold mb-2">Unit Status</h5>
+    <SectionLabel>Unit Status</SectionLabel>
     <div class="grid grid-cols-2 gap-x-4 gap-y-0.5">
       {#each unitStatuses as status}
         {@const config = StatusConfig[status]}
@@ -127,7 +128,7 @@
   </div>
 
   <div class="border-t pt-3">
-    <h5 class="text-[0.65rem] text-muted-foreground uppercase tracking-wider font-bold mb-2">Interactive Demo</h5>
+    <SectionLabel>Interactive Demo</SectionLabel>
     <p class="text-xs text-muted-foreground mb-2">
       Click the power button to start the unit. Once online, drag the slider to set output. Click power again to shut down.
     </p>

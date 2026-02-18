@@ -2,6 +2,8 @@
   import type { StatsSnapshot } from '$lib/types';
   import { SubstationCategory, LoadCategoryType } from '$lib/types';
   import { GenerationTypeConfig, LoadTypeConfig, STAT_VALUE } from '$components/theme';
+  import SectionLabel from '$components/ui/SectionLabel.svelte';
+  import FormattedUnit from '$components/ui/FormattedUnit.svelte';
   import { cn, fmtPower, fmtMoney } from '$lib/utils';
 
   interface Props {
@@ -14,15 +16,13 @@
   let loadFormatted = $derived(fmtPower(stats.loadServed));
   let unservedFormatted = $derived(fmtPower(stats.loadUnserved));
 
-  // Generation sources
+  // Generation sources (capacity = total installed, weather-adjusted for renewables)
   let generationSources = $derived([
-    { type: SubstationCategory.Nuclear, value: stats.nuclearGen, reserve: stats.reservesNuclear },
-    { type: SubstationCategory.Thermal, value: stats.thermalGen, reserve: stats.reservesThermal },
-    { type: SubstationCategory.Solar, value: stats.solarGen, reserve: stats.reservesSolar },
-    { type: SubstationCategory.Wind, value: stats.windGen, reserve: stats.reservesWind },
+    { type: SubstationCategory.Nuclear, value: stats.nuclearGen, capacity: stats.capacityNuclear },
+    { type: SubstationCategory.Thermal, value: stats.thermalGen, capacity: stats.capacityThermal },
+    { type: SubstationCategory.Solar, value: stats.solarGen, capacity: stats.capacitySolar },
+    { type: SubstationCategory.Wind, value: stats.windGen, capacity: stats.capacityWind },
   ]);
-
-  let totalSystemCapacity = $derived(stats.totalGeneration + stats.reserves);
 
   // Load mix
   let loadMix = $derived([
@@ -32,15 +32,18 @@
     { ...LoadTypeConfig[LoadCategoryType.Datacenter], value: stats.loadServedDatacenter },
   ]);
 
+  // Unified scale: max category value across both gen capacities and load values
+  let globalMax = $derived(Math.max(
+    ...generationSources.map(g => g.capacity),
+    ...loadMix.map(l => l.value),
+    1,
+  ));
+
   function moneyStr(val: number): string {
     const [v, u] = fmtMoney(val);
     return v + u;
   }
 </script>
-
-{#snippet unit(v: string, u: string, hero?: boolean)}
-  {v}{#if u}<span class={cn(hero ? 'text-[0.6em]' : 'text-[0.8em]', 'opacity-50 ml-[0.15em]')}>{u}</span>{/if}
-{/snippet}
 
 {#snippet statRow(label: string, value: string | [string, string])}
   <div class="flex justify-between items-baseline gap-2">
@@ -49,92 +52,101 @@
       {#if typeof value === 'string'}
         {value}
       {:else}
-        {@render unit(value[0], value[1])}
+        <FormattedUnit value={value[0]} unit={value[1]} />
       {/if}
+    </span>
+  </div>
+{/snippet}
+
+{#snippet barRow(Icon: typeof import('lucide-svelte').Atom, iconClass: string, nameId: string, name: string, valueId: string, descId: string | undefined, barBg: string, segments: {pct: number, title: string, dim?: boolean}[], value: number, ariaMax: number, ariaLabel: string, barTitle: string)}
+  {@const totalPct = segments.reduce((a,s) => a + s.pct, 0)}
+  <div class="flex items-center gap-1.5 sm:gap-2">
+    <Icon class={cn('h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0', iconClass)} />
+    <span id={nameId} class="text-xs sm:text-sm text-sidebar-foreground/50 w-16 sm:w-[5rem] flex-shrink-0 truncate">{name}</span>
+    <div
+      class="h-2.5 sm:h-3 flex-1 min-w-0 rounded-full bg-foreground/10"
+      role="meter"
+      aria-valuemin={0}
+      aria-valuemax={ariaMax}
+      aria-valuenow={value}
+      aria-labelledby="{nameId} {valueId}"
+      aria-describedby={descId}
+      title={barTitle}
+    >
+      {#if descId}<span id={descId} class="sr-only">{ariaLabel}</span>{/if}
+      <div class="h-full flex rounded-full overflow-hidden" style="width: {totalPct}%">
+        {#each segments as seg}
+          <div
+            class={cn(barBg, seg.dim ? 'opacity-30' : '')}
+            style="width: {totalPct > 0 ? (seg.pct / totalPct) * 100 : 0}%"
+            title={seg.title}
+          ></div>
+        {/each}
+      </div>
+    </div>
+    <span id={valueId} class={cn('text-sm sm:text-base w-16 sm:w-20 text-right text-sidebar-foreground/70 flex-shrink-0', STAT_VALUE)}>
+      <FormattedUnit value={value.toFixed(0)} unit="MW" />
     </span>
   </div>
 {/snippet}
 
 <div class="space-y-3">
   <!-- Generation Section -->
-  <h4 class="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-border/50 pb-1">Generation</h4>
-  <div class="space-y-2">
-    <div class="space-y-2">
-      {#each generationSources as { type, value, reserve }, index}
-        {@const config = GenerationTypeConfig[type]}
-        {#if config}
-          {@const capacity = value + reserve}
-          {@const capacityPercentage = totalSystemCapacity > 0 ? (capacity / totalSystemCapacity) * 100 : 0}
-          {@const actualPercentageOfCapacity = capacity > 0 ? (value / capacity) * 100 : 0}
-          <div class="flex items-center gap-2">
-            <config.icon class="h-4 w-4 {config.tailwind.text} flex-shrink-0" />
-            <span id="gen-name-{index}" class="text-sm text-sidebar-foreground/50 w-[5rem] flex-shrink-0">{config.name}</span>
-            <div
-              class="h-3 flex-1 rounded-full bg-foreground/10"
-              role="meter"
-              aria-valuemin={0}
-              aria-valuemax={capacity}
-              aria-valuenow={value}
-              aria-labelledby="gen-name-{index} gen-value-{index}"
-              aria-describedby="gen-desc-{index}"
-              title="Capacity: {capacity.toFixed(0)} MW"
-            >
-              <span id="gen-desc-{index}" class="sr-only">. Total capacity is {capacity.toFixed(0)} MW, with {reserve.toFixed(0)} MW in reserve.</span>
-              <div class="h-3 flex rounded-full overflow-hidden" style="width: {capacityPercentage}%">
-                <div
-                  class={cn(config.tailwind.bg)}
-                  style="width: {actualPercentageOfCapacity}%"
-                  title="Current Output: {value.toFixed(0)} MW"
-                ></div>
-                <div
-                  class={cn(config.tailwind.bg, 'opacity-30')}
-                  style="width: {100 - actualPercentageOfCapacity}%"
-                  title="Reserve Capacity: {reserve.toFixed(0)} MW"
-                ></div>
-              </div>
-            </div>
-            <span id="gen-value-{index}" class={cn('text-base w-20 text-right text-sidebar-foreground/70', STAT_VALUE)}>
-              {@render unit(value.toFixed(0), 'MW')}
-            </span>
-          </div>
-        {/if}
-      {/each}
-    </div>
+  <SectionLabel variant="dashboard">Generation</SectionLabel>
+  <div class="space-y-1.5 sm:space-y-2">
+    {#each generationSources as { type, value, capacity }, index}
+      {@const config = GenerationTypeConfig[type]}
+      {#if config}
+        {@const activePct = (value / globalMax) * 100}
+        {@const unused = capacity - value}
+        {@const unusedPct = (unused / globalMax) * 100}
+        {@render barRow(
+          config.icon,
+          config.tailwind.text,
+          `gen-name-${index}`,
+          config.name,
+          `gen-value-${index}`,
+          `gen-desc-${index}`,
+          config.tailwind.bg,
+          [
+            { pct: activePct, title: `Current Output: ${value.toFixed(0)} MW` },
+            { pct: unusedPct, title: `Unused Capacity: ${unused.toFixed(0)} MW`, dim: true },
+          ],
+          value,
+          capacity,
+          `. Total capacity is ${capacity.toFixed(0)} MW, with ${unused.toFixed(0)} MW unused.`,
+          `Capacity: ${capacity.toFixed(0)} MW`
+        )}
+      {/if}
+    {/each}
   </div>
 
   <!-- Load Section -->
-  <h4 class="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-border/50 pb-1 mt-4">Load</h4>
-  <div class="space-y-2">
-    <div class="space-y-2">
-      {#each loadMix as { name, value, icon: Icon, tailwind }, index}
-        {@const barPercentage = stats.loadServed > 0 ? (value / stats.loadServed) * 100 : 0}
-        <div class="flex items-center gap-2">
-          <Icon class={cn('h-4 w-4 flex-shrink-0', tailwind.text)} />
-          <span id="load-name-{index}" class="text-sm text-sidebar-foreground/50 w-[5rem] flex-shrink-0">{name}</span>
-          <div
-            class="h-3 flex-1 rounded-full bg-foreground/10"
-            role="progressbar"
-            aria-valuemin={0}
-            aria-valuemax={100}
-            aria-valuenow={barPercentage}
-            aria-labelledby="load-name-{index} load-value-{index}"
-            title="{barPercentage.toFixed(1)}%"
-          >
-            <div class={cn('h-3 rounded-full', tailwind.bg)} style="width: {barPercentage}%"></div>
-          </div>
-          <span id="load-value-{index}" class={cn('text-base w-20 text-right text-sidebar-foreground/70', STAT_VALUE)}>
-            {@render unit(value.toFixed(0), 'MW')}
-          </span>
-        </div>
-      {/each}
-    </div>
+  <SectionLabel variant="dashboard" class="mt-4">Load</SectionLabel>
+  <div class="space-y-1.5 sm:space-y-2">
+    {#each loadMix as { name, value, icon: Icon, tailwind }, index}
+      {@const barPct = (value / globalMax) * 100}
+      {@render barRow(
+        Icon,
+        tailwind.text,
+        `load-name-${index}`,
+        name,
+        `load-value-${index}`,
+        undefined,
+        tailwind.bg,
+        [{ pct: barPct, title: `${value.toFixed(0)} MW` }],
+        value,
+        globalMax,
+        '',
+        `${value.toFixed(0)} MW`
+      )}
+    {/each}
   </div>
 
   <!-- Summary Section -->
-  <h4 class="text-sm font-bold uppercase tracking-wider text-muted-foreground border-b border-border/50 pb-1 mt-4">Summary</h4>
+  <SectionLabel variant="dashboard" class="mt-4">Summary</SectionLabel>
   <div
-    class="grid gap-x-4 gap-y-0.5 text-sm"
-    style="grid-template-columns: repeat(auto-fit, minmax(8rem, 1fr))"
+    class="grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5 text-sm"
     role="group"
     aria-label="Summary statistics"
   >

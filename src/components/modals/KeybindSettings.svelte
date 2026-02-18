@@ -1,5 +1,7 @@
 <script lang="ts">
   import { cn } from '$lib/utils';
+  import SettingRow from '$components/ui/SettingRow.svelte';
+  import CardContainer from '$components/ui/CardContainer.svelte';
   import type { KeyBindings, GameAction } from '$lib/types';
 
   const actionLabels: Record<GameAction, string> = {
@@ -159,19 +161,13 @@
         <h4 class="text-sm font-semibold text-foreground">{group.title}</h4>
         <p class="text-xs text-muted-foreground">{group.description}</p>
       </div>
-      <div class="space-y-0.5 rounded-lg border bg-card/50 p-1">
+      <CardContainer class="space-y-0.5 p-1">
         {#each group.actions as action}
           {@const isEditing = editingAction === action}
           {@const error = errors[action] || null}
           <div class="group">
-            <div class={cn(
-              "flex items-center justify-between gap-4 py-2.5 px-3 rounded-lg transition-colors",
-              isEditing ? "bg-accent" : "hover:bg-accent/50"
-            )}>
-              <div class="flex-1 min-w-0">
-                <div class="text-sm font-medium">{actionLabels[action]}</div>
-                <div class="text-xs text-muted-foreground truncate">{actionDescriptions[action]}</div>
-              </div>
+            <SettingRow label={actionLabels[action]} description={actionDescriptions[action]}
+              descriptionClass="truncate" class={isEditing ? "bg-accent" : "hover:bg-accent/50"}>
               <button
                 type="button"
                 onclick={isEditing ? cancelEdit : () => startEdit(action)}
@@ -202,7 +198,7 @@
                   <span>{getDisplayKey(bindings[action])}</span>
                 {/if}
               </button>
-            </div>
+            </SettingRow>
             {#if error}
               <div class="text-xs text-destructive px-3 pb-1 animate-in fade-in slide-in-from-top-1" role="alert">
                 {error}
@@ -210,7 +206,7 @@
             {/if}
           </div>
         {/each}
-      </div>
+      </CardContainer>
     </div>
   {/each}
 </div>

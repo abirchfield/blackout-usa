@@ -1,19 +1,16 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { untrack } from 'svelte';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { cn } from '$lib/utils';
   import type { GameEngine } from '$lib/engine';
   import type { Substation, Branch } from '$lib/types';
-  import {
-    setEngine, setEngineStores,
-    createEngineStores
-  } from '$lib/stores/engine';
+  import { initEngineContext } from '$lib/stores/engine.svelte';
   import { modals } from '$lib/stores/modals.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { theme } from '$lib/stores/theme.svelte';
   import { mobile } from '$lib/stores/mobile.svelte';
-  import { keyboard } from '$lib/keyboard';
+  import { KeyboardController } from '$lib/keyboard.svelte';
 
   import AppHeader from '$components/game/AppHeader.svelte';
   import KeyStats from '$components/game/KeyStats.svelte';
@@ -40,15 +37,11 @@
 
   // --- Set up context (synchronous during init, engine never changes) ---
   // svelte-ignore state_referenced_locally
-  setEngine(engine);
-  // svelte-ignore state_referenced_locally
-  const stores = createEngineStores(engine);
-  setEngineStores(stores);
+  const engineState = initEngineContext(engine);
 
-  // --- Destructure stores ---
-  const { stats, isBlackout, alerts, hints, dayTransitionId, subs, branches, forecast } = stores;
+  $effect(() => () => engineState.destroy());
 
-  let forecastProgress = $derived($stats.timeStep / GAME_DURATION_S);
+  let forecastProgress = $derived(engineState.stats.timeStep / GAME_DURATION_S);
 
   // --- State ---
   let mapContainer: HTMLDivElement;
@@ -95,17 +88,16 @@
   });
 
   // --- Day Lifecycle bridge ---
-  // svelte-ignore state_referenced_locally
-  let prevTransitionId = engine.dayTransitionId;
-
+  // dayVersion starts at 0; navigateToDay() increments it to 1+.
+  // Skip version 0 to avoid acting on the pre-navigation initial state.
   $effect(() => {
-    const id = $dayTransitionId;
-    if (id === prevTransitionId) return;
-    prevTransitionId = id;
+    const v = engineState.dayVersion;
+    if (v === 0) return;
+    const phase = engineState.dayPhase;
 
-    if (engine.dayPhase === 'briefing') {
+    if (phase === 'briefing') {
       modals.replaceModal('day-briefing', { targetDay: engine.targetDay, info: engine.currentInfo });
-    } else if (engine.dayPhase === 'results') {
+    } else if (phase === 'results') {
       modals.replaceModal('day-results', {
         targetDay: engine.targetDay,
         resultDetails: engine.lastResults,
@@ -116,17 +108,19 @@
   });
 
   // --- Initialization (run once on mount) ---
-  onMount(() => {
-    if (tutorial) {
-      modals.openModal('help');
-      isInitialTutorial = true;
-    } else {
-      engine.navigateToDay(1);
-    }
+  $effect(() => {
+    untrack(() => {
+      if (tutorial) {
+        modals.openModal('help');
+        isInitialTutorial = true;
+      } else {
+        engine.navigateToDay(1);
+      }
+    });
   });
 
   function openBriefing() {
-    const info = engine.getInfoForDay(engine.stats.day);
+    const info = engine.currentInfo;
     modals.openModal('day-briefing', { targetDay: engine.stats.day, info });
   }
 
@@ -135,24 +129,22 @@
     modals.activeModal === 'day-briefing' || modals.activeModal === 'day-results'
   );
 
-  // Global keyboard handler (use $effect since actions can't go on svelte:window)
-  $effect(() => {
-    const params = {
-      engine,
-      keyBindings: settings.current.keyBindings,
-      isBlocked: () => modals.isAnyModalOpen,
-      isBlackout: $isBlackout,
-    };
-    const action = keyboard(document.body, params);
-    return () => action.destroy();
-  });
+  // svelte-ignore state_referenced_locally
+  const kbController = new KeyboardController(() => ({
+    engine,
+    keyBindings: settings.current.keyBindings,
+    isBlocked: () => modals.isAnyModalOpen,
+    isBlackout: () => engineState.isBlackout,
+  }));
+
+  $effect(() => () => kbController.destroy());
 </script>
 
 <AppHeader
   onOpenModal={modals.openModal}
   onBriefingClick={openBriefing}
   controlsDisabled={isDayTransitionModal}
-  isBlackout={$isBlackout}
+  isBlackout={engineState.isBlackout}
 />
 
 <div class={cn(
@@ -232,7 +224,7 @@
     onOpenChange={(open: boolean) => modals.onOpenChange('alerts', open)}
     title="Alerts"
     description="Critical and informational messages about the grid status."
-    items={$alerts}
+    items={engineState.alerts}
     onRemove={(id) => engine.dismissAlert(id)}
     onDismissAll={() => engine.dismissAllAlerts()}
     emptyMessage="No alerts to show"
@@ -246,7 +238,7 @@
     onOpenChange={(open: boolean) => modals.onOpenChange('hints', open)}
     title="Hints"
     description="Suggestions and guidance for managing the grid."
-    items={$hints}
+    items={engineState.hints}
     onRemove={(id) => engine.dismissHint(id)}
     onDismissAll={() => engine.dismissAllHints()}
     emptyMessage="No hints to show"
@@ -269,10 +261,10 @@
     aria-label="Game Sidebar"
   >
     <div class="font-sans flex flex-col p-4 h-full">
-      <KeyStats stats={$stats} />
+      <KeyStats stats={engineState.stats} />
       <div class="flex-1 flex flex-col min-h-0 mt-4">
         <div class="flex-1 overflow-y-auto pr-2 -mr-2">
-          <Dashboard stats={$stats} />
+          <Dashboard stats={engineState.stats} />
         </div>
       </div>
     </div>
@@ -282,14 +274,14 @@
 {#snippet mainPanel()}
   <main class="flex-1 min-w-0 h-full flex flex-col" aria-label="Main game area">
     <div class="font-sans relative flex-1 w-full h-full flex flex-col">
-      {#if settings.current.viewMode !== 'tabular'}
+      {#if settings.current.viewMode === 'map'}
         <div class="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-5 py-2.5 rounded-md border border-border/50 shadow-sm">
-          <DayTimeDisplay day={$stats.day} timeStr={$stats.timeStr} idPrefix="vis" size="lg" />
+          <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} idPrefix="vis" size="lg" />
         </div>
         <div class="absolute top-4 right-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm rounded-md border border-border/50 shadow-md hidden sm:block w-[min(45%,380px)]">
-          {#if $forecast}
+          {#if engineState.forecast}
             <section class="px-2.5 py-1.5" aria-label="Demand forecast">
-              <ForecastChart forecast={$forecast} progress={forecastProgress} />
+              <ForecastChart forecast={engineState.forecast} progress={forecastProgress} />
             </section>
           {/if}
         </div>
@@ -297,25 +289,25 @@
       <div
         bind:this={mapContainer}
         tabindex="-1"
-        aria-label="Interactive Texas electrical grid map"
+        aria-label="Interactive electrical grid map"
         role="application"
-        class="h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary {settings.current.viewMode !== 'map' ? 'hidden' : ''}"
+        class={cn("h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary", settings.current.viewMode !== 'map' && 'hidden')}
       ></div>
       {#if settings.current.viewMode === 'tabular'}
         <div class="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-sans">
           <div class="flex-1 border-b md:border-b-0 md:border-r p-4 flex flex-col min-h-0">
             <div class="flex justify-between items-baseline mb-4">
               <h2 class="text-xl font-bold uppercase text-muted-foreground">Substations</h2>
-              <DayTimeDisplay day={$stats.day} timeStr={$stats.timeStr} idPrefix="tab" size="sm" />
+              <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} idPrefix="tab" size="sm" />
             </div>
             <div class="flex-1 overflow-y-auto -mr-4 pr-4">
-              <SubstationTable subs={$subs} onSubstationSelect={handleSubstationSelect} />
+              <SubstationTable subs={engineState.subs} onSubstationSelect={handleSubstationSelect} />
             </div>
           </div>
           <div class="flex-1 p-4 flex flex-col min-h-0">
             <h2 class="text-xl font-bold mb-4 uppercase text-muted-foreground">Transmission Lines</h2>
             <div class="flex-1 overflow-y-auto -mr-4 pr-4">
-              <BranchTable branches={$branches} onBranchSelect={handleBranchSelect} />
+              <BranchTable branches={engineState.branches} onBranchSelect={handleBranchSelect} />
             </div>
           </div>
         </div>

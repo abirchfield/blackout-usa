@@ -5,6 +5,7 @@ import { isInactive } from "../utils";
 import { GenModel } from "./gen";
 import { LoadModel } from "./load";
 
+/** Substation model: wraps gen/load unit models and delegates lifecycle/operator actions. */
 export class SubstationModel implements Model {
   readonly data: Substation;
   private _gens: GenModel[] = [];
@@ -17,6 +18,7 @@ export class SubstationModel implements Model {
 
   // --- Lifecycle ---
 
+  /** Create GenModel/LoadModel wrappers for each unit in this substation. */
   setup(): void {
     const d = this.data;
     // All derived fields (idx, pmax, pmin, isLoad, isRenewable) are pre-computed in grid-data.json
@@ -42,16 +44,19 @@ export class SubstationModel implements Model {
 
   // --- Unit Iteration ---
 
+  /** Iterate over all generation units with index. */
   forEachUnit(fn: (u: Unit, index: number) => void): void {
     for (let i = 0; i < this.data.Units; ++i) fn(this.data.U[i], i);
   }
 
+  /** Iterate over a unit index range (defaults to all units). */
   forRange(range: { from?: number; count?: number } | undefined, fn: (u: Unit, index: number) => void): void {
     const from = range?.from ?? 0;
     const end = Math.min(from + (range?.count ?? this.data.U.length - from), this.data.U.length);
     for (let i = from; i < end; i++) fn(this.data.U[i], i);
   }
 
+  /** Check if any unit (gen or load) has the given status. */
   hasUnitWithStatus(status: UnitStatus): boolean {
     for (const g of this._gens) if (g.unit.Status === status) return true;
     for (const l of this._loads) if (l.unit.Status === status) return true;
@@ -60,11 +65,13 @@ export class SubstationModel implements Model {
 
   // --- Lifecycle (delegates to unit models) ---
 
+  /** Reset all gen and load units to initial state. */
   resetUnits(): void {
     for (const g of this._gens) g.reset();
     for (const l of this._loads) l.reset();
   }
 
+  /** Advance all generator unit transitions by one step. */
   tick(_dt: number): void {
     for (const g of this._gens) g.tick();
   }
@@ -85,23 +92,28 @@ export class SubstationModel implements Model {
 
   // --- Operator Actions ---
 
+  /** Toggle a unit on/off (dispatches to gen or load model). */
   toggleUnit(unitIndex: number): void {
     if (this.data.isLoad) this._loads[unitIndex]?.toggle();
     else this._gens[unitIndex]?.toggle();
   }
 
+  /** Toggle a load unit on/off. */
   toggleLoadUnit(unitIndex: number): void {
     this._loads[unitIndex]?.toggle();
   }
 
+  /** Cancel an in-progress startup or shutdown for a generator. */
   abortTransition(unitIndex: number): void {
     this._gens[unitIndex]?.abortTransition();
   }
 
+  /** Set a generator's target power output. */
   setSetpoint(unitIndex: number, value: number): void {
     this._gens[unitIndex]?.setSetpoint(value);
   }
 
+  /** Disconnect all active load units at this substation. */
   shedAll(): void {
     for (const l of this._loads) {
       if (l.unit.Status === UnitStatus.IN) l.toggle();
@@ -110,6 +122,7 @@ export class SubstationModel implements Model {
 
   // --- Scenario Mutations ---
 
+  /** Set unit status by index or range (scenario scripting). */
   setUnitsStatus(status: UnitStatus, range?: number | { from?: number; count?: number }): void {
     if (typeof range === 'number') {
       const u = this.data.U[range];
@@ -119,25 +132,25 @@ export class SubstationModel implements Model {
     }
   }
 
+  /** Move tripped units to out-of-service so they can be manually restarted. */
   readyUnits(range?: { from?: number; count?: number }): void {
     this.forRange(range, u => { if (u.Status === UnitStatus.TRIP) u.Status = UnitStatus.DIS; });
   }
 
+  /** Directly set unit power output (scenario scripting). */
   setUnitPower(power: number, range?: { from?: number; count?: number }): void {
     this.forRange(range, u => { u.P = power; });
   }
 
   // --- Topology Helpers ---
 
+  /** Trip a specific unit by index (dispatches to gen or load model). */
   forceTrip(unitIndex: number): void {
     if (this.data.isLoad) this._loads[unitIndex]?.forceTrip();
     else this._gens[unitIndex]?.forceTrip();
   }
 
-  forceLoadTrip(unitIndex: number): void {
-    this._loads[unitIndex]?.forceTrip();
-  }
-
+  /** Trip all non-inactive units; return indices of tripped gen and load units. */
   tripActiveUnits(): { genTripped: number[]; loadTripped: number[] } {
     const genTripped: number[] = [];
     const loadTripped: number[] = [];

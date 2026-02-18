@@ -1,21 +1,11 @@
+import { MediaQuery } from 'svelte/reactivity';
 import { ViewConfig } from '$lib/view/constants';
 
-function createMobileState() {
-  let isMobile = $state(false);
+const mq = typeof window !== 'undefined'
+  ? new MediaQuery(`(max-width: ${ViewConfig.MOBILE_BREAKPOINT_PX - 1}px)`)
+  : null;
 
-  if (typeof window !== 'undefined') {
-    const check = () => { isMobile = window.innerWidth < ViewConfig.MOBILE_BREAKPOINT_PX; };
-    check();
-    window.addEventListener('resize', check);
-
-    if (import.meta.hot) {
-      import.meta.hot.dispose(() => window.removeEventListener('resize', check));
-    }
-  }
-
-  return {
-    get value() { return isMobile; },
-  };
-}
-
-export const mobile = createMobileState();
+/** Reactive mobile breakpoint detector (true when viewport is below mobile breakpoint). */
+export const mobile = {
+  get value() { return mq?.current ?? false; },
+};

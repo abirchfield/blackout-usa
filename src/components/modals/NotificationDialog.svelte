@@ -25,7 +25,7 @@
   <Dialog.Root {open} {onOpenChange}>
     <DialogContent id="notifications-modal" class="sm:max-w-lg">
       <DialogHeader {title} {description} />
-      <div class="max-h-[70vh] overflow-y-auto -mx-6 px-6">
+      <div class="max-h-[70vh] modal-scroll">
         {#if items.length === 0}
           <div class="p-4 text-center text-muted-foreground">{emptyMessage}</div>
         {:else}

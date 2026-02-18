@@ -47,7 +47,7 @@
       <Slider.Thumb
         data-slot="slider-thumb"
         {index}
-        class="z-10 border-primary ring-ring/50 block size-4 shrink-0 rounded-full border-2 bg-white shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden cursor-grab active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50"
+        class="z-10 border-primary ring-ring/50 block size-4 shrink-0 rounded-full border-2 bg-background shadow-sm transition-[color,box-shadow] hover:ring-4 focus-visible:ring-4 focus-visible:outline-hidden cursor-grab active:cursor-grabbing disabled:pointer-events-none disabled:opacity-50"
       />
     {/each}
   {/snippet}

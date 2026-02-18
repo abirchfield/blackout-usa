@@ -3,6 +3,7 @@ import {
 } from "../types";
 import { isInactive } from "../utils";
 
+/** Per-unit load model: tracks status and scales power with demand level. */
 export class LoadModel {
   readonly unit: Unit;
 
@@ -18,6 +19,7 @@ export class LoadModel {
 
   // --- Lifecycle ---
 
+  /** Restore load unit to initial status and power. */
   reset(): void {
     this.unit.Status = this.unit.Status0;
     this.unit.P = this.unit.Pset = this.unit.P0;
@@ -26,6 +28,7 @@ export class LoadModel {
 
   // --- Load Power ---
 
+  /** Set load power based on current demand level multiplier. */
   applyLoadPower(loadLevel: number): void {
     if (this.unit.Status === UnitStatus.IN) {
       this.unit.P = this.pmax * loadLevel;
@@ -36,6 +39,7 @@ export class LoadModel {
 
   // --- Operator Actions ---
 
+  /** Connect or disconnect the load unit. */
   toggle(): void {
     if (this.unit.Status === UnitStatus.DIS) this.unit.Status = UnitStatus.IN;
     else if (this.unit.Status === UnitStatus.IN) this.unit.Status = UnitStatus.DIS;
@@ -43,6 +47,7 @@ export class LoadModel {
 
   // --- Topology Helpers ---
 
+  /** Immediately trip the load unit. */
   forceTrip(): void {
     this.unit.Status = UnitStatus.TRIP;
     this.unit.P = 0;

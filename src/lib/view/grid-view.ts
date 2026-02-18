@@ -28,6 +28,7 @@ export interface GridViewApi {
   destroy(): void;
 }
 
+/** Canvas-based grid map renderer with dirty tracking and flow animation. */
 export class GridView implements GridViewApi {
   private container: HTMLDivElement;
   private canvas: HTMLCanvasElement;
@@ -94,6 +95,7 @@ export class GridView implements GridViewApi {
     this.colors = resolveThemeColors();
   }
 
+  /** Bind state and set up input handler with engine callbacks. */
   init(state: GameState, callbacks: ViewCallbacks): void {
     this.state = state;
     if (this.interactive) {
@@ -109,6 +111,7 @@ export class GridView implements GridViewApi {
     }
   }
 
+  /** Render one frame: resize canvas, update animations, draw border/branches/substations. */
   draw(isPaused: boolean, isFastForward: boolean): void {
     const resized = this.resizeCanvas();
     if (!this.isViewInitialized && this.isCanvasReady()) {
@@ -221,6 +224,7 @@ export class GridView implements GridViewApi {
     drawHoverLabel(dc);
   }
 
+  /** Push settings changes (theme, animations, labels, zoom, keybindings) into view state. */
   applySettings(s: EngineSettings): void {
     if (s.theme !== undefined) this.state.theme = s.theme;
     if (s.animationsEnabled !== undefined) this.state.animationsEnabled = s.animationsEnabled;
@@ -229,6 +233,7 @@ export class GridView implements GridViewApi {
     if (s.keyBindings !== undefined) this.state.keyBindings = s.keyBindings;
   }
 
+  /** Move the canvas element to a new container and force a redraw. */
   reparent(container: HTMLDivElement): void {
     container.appendChild(this.canvas);
     this.container = container;
@@ -238,6 +243,7 @@ export class GridView implements GridViewApi {
     this._forceRedraw = true;
   }
 
+  /** Forward a game action to the input handler. */
   performAction(action: GameAction): void {
     this.handler?.performAction(action);
   }
@@ -246,6 +252,7 @@ export class GridView implements GridViewApi {
     if (this.handler) this.handler.onInteract = h;
   }
 
+  /** Remove canvas, disconnect handler, release geometry caches. */
   destroy(): void {
     this.handler?.destroy();
     this.canvas.remove();

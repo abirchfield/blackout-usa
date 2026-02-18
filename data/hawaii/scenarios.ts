@@ -1,8 +1,8 @@
-import { IScenario } from "$lib/types";
+import { Scenario } from "$lib/types";
 import { Wind, Solar, Demand } from "$lib/weather";
 // import { SUB, LINE } from "../_out/hawaii/lookups";
 
-const day1: IScenario = {
+const day1: Scenario = {
     info: [
         "Welcome to the Hawaii grid!",
     ],
@@ -14,6 +14,6 @@ const day1: IScenario = {
     },
 };
 
-export const scenarios: Record<number, IScenario> = {
+export const scenarios: Record<number, Scenario> = {
     1: day1,
 };

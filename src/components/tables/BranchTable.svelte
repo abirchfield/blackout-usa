@@ -1,6 +1,7 @@
 <script lang="ts">
   import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$components/ui/table';
   import Button from '$components/ui/Button.svelte';
+  import ProgressBar from '$components/ui/ProgressBar.svelte';
   import type { Branch } from '$lib/types';
   import { BranchStatus } from '$lib/types';
   import { branchLoading, getLoadingBarColor, isBranchActive } from '$lib/utils';
@@ -67,17 +68,7 @@
               <div class="flex items-center justify-end gap-2">
                 <div role="img" aria-label={indicator.title} class={indicator.className} title={indicator.title}></div>
                 {#if active}
-                  <div
-                    role="progressbar"
-                    aria-valuenow={loading}
-                    aria-valuemin={0}
-                    aria-valuemax={100}
-                    aria-label={`Line loading: ${loading.toFixed(0)}%`}
-                    title={`Loading: ${loading.toFixed(0)}%`}
-                    class="h-1.5 w-16 rounded-full bg-muted"
-                  >
-                    <div class="h-1.5 rounded-full {barColor} transition-all" style="width: {Math.min(100, loading)}%"></div>
-                  </div>
+                  <ProgressBar value={loading} height="sm" colorClass={barColor} label={`Line loading: ${loading.toFixed(0)}%`} class="w-16" />
                   <span class="text-xs font-mono w-8 text-right text-foreground" aria-hidden="true">{loading.toFixed(0)}%</span>
                 {/if}
               </div>
