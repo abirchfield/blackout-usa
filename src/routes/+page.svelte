@@ -2,7 +2,7 @@
   import { base } from '$app/paths';
   import Button from '$components/ui/Button.svelte';
   import { GameEngine } from '$lib/engine';
-  import { loadCase, DEFAULT_CASE, CASE_NAMES } from '$data/_out/registry';
+  import { loadCase, DEFAULT_CASE, CASE_NAMES } from '$lib/cases/registry';
   import { theme } from '$lib/stores/theme.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { modals } from '$lib/stores/modals.svelte';

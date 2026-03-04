@@ -9,6 +9,7 @@
   },
   "scripts": {
     "generate": "python data/runme.py",
+    "predev": "python data/runme.py",
     "dev": "svelte-kit sync && vite dev",
     "prebuild": "python data/runme.py",
     "deploy": "npm run build && wrangler pages deploy",

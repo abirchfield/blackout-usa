@@ -1,6 +1,6 @@
 import { GridModelApi, Scenario, UnitStatus } from "$lib/types";
 import { Wind, Solar, Demand } from "$lib/weather";
-import { SUB, LINE } from "../_out/texas/lookups";
+import { SUB, LINE } from "$data/_out/texas/lookups";
 
 // --- Scenario timing helpers ---
 
