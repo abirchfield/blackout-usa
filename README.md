@@ -18,6 +18,11 @@ are those of the author(s) and do not necessarily reflect the views of the Natio
 
 ### Development
 
+Prerequisites:
+- Node.js 20+ (required by `wrangler`)
+- npm 10+
+- Python 3 (for `npm run generate` / `npm run build`)
+
 ```bash
 npm install          # install dependencies
 npm run generate     # build grid data (requires Python, run once or after editing data/)
