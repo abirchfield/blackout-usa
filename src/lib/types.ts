@@ -152,6 +152,7 @@ export interface CumulativeMetrics {
 export interface SnapshotMeta {
   day: number;
   timeStr: string;
+  timeIso: string;
   timeStep: number;
   frequency: number;
   windAvail: number;
@@ -296,8 +297,8 @@ export interface Scenario {
   readonly costs: CostThresholds;
   readonly hints?: string[];
   readonly weather?: WeatherConfig;
-  start?(t: number, grid: GridModelApi, weather: WeatherModelApi): void;
-  update?(t: number, grid: GridModelApi, weather: WeatherModelApi): void;
+  start?(t: number, grid: GridModelApi, weather: WeatherModelApi, startHour?: number): void;
+  update?(t: number, grid: GridModelApi, weather: WeatherModelApi, startHour?: number): void;
 }
 
 // --- Case Definition Types ---

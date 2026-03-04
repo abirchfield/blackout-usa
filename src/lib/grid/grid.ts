@@ -16,6 +16,7 @@ import {
 } from "./constants";
 import { NetworkModel } from "./network";
 import { SubstationModel } from "./substation";
+import { GridMutationError } from "./errors";
 
 // --- Probability helpers ---
 
@@ -332,27 +333,28 @@ export class GridModel implements GridModelApi {
 
   /** Toggle a generator unit between startup and shutdown. */
   toggleUnit(subId: string, unitIndex: number): void {
-    this.subModels[subId]?.toggleUnit(unitIndex);
+    this.requireSubModel(subId, 'toggleUnit').toggleUnit(unitIndex);
   }
 
   /** Toggle a load unit between connected and disconnected. */
   toggleLoadUnit(subId: string, unitIndex: number): void {
-    this.subModels[subId]?.toggleLoadUnit(unitIndex);
+    this.requireSubModel(subId, 'toggleLoadUnit').toggleLoadUnit(unitIndex);
   }
 
   /** Cancel an in-progress startup or shutdown for a generator unit. */
   abortTransition(subId: string, unitIndex: number): void {
-    this.subModels[subId]?.abortTransition(unitIndex);
+    this.requireSubModel(subId, 'abortTransition').abortTransition(unitIndex);
   }
 
   /** Open or close a transmission branch. */
   toggleBranch(branchId: string): void {
+    this.requireBranch(branchId, 'toggleBranch');
     this.network.toggleBranch(branchId);
   }
 
   /** Set a generator's target power output. */
   setSetpoint(subId: string, unitIndex: number, value: number): void {
-    this.subModels[subId]?.setSetpoint(unitIndex, value);
+    this.requireSubModel(subId, 'setSetpoint').setSetpoint(unitIndex, value);
   }
 
   /** Disconnect the smallest active load substation. */
@@ -393,35 +395,50 @@ export class GridModel implements GridModelApi {
 
   /** Set unit status for scenario scripting (single index or range). */
   setUnitStatus(subId: string, status: UnitStatus, range?: number | { from?: number; count?: number }): void {
-    this.subModels[subId]?.setUnitsStatus(status, range);
+    this.requireSubModel(subId, 'setUnitStatus').setUnitsStatus(status, range);
   }
 
   /** Force-trip a branch (scenario scripting). */
   tripBranch(branchId: string): void {
+    this.requireBranch(branchId, 'tripBranch');
     this.network.tripBranch(branchId);
   }
 
   /** Randomly trip branches by probability (scenario scripting). */
   randomTrips(branchIds: string[], probability: number, reason?: string): void {
+    for (const id of branchIds) this.requireBranch(id, 'randomTrips');
     this.network.randomTrips(branchIds, probability, reason);
   }
 
   /** Move tripped units to out-of-service so they can be manually restarted. */
   readyUnits(subId: string, range?: { from?: number; count?: number }): void {
-    this.subModels[subId]?.readyUnits(range);
+    this.requireSubModel(subId, 'readyUnits').readyUnits(range);
   }
 
   /** Move a tripped branch to out-of-service (allows manual re-close). */
   readyBranch(branchId: string): void {
+    this.requireBranch(branchId, 'readyBranch');
     this.network.readyBranch(branchId);
   }
 
   /** Directly set unit power output (scenario scripting). */
   setUnitPower(subId: string, power: number, range?: { from?: number; count?: number }): void {
-    this.subModels[subId]?.setUnitPower(power, range);
+    this.requireSubModel(subId, 'setUnitPower').setUnitPower(power, range);
   }
 
   // --- Private helpers ---
+
+  private requireSubModel(subId: string, op: string): SubstationModel {
+    const model = this.subModels[subId];
+    if (!model) throw new GridMutationError(op, subId);
+    return model;
+  }
+
+  private requireBranch(branchId: string, op: string): void {
+    if (!this.state.branches[branchId]) {
+      throw new GridMutationError(op, branchId);
+    }
+  }
 
   private findLoadModel(compare: 'smallest' | 'largest'): SubstationModel | null {
     let best: SubstationModel | null = null;

@@ -1,6 +1,6 @@
 """Prebuild: JSON source -> _out/ (lookups.ts, grid-data.json bundle, manifest.json)."""
 
-import json, math, random
+import json, math
 from pathlib import Path
 
 DATA_DIR = Path(__file__).parent
@@ -8,6 +8,7 @@ OUT_DIR = DATA_DIR / "_out"
 
 PARAMS = ["Pmax", "Pmin", "Ramp", "StartTime", "FixedCost", "FuelCost"]
 LOAD_CATS = ["Residential", "Commercial", "Industrial", "Datacenter"]
+DEFAULT_LOAD_CATEGORY = "Commercial"
 
 
 def discover_cases():
@@ -20,17 +21,36 @@ def key(name: str) -> str:
     return name.replace("'", "").replace(" ", "")
 
 
+def require_fields(obj, fields, context: str):
+    for f in fields:
+        if f not in obj:
+            raise ValueError(f"{context}: missing required field '{f}'")
+
+
+def parse_load_category(unit, block_default: str):
+    value = unit.get("LoadCategory", "").strip() or block_default or DEFAULT_LOAD_CATEGORY
+    if value not in LOAD_CATS:
+        raise ValueError(f"Invalid LoadCategory '{value}'. Expected one of: {', '.join(LOAD_CATS)}")
+    return value
+
+
 def expand_block(block, is_load, load_cat=""):
+    if block is None:
+        raise ValueError("Substation block is missing (expected 'Gens' or 'Loads').")
+    if "U" not in block or not isinstance(block["U"], list):
+        raise ValueError("Substation block must contain a list field 'U'.")
+
     cat = "Load" if is_load else block.get("Category", "Gas Turbine")
     units = []
     for e in block["U"]:
+        require_fields(e, ["P"], "unit")
         p = float(e["P"])
         st = e.get("Status", "IN")
         u = {"Status": st, "Status0": st, "Pset": p, "P": p, "P0": p, "StatusCount": 0}
         for f in PARAMS:
             u[f] = float(block.get(f, p if f == "Pmax" else 0))
         if is_load:
-            u["LoadCategory"] = e.get("LoadCategory", "").strip() or load_cat or random.choice(LOAD_CATS)
+            u["LoadCategory"] = parse_load_category(e, load_cat)
         units.append(u)
     return cat, units
 
@@ -38,6 +58,7 @@ def expand_block(block, is_load, load_cat=""):
 def build_subs(rows):
     subs = {}
     for i, raw in enumerate(rows):
+        require_fields(raw, ["Name", "Latitude", "Longitude"], f"substation[{i}]")
         num = str(raw.get("Number", i + 1))
 
         has_both = "Gens" in raw and "Loads" in raw
@@ -45,6 +66,8 @@ def build_subs(rows):
             block, is_load = raw["Gens"], False
         else:
             block = raw.get("Gens") or raw.get("Loads")
+            if block is None:
+                raise ValueError(f"Substation '{raw['Name']}' missing both Gens and Loads blocks.")
             is_load = "Gens" not in raw
 
         lc = (block.get("LoadCategory") or raw.get("LoadCategory") or "").strip() if is_load else ""
@@ -89,9 +112,14 @@ def build_subs(rows):
 def build_branches(rows, subs):
     branches = {}
     for raw in rows:
+        require_fields(raw, ["Number", "FromBus", "ToBus", "FromNum", "ToNum", "Z", "Pmax"], "branch")
         fn, tn = str(raw["FromNum"]), str(raw["ToNum"])
         bn = str(raw["Number"])
+        if fn not in subs or tn not in subs:
+            raise ValueError(f"Branch {bn} references unknown endpoints: {fn} -> {tn}")
         z = float(raw["Z"])
+        if z == 0:
+            raise ValueError(f"Branch {bn} has zero impedance (Z=0), which is invalid.")
         s1, s2 = subs.get(fn), subs.get(tn)
         dist = math.hypot(s1["Latitude"] - s2["Latitude"], s1["Longitude"] - s2["Longitude"]) if s1 and s2 else 0
         branches[bn] = {
@@ -198,6 +226,11 @@ def main():
 
         num_by_name = {r["Name"]: str(r.get("Number", i + 1)) for i, r in enumerate(subs)}
         for br in branches:
+            require_fields(br, ["FromBus", "ToBus"], f"branch[{br.get('Number', '?')}]")
+            if br["FromBus"] not in num_by_name or br["ToBus"] not in num_by_name:
+                raise ValueError(
+                    f"Branch {br.get('Number', '?')} references unknown bus names: {br['FromBus']} -> {br['ToBus']}"
+                )
             br["FromNum"] = int(num_by_name[br["FromBus"]])
             br["ToNum"] = int(num_by_name[br["ToBus"]])
 

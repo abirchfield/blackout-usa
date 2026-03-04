@@ -1,4 +1,6 @@
 <script lang="ts">
+  import { goto } from '$app/navigation';
+  import { base } from '$app/paths';
   import { page } from '$app/state';
   import Button from '$components/ui/Button.svelte';
 </script>
@@ -17,7 +19,7 @@
     <Button onclick={() => window.location.reload()}>
       Reload Page
     </Button>
-    <Button variant="secondary" onclick={() => window.location.href = '/'}>
+    <Button variant="secondary" onclick={() => goto(`${base}/`)}>
       Back to Home
     </Button>
   </div>

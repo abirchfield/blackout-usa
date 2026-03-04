@@ -4,6 +4,7 @@ import {
 import { isInactive } from "../utils";
 import { GenModel } from "./gen";
 import { LoadModel } from "./load";
+import { clamp } from "./utils";
 
 /** Substation model: wraps gen/load unit models and delegates lifecycle/operator actions. */
 export class SubstationModel implements Model {
@@ -139,7 +140,11 @@ export class SubstationModel implements Model {
 
   /** Directly set unit power output (scenario scripting). */
   setUnitPower(power: number, range?: { from?: number; count?: number }): void {
-    this.forRange(range, u => { u.P = power; });
+    this.forRange(range, u => {
+      const p = clamp(power, u.Pmin, u.Pmax);
+      u.P = p;
+      u.Pset = p;
+    });
   }
 
   // --- Topology Helpers ---

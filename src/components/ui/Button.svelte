@@ -19,16 +19,29 @@
     [key: string]: unknown;
   }
 
-  let { variant = 'default', size = 'default', href, class: className, children, ...rest }: Props = $props();
+  let { variant = 'default', size = 'default', href, class: className, children, disabled = false, ...rest }: Props = $props();
 
 </script>
 
 {#if href}
-  <a {href} data-slot="button" class={cn(buttonVariants({ variant, size }), className)} {...rest}>
+  <a
+    href={disabled ? undefined : href}
+    aria-disabled={disabled ? 'true' : undefined}
+    tabindex={disabled ? -1 : undefined}
+    onclick={(e) => {
+      if (disabled) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    }}
+    data-slot="button"
+    class={cn(buttonVariants({ variant, size }), disabled && 'pointer-events-none opacity-50', className)}
+    {...rest}
+  >
     {@render children()}
   </a>
 {:else}
-  <button data-slot="button" class={cn(buttonVariants({ variant, size }), className)} {...rest}>
+  <button data-slot="button" disabled={disabled} class={cn(buttonVariants({ variant, size }), className)} {...rest}>
     {@render children()}
   </button>
 {/if}

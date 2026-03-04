@@ -128,7 +128,7 @@
   <div class="w-full lg:w-1/2 h-[50vh] lg:h-[70vh] rounded-lg bg-background overflow-hidden">
     <div
       bind:this={mapContainer}
-      aria-label="A static visual of the Texas electrical grid map"
+      aria-label={`A static visual of the ${selectedCase} electrical grid map`}
       role="img"
       class="h-full w-full"
     ></div>

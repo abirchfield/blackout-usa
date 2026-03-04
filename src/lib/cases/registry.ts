@@ -27,9 +27,17 @@ if (CASE_NAMES.length === 0) {
 
 export const DEFAULT_CASE = CASE_NAMES[0];
 
+/** Raised when a route requests a case slug not present in the generated manifest. */
+export class UnknownCaseError extends Error {
+  constructor(caseName: string, available: string[]) {
+    super(`Unknown case: ${caseName}. Available: ${available.join(', ')}`);
+    this.name = 'UnknownCaseError';
+  }
+}
+
 export async function loadCase(caseName: string): Promise<GridCase> {
   if (!CASE_NAMES.includes(caseName)) {
-    throw new Error(`Unknown case: ${caseName}. Available: ${CASE_NAMES.join(', ')}`);
+    throw new UnknownCaseError(caseName, CASE_NAMES);
   }
 
   const loadBundle = bundles[`../../../data/_out/${caseName}/grid-data.json`];
