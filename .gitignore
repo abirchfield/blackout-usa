@@ -37,9 +37,6 @@ yarn-error.log*
 CLAUDE.md
 .claude/settings.local.json
 
-# vscode
-.vscode/settings.json
-
 # typescript
 *.tsbuildinfo
 
