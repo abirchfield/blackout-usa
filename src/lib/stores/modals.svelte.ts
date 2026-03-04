@@ -1,3 +1,4 @@
+import { tick } from 'svelte';
 import type { ResultDetails, StatsSnapshot } from '$lib/types';
 
 export type ModalId =
@@ -46,6 +47,19 @@ function createModalState() {
     });
   }
 
+  /** Close modal and wait for DOM + animation frame teardown before next action. */
+  async function closeModalAndWait() {
+    activeModal = null;
+    payload = {};
+    await tick();
+    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
+    requestAnimationFrame(() => {
+      if (lastFocused && document.contains(lastFocused)) {
+        lastFocused.focus();
+      }
+    });
+  }
+
   /** Toggle callback for bits-ui Dialog open state. */
   function onOpenChange(id: ModalId, open: boolean) {
     if (open) {
@@ -56,7 +70,8 @@ function createModalState() {
   }
 
   /** Swap the active modal without focus save/restore. */
-  function replaceModal(id: ModalId, newPayload?: ModalPayload) {
+  async function replaceModal(id: ModalId, newPayload?: ModalPayload) {
+    await closeModalAndWait();
     payload = newPayload || {};
     activeModal = id;
   }
@@ -68,6 +83,7 @@ function createModalState() {
     get isPausingModal() { return isPausingModal; },
     openModal,
     closeModal,
+    closeModalAndWait,
     onOpenChange,
     replaceModal,
   };

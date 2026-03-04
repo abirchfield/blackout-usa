@@ -17,6 +17,8 @@ const MSG_RECORD = (record: string) => `Amazing!! This is better than the prior 
 const MSG_GOOD = (record: string) => `Great job! The record for this scenario is $${record}M.\nSuper job managing the grid today and keeping costs low`;
 const MSG_OKAY = (good: string) => `Not too bad. We would hope to keep the cost under $${good}M for this scenario.\nFeel free to give it another try`;
 const MSG_BAD = (good: string) => `That's too high! We would hope to keep the cost under $${good}M for this scenario.\nFeel free to give it another try`;
+const ISO_BASE_YEAR = 2026;
+const ISO_BASE_MONTH = 1;
 
 /** Build the initial game state from a grid case definition. Pure factory — no side effects. */
 function buildInitialState(gc: GridCase): GameState {
@@ -58,9 +60,21 @@ function computeStats(
     ...instant,
     ...cumulative,
     timeStr: formatGameTime(t, startHour),
+    timeIso: toIsoGameTime(t, startHour, day),
     timeStep: t, frequency, windAvail, sunAvail, day,
     blackout: isBlackout,
   };
+}
+
+/** Build a valid ISO datetime for machine-readable <time datetime> metadata. */
+function toIsoGameTime(t: number, startHour: number, day: number): string {
+  const totalMinutes = startHour * 60 + Math.floor(t / 60);
+  const hour24 = Math.floor(totalMinutes / 60) % 24;
+  const minute = totalMinutes % 60;
+  const dd = String(Math.max(1, day)).padStart(2, '0');
+  const hh = String(hour24).padStart(2, '0');
+  const mm = String(minute).padStart(2, '0');
+  return `${ISO_BASE_YEAR}-${String(ISO_BASE_MONTH).padStart(2, '0')}-${dd}T${hh}:${mm}:00`;
 }
 
 /** Top-level game engine: owns the simulation loop, grid model, weather, and view layer. */
@@ -198,18 +212,25 @@ export class GameEngine {
       this._latitude,
     );
 
-    // Load scenario and initialize grid + weather so stats are populated
-    // before the player clicks "Start Day" (otherwise sidebar shows zeros).
     this.clearAlerts();
-    this._scenario = this.gridCase.scenarios[day] || null;
+    this._scenario = this.gridCase.scenarios[day] ?? null;
+
+    // Always initialize a deterministic baseline state for the selected day.
+    this.grid.reset(this.addAlert, this.addHint);
+    this.weather.setModels(this._scenario?.weather);
+    this.weather.reset();
+    this.grid.initRenewableOutput();
+
     if (!this._scenario) {
       this.addAlert({ message: `Scenario for Day ${day} is not defined.`, critical: true }, true);
+      // Solve one baseline step so stats and map stay coherent for missing scenarios.
+      this.weather.tick(0);
+      this.grid.tick(0);
+      this._dayVersion++;
+      this.commit();
+      return;
     } else {
-      this.grid.reset(this.addAlert, this.addHint);
-      this.weather.setModels(this._scenario.weather);
-      this.weather.reset();
-      this.grid.initRenewableOutput();
-      this._scenario.start?.(0, this.grid, this.weather);
+      this._scenario.start?.(0, this.grid, this.weather, this.timeConfig.startHour);
 
       if (this._scenario.hints) {
         for (let i = 0; i < this._scenario.hints.length; i++) {
@@ -218,7 +239,7 @@ export class GameEngine {
       }
 
       // Solve initial power flow (dt=0: solver runs, time doesn't advance)
-      this._scenario.update?.(0, this.grid, this.weather);
+      this._scenario.update?.(0, this.grid, this.weather, this.timeConfig.startHour);
       this.weather.tick(0);
       this.grid.tick(0);
     }
@@ -238,8 +259,11 @@ export class GameEngine {
 
   /** Navigate to the next scenario day (wraps to day 1). */
   advanceToNextDay() {
-    const totalDays = Object.keys(this.gridCase.scenarios).length;
-    this.navigateToDay(this._targetDay < totalDays ? this._targetDay + 1 : 1);
+    const days = this.getOrderedScenarioDays();
+    if (days.length === 0) return;
+    const idx = days.indexOf(this._targetDay);
+    const next = idx >= 0 ? days[(idx + 1) % days.length] : days[0];
+    this.navigateToDay(next);
   }
 
   private infoForDay(day: number): string[] | null {
@@ -248,14 +272,27 @@ export class GameEngine {
 
   // --- Playback ---
 
+  private isPlayingPhase() {
+    return this._dayPhase === 'playing';
+  }
+
+  private getOrderedScenarioDays(): number[] {
+    return Object.keys(this.gridCase.scenarios)
+      .map(Number)
+      .filter((n) => Number.isInteger(n))
+      .sort((a, b) => a - b);
+  }
+
   /** Toggle between paused and playing. */
   togglePause() {
+    if (!this.isPlayingPhase()) return;
     this._playback = this._playback === 'paused' ? 'playing' : 'paused';
     this._fireListeners();
   }
 
   /** Toggle between fast-forward and normal speed. */
   toggleFastForward() {
+    if (!this.isPlayingPhase()) return;
     this._playback = this._playback === 'fast' ? 'playing' : 'fast';
     this._fireListeners();
   }
@@ -310,9 +347,10 @@ export class GameEngine {
 
   /** Advance simulation by one time step; triggers blackout/day-end checks. */
   tick() {
+    if (!this.isPlayingPhase()) return;
     this.state.t += SECONDS_PER_TICK;
 
-    this._scenario?.update?.(this.state.t, this.grid, this.weather);
+    this._scenario?.update?.(this.state.t, this.grid, this.weather, this.timeConfig.startHour);
     this.weather.tick(1);
     this.grid.tick(1);
 

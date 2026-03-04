@@ -96,9 +96,9 @@
     const phase = engineState.dayPhase;
 
     if (phase === 'briefing') {
-      modals.replaceModal('day-briefing', { targetDay: engine.targetDay, info: engine.currentInfo });
+      void modals.replaceModal('day-briefing', { targetDay: engine.targetDay, info: engine.currentInfo });
     } else if (phase === 'results') {
-      modals.replaceModal('day-results', {
+      void modals.replaceModal('day-results', {
         targetDay: engine.targetDay,
         resultDetails: engine.lastResults,
         gameStatistics: engine.lastResultStats ?? undefined,
@@ -167,11 +167,15 @@
   <HelpModal
     open={true}
     onOpenChange={(open: boolean) => {
-      modals.onOpenChange('help', open);
       if (!open && isInitialTutorial) {
         isInitialTutorial = false;
-        engine.navigateToDay(1);
+        void (async () => {
+          await modals.closeModalAndWait();
+          engine.navigateToDay(1);
+        })();
+        return;
       }
+      modals.onOpenChange('help', open);
     }}
   />
 {/if}
@@ -276,7 +280,7 @@
     <div class="font-sans relative flex-1 w-full h-full flex flex-col">
       {#if settings.current.viewMode === 'map'}
         <div class="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-5 py-2.5 rounded-md border border-border/50 shadow-sm">
-          <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} idPrefix="vis" size="lg" />
+          <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} timeIso={engineState.stats.timeIso} idPrefix="vis" size="lg" />
         </div>
         <div class="absolute top-4 right-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm rounded-md border border-border/50 shadow-md hidden sm:block w-[min(45%,380px)]">
           {#if engineState.forecast}
@@ -298,7 +302,7 @@
           <div class="flex-1 border-b md:border-b-0 md:border-r p-4 flex flex-col min-h-0">
             <div class="flex justify-between items-baseline mb-4">
               <h2 class="text-xl font-bold uppercase text-muted-foreground">Substations</h2>
-              <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} idPrefix="tab" size="sm" />
+              <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} timeIso={engineState.stats.timeIso} idPrefix="tab" size="sm" />
             </div>
             <div class="flex-1 overflow-y-auto -mr-4 pr-4">
               <SubstationTable subs={engineState.subs} onSubstationSelect={handleSubstationSelect} />
