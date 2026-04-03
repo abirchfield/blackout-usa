@@ -17,11 +17,11 @@
 </script>
 
 <div
-  role={label ? 'progressbar' : undefined}
-  aria-valuenow={label ? value : undefined}
-  aria-valuemin={label ? 0 : undefined}
-  aria-valuemax={label ? max : undefined}
-  aria-label={label}
+  role="progressbar"
+  aria-valuenow={value}
+  aria-valuemin={0}
+  aria-valuemax={max}
+  aria-label={label ?? undefined}
   class={cn('progress-track', h, className)}
 >
   <div class={cn('progress-fill', h, colorClass)} style="width: {pct}%"></div>

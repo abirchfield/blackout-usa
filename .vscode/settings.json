@@ -1,5 +1,28 @@
 {
 	"files.watcherExclude": {
 		"**/.svelte-kit/**": true
+	},
+	"actionButtons": {
+		"defaultColor": "#ffffff",
+		"reloadButton": null,
+		"commands": [
+			{
+				"name": "$(play) Dev Server",
+				"color": "#ffffff",
+				"singleInstance": true,
+				"command": "npm run dev"
+			},
+			{
+				"name": "$(package) Build",
+				"color": "#ffffff",
+				"command": "npm run build"
+			},
+			{
+				"name": "$(eye) Preview",
+				"color": "#ffffff",
+				"singleInstance": true,
+				"command": "npm run preview"
+			}
+		]
 	}
 }

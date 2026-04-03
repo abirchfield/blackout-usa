@@ -20,13 +20,13 @@
 <div
   data-slot="setting-row"
   class={cn(
-    'flex items-center justify-between gap-4 py-2.5 px-3 rounded-lg transition-colors',
+    'flex flex-wrap items-center justify-between gap-x-4 gap-y-2 py-2.5 px-3 rounded-lg transition-colors',
     disabled && 'opacity-60',
     className
   )}
   {...rest}
 >
-  <div class="flex-1 min-w-0">
+  <div class="flex-1 min-w-40">
     <label for={htmlFor} class="text-sm font-medium cursor-pointer">{label}</label>
     {#if description}
       <p class={cn('text-xs text-muted-foreground', descriptionClass)}>{description}</p>

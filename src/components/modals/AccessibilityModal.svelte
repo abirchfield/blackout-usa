@@ -3,7 +3,6 @@
   import DialogContent from '$components/ui/DialogContent.svelte';
   import DialogHeader from '$components/ui/DialogHeader.svelte';
   import SettingRow from '$components/ui/SettingRow.svelte';
-  import CardContainer from '$components/ui/CardContainer.svelte';
   import Switch from '$components/ui/Switch.svelte';
   import Slider from '$components/ui/Slider.svelte';
   import { Select } from 'bits-ui';
@@ -39,11 +38,11 @@
             <h3 class="text-sm font-semibold text-foreground">Display</h3>
             <p class="text-xs text-muted-foreground">Customize colors, contrast, and text size</p>
           </div>
-          <CardContainer class="space-y-0.5 p-1">
+          <div class="space-y-0.5">
             <SettingRow label="Color Theme" description="Light, dark, or match system" htmlFor="theme-select-modal" class="hover:bg-accent/50">{@render themeSelect()}</SettingRow>
             <SettingRow label="Font Size" description="Adjust text size across the app" htmlFor="font-size-select-modal" class="hover:bg-accent/50">{@render fontSizeSelect()}</SettingRow>
             <SettingRow label="High Contrast" description="Increase visual distinction" htmlFor="high-contrast-toggle-modal" class="hover:bg-accent/50">{@render highContrastToggle()}</SettingRow>
-          </CardContainer>
+          </div>
         </section>
 
         <!-- Grid View Section -->
@@ -52,12 +51,12 @@
             <h3 class="text-sm font-semibold text-foreground">Grid View</h3>
             <p class="text-xs text-muted-foreground">Configure how the power grid is displayed</p>
           </div>
-          <CardContainer class="space-y-0.5 p-1">
+          <div class="space-y-0.5">
             <SettingRow label="Display Mode" description="Interactive map or data tables" htmlFor="view-mode-select" class="hover:bg-accent/50">{@render viewModeSelect()}</SettingRow>
             <SettingRow label="Animations" description="Animated power flow on lines" htmlFor="animations-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render animationsToggle()}</SettingRow>
             <SettingRow label="Map Labels" description="Show substation names on map" htmlFor="map-labels-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render mapLabelsToggle()}</SettingRow>
             <SettingRow label="Zoom Speed" description="Mouse wheel sensitivity" htmlFor="zoom-sensitivity-slider" disabled={isTabular} class="hover:bg-accent/50">{@render zoomSlider()}</SettingRow>
-          </CardContainer>
+          </div>
         </section>
 
         <!-- Keyboard Shortcuts Section -->
@@ -86,7 +85,7 @@
 
 {#snippet themeSelect()}
   <Select.Root type="single" value={theme.current} onValueChange={(value) => { if (value) theme.current = value as any; }}>
-    <SelectTrigger id="theme-select-modal" class="w-32">
+    <SelectTrigger id="theme-select-modal" class="w-auto min-w-32">
       <span data-slot="select-value">{theme.current === 'light' ? 'Light' : theme.current === 'dark' ? 'Dark' : 'System'}</span>
     </SelectTrigger>
     <SelectContent>
@@ -99,7 +98,7 @@
 
 {#snippet fontSizeSelect()}
   <Select.Root type="single" value={settings.current.fontSize} onValueChange={(value) => { if (value) settings.update({ fontSize: value as FontSize }); }}>
-    <SelectTrigger id="font-size-select-modal" class="w-32">
+    <SelectTrigger id="font-size-select-modal" class="w-auto min-w-32">
       <span data-slot="select-value">{settings.current.fontSize === 'sm' ? 'Small' : settings.current.fontSize === 'base' ? 'Default' : settings.current.fontSize === 'lg' ? 'Large' : 'Extra Large'}</span>
     </SelectTrigger>
     <SelectContent>
@@ -121,7 +120,7 @@
 
 {#snippet viewModeSelect()}
   <Select.Root type="single" value={settings.current.viewMode} onValueChange={(value) => { if (value) settings.update({ viewMode: value as 'map' | 'tabular' }); }}>
-    <SelectTrigger id="view-mode-select" class="w-32">
+    <SelectTrigger id="view-mode-select" class="w-auto min-w-32">
       <span data-slot="select-value">{settings.current.viewMode === 'map' ? 'Map' : 'Tabular'}</span>
     </SelectTrigger>
     <SelectContent>
@@ -150,7 +149,7 @@
 {/snippet}
 
 {#snippet zoomSlider()}
-  <div class="flex items-center gap-2 w-32">
+  <div class="flex items-center gap-2 w-auto min-w-32">
     <Slider
       id="zoom-sensitivity-slider"
       min={ViewConfig.ZOOM_SENSITIVITY_MIN}

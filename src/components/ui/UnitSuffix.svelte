@@ -14,6 +14,6 @@
 
 <span
   data-slot="unit-suffix"
-  class={cn(hero ? 'text-[0.6em]' : 'text-[0.8em]', 'opacity-50 ml-[0.15em]', className)}
+  class={cn(hero ? 'text-[0.6em]' : 'text-[0.8em]', 'opacity-60 ms-[0.15em]', className)}
   {...rest}
 >{@render children()}</span>

@@ -6,7 +6,7 @@
   import type { GameEngine } from '$lib/engine';
   import type { Substation, Branch } from '$lib/types';
   import { initEngineContext } from '$lib/stores/engine.svelte';
-  import { modals } from '$lib/stores/modals.svelte';
+  import { createModalState } from '$lib/stores/modals.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { theme } from '$lib/stores/theme.svelte';
   import { mobile } from '$lib/stores/mobile.svelte';
@@ -34,6 +34,9 @@
   }
 
   let { engine, tutorial }: Props = $props();
+
+  // --- Modal state scoped to this game session ---
+  const modals = createModalState();
 
   // --- Set up context (synchronous during init, engine never changes) ---
   // svelte-ignore state_referenced_locally
@@ -90,15 +93,18 @@
   // --- Day Lifecycle bridge ---
   // dayVersion starts at 0; navigateToDay() increments it to 1+.
   // Skip version 0 to avoid acting on the pre-navigation initial state.
-  $effect(() => {
+  // Uses $effect.pre so it runs BEFORE DOM updates and child effects —
+  // a rendering error in a child component (e.g. ForecastChart) must never
+  // block the game lifecycle from opening briefing/results modals.
+  $effect.pre(() => {
     const v = engineState.dayVersion;
     if (v === 0) return;
     const phase = engineState.dayPhase;
 
     if (phase === 'briefing') {
-      void modals.replaceModal('day-briefing', { targetDay: engine.targetDay, info: engine.currentInfo });
+      modals.openModal('day-briefing', { targetDay: engine.targetDay, info: engine.currentInfo });
     } else if (phase === 'results') {
-      void modals.replaceModal('day-results', {
+      modals.openModal('day-results', {
         targetDay: engine.targetDay,
         resultDetails: engine.lastResults,
         gameStatistics: engine.lastResultStats ?? undefined,
@@ -140,6 +146,12 @@
   $effect(() => () => kbController.destroy());
 </script>
 
+<a href="#main-game" class="sr-only focus:not-sr-only focus:absolute focus:z-100 focus:top-2 focus:left-2 focus:bg-background focus:text-foreground focus:px-4 focus:py-2 focus:rounded-md focus:border focus:border-border focus:shadow-md focus:text-sm focus:font-medium">
+  Skip to game
+</a>
+
+<h1 class="sr-only">Blackout USA — {engine.caseName} Grid</h1>
+
 <AppHeader
   onOpenModal={modals.openModal}
   onBriefingClick={openBriefing}
@@ -169,10 +181,8 @@
     onOpenChange={(open: boolean) => {
       if (!open && isInitialTutorial) {
         isInitialTutorial = false;
-        void (async () => {
-          await modals.closeModalAndWait();
-          engine.navigateToDay(1);
-        })();
+        modals.closeModal();
+        engine.navigateToDay(1);
         return;
       }
       modals.onOpenChange('help', open);
@@ -259,7 +269,7 @@
     class={cn(
       "bg-sidebar overflow-y-auto",
       mobile.value
-        ? "border-t-4 border-border"
+        ? "border-t-2 border-border"
         : "w-[clamp(280px,35%,400px)] flex-shrink-0 border-r border-border"
     )}
     aria-label="Game Sidebar"
@@ -276,41 +286,49 @@
 {/snippet}
 
 {#snippet mainPanel()}
-  <main class="flex-1 min-w-0 h-full flex flex-col" aria-label="Main game area">
+  <main id="main-game" class="flex-1 min-w-0 h-full flex flex-col" aria-label="Main game area">
     <div class="font-sans relative flex-1 w-full h-full flex flex-col">
       {#if settings.current.viewMode === 'map'}
-        <div class="absolute top-4 left-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm px-5 py-2.5 rounded-md border border-border/50 shadow-sm">
+        <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 pointer-events-none select-none bg-background/90 px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-md border border-border/50 shadow-sm">
           <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} timeIso={engineState.stats.timeIso} idPrefix="vis" size="lg" />
         </div>
-        <div class="absolute top-4 right-4 z-10 pointer-events-none select-none bg-background/80 backdrop-blur-sm rounded-md border border-border/50 shadow-md hidden sm:block w-[min(45%,380px)]">
-          {#if engineState.forecast}
+        <!-- Desktop: top-right overlay; Mobile: bottom strip -->
+        {#if engineState.forecast}
+          <div class="absolute z-10 pointer-events-none select-none bg-background/90 border border-border/50 shadow-md
+            bottom-2 left-2 right-2 rounded-md
+            sm:bottom-auto sm:left-auto sm:top-4 sm:right-4 sm:w-[min(45%,380px)] sm:rounded-md">
             <section class="px-2.5 py-1.5" aria-label="Demand forecast">
               <ForecastChart forecast={engineState.forecast} progress={forecastProgress} />
             </section>
-          {/if}
-        </div>
+          </div>
+        {/if}
       {/if}
+      <!-- svelte-ignore a11y_no_noninteractive_tabindex — role="application" makes this
+           an interactive widget (canvas with click/drag), tabindex=-1 allows programmatic
+           focus for keyboard shortcuts without adding it to the tab sequence -->
       <div
         bind:this={mapContainer}
-        tabindex="-1"
-        aria-label="Interactive electrical grid map"
-        role="application"
+        tabindex={settings.current.viewMode === 'map' ? -1 : undefined}
+        aria-label={settings.current.viewMode === 'map' ? 'Interactive electrical grid map. Click substations or lines to inspect. For full keyboard access, switch to Tabular mode in Settings.' : 'Electrical grid map'}
+        role={settings.current.viewMode === 'map' ? 'application' : 'img'}
+        aria-hidden={settings.current.viewMode !== 'map' ? true : undefined}
         class={cn("h-full w-full outline-none focus-visible:ring-2 focus-visible:ring-primary", settings.current.viewMode !== 'map' && 'hidden')}
       ></div>
       {#if settings.current.viewMode === 'tabular'}
-        <div class="absolute inset-0 flex flex-col md:flex-row overflow-hidden bg-background text-foreground font-sans">
-          <div class="flex-1 border-b md:border-b-0 md:border-r p-4 flex flex-col min-h-0">
+        <!-- Mobile: single scrollable column; Desktop: side-by-side panels -->
+        <div class="absolute inset-0 overflow-y-auto md:overflow-hidden md:flex md:flex-row bg-background text-foreground font-sans">
+          <div class="md:flex-1 border-b md:border-b-0 md:border-r p-4 md:flex md:flex-col md:min-h-0">
             <div class="flex justify-between items-baseline mb-4">
               <h2 class="text-xl font-bold uppercase text-muted-foreground">Substations</h2>
               <DayTimeDisplay day={engineState.stats.day} timeStr={engineState.stats.timeStr} timeIso={engineState.stats.timeIso} idPrefix="tab" size="sm" />
             </div>
-            <div class="flex-1 overflow-y-auto -mr-4 pr-4">
+            <div class="md:flex-1 md:overflow-y-auto md:-mr-4 md:pr-4">
               <SubstationTable subs={engineState.subs} onSubstationSelect={handleSubstationSelect} />
             </div>
           </div>
-          <div class="flex-1 p-4 flex flex-col min-h-0">
+          <div class="md:flex-1 p-4 md:flex md:flex-col md:min-h-0">
             <h2 class="text-xl font-bold mb-4 uppercase text-muted-foreground">Transmission Lines</h2>
-            <div class="flex-1 overflow-y-auto -mr-4 pr-4">
+            <div class="md:flex-1 md:overflow-y-auto md:-mr-4 md:pr-4">
               <BranchTable branches={engineState.branches} onBranchSelect={handleBranchSelect} />
             </div>
           </div>

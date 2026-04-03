@@ -18,16 +18,53 @@ export interface ThemeColors {
 }
 
 /**
- * Resolve a CSS custom property to a Canvas-compatible color string.
- *
- * getPropertyValue("--foo") returns raw token values (e.g. "oklch(0.985 0 0)")
- * which Canvas 2D cannot parse as strokeStyle/fillStyle. By setting the value
- * on a real element's `color` property and reading it back, the browser resolves
- * it to an rgb()/rgba() string that Canvas always accepts.
+ * Normalize any computed CSS color to #rrggbb hex via canvas pixel readback.
+ * Immune to browser format variation (rgb, oklch, lab, etc.) because
+ * getImageData always returns sRGB per spec.
  */
-function resolveColor(el: HTMLElement, cssVar: string): string {
+const toHex: (color: string) => string = (() => {
+  let ctx: CanvasRenderingContext2D | null = null;
+  return (color: string): string => {
+    if (!ctx) {
+      const c = document.createElement('canvas');
+      c.width = 1; c.height = 1;
+      ctx = c.getContext('2d')!;
+    }
+    ctx.clearRect(0, 0, 1, 1);
+    ctx.fillStyle = '#000';
+    ctx.fillStyle = color;
+    ctx.fillRect(0, 0, 1, 1);
+    const [r, g, b] = ctx.getImageData(0, 0, 1, 1).data;
+    return '#' + ((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1);
+  };
+})();
+
+/**
+ * Resolve a CSS custom property to a #rrggbb hex string for Canvas use.
+ *
+ * Sets the value on a real element's `color` property so the browser resolves
+ * var() references, then normalizes the computed result to hex via canvas pixel
+ * readback (getComputedStyle may return oklch/lab on modern browsers).
+ */
+export function resolveColor(el: HTMLElement, cssVar: string): string {
   el.style.color = `var(${cssVar})`;
-  return getComputedStyle(el).color;
+  return toHex(getComputedStyle(el).color);
+}
+
+/**
+ * Resolve multiple CSS custom properties to Canvas-compatible color strings.
+ * Creates and tears down a temporary DOM element for the batch.
+ */
+export function resolveColors(cssVars: Record<string, string>): Record<string, string> {
+  const el = document.createElement("div");
+  el.style.display = "none";
+  document.documentElement.appendChild(el);
+  const result: Record<string, string> = {};
+  for (const [key, cssVar] of Object.entries(cssVars)) {
+    result[key] = resolveColor(el, cssVar);
+  }
+  el.remove();
+  return result;
 }
 
 /** Read CSS custom properties from the document root into a ThemeColors object. */

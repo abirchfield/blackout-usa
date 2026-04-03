@@ -124,7 +124,11 @@
         <span class="text-muted-foreground">Served Load</span>
         <span class="font-mono font-bold tabular-nums">{totalServed.toFixed(0)} <span class="text-xs text-muted-foreground font-normal">/ {totalCapacity.toFixed(0)} MW</span></span>
       </div>
-      <div class="flex h-2.5 w-full rounded-full overflow-hidden bg-muted">
+      <div
+        class="flex h-2.5 w-full rounded-full overflow-hidden bg-muted"
+        role="img"
+        aria-label="Served load: {totalServed.toFixed(0)} of {totalCapacity.toFixed(0)} MW — {byCategory.map(g => `${g.config.name}: ${g.served.toFixed(0)} MW`).join(', ')}"
+      >
         {#each byCategory as { cat, served, config }}
           <div
             class={cn('h-full transition-all', config.tailwind.bg)}

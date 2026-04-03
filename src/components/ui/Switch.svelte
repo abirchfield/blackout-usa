@@ -11,6 +11,11 @@
   }
 
   let { checked = $bindable(false), onCheckedChange, disabled, class: className, ...rest }: Props = $props();
+
+  // svelte-ignore state_referenced_locally
+  if (import.meta.env.DEV && !rest['aria-label'] && !rest['aria-labelledby']) {
+    console.warn('Switch: missing aria-label or aria-labelledby. Provide one for accessibility.');
+  }
 </script>
 
 <SwitchPrimitive.Root

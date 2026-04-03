@@ -19,7 +19,7 @@
   });
 </script>
 
-<div>
+<div class="overflow-x-auto">
   <Table>
     <caption class="sr-only">A sortable list of all substations in the grid. Select a substation to view its details.</caption>
     <TableHeader>
@@ -38,7 +38,7 @@
               <Button
                 variant="link"
                 onclick={() => onSubstationSelect(sub)}
-                class="p-0 h-auto text-foreground text-xs font-medium justify-start text-left"
+                class="px-0 py-1 min-h-11 text-foreground text-xs font-medium justify-start text-left"
               >
                 {sub.Name}
               </Button>
@@ -49,21 +49,21 @@
                   {#each sub.U as unit, index (index)}
                     {@const title = `Circuit #${index + 1}: ${unit.Status}`}
                     <span role="img" aria-label={title}>
-                      <StatusIndicator status={unit.Status} category={SubstationCategory.Load} class="w-2.5 h-2.5" {title} />
+                      <StatusIndicator status={unit.Status} category={SubstationCategory.Load} class="w-3 h-3" {title} />
                     </span>
                   {/each}
                 {:else}
                   {#each sub.U as unit, index (index)}
                     {@const title = `Unit #${index + 1}: ${unit.Status} - ${unit.P.toFixed(0)} MW`}
                     <span role="img" aria-label={title}>
-                      <StatusIndicator status={unit.Status} power={unit.P} pmax={unit.Pmax} class="w-2.5 h-2.5" {title} />
+                      <StatusIndicator status={unit.Status} power={unit.P} pmax={unit.Pmax} class="w-3 h-3" {title} />
                     </span>
                   {/each}
                   {#if sub.Loads?.U}
                     {#each sub.Loads.U as unit, index (index)}
                       {@const title = `Load #${index + 1}: ${unit.Status}`}
                       <span role="img" aria-label={title}>
-                        <StatusIndicator status={unit.Status} category={SubstationCategory.Load} class="w-2.5 h-2.5" {title} />
+                        <StatusIndicator status={unit.Status} category={SubstationCategory.Load} class="w-3 h-3" {title} />
                       </span>
                     {/each}
                   {/if}

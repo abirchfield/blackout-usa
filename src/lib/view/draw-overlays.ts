@@ -1,5 +1,4 @@
-import { Branch, BranchStatus, GameState, Substation } from "../types";
-import { ThemeColors } from "./colors";
+import { Branch, BranchStatus, Substation } from "../types";
 import { DrawingConfig } from "./constants";
 import type { DrawContext } from "./draw-branches";
 

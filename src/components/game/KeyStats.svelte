@@ -14,28 +14,39 @@
 
   let genFormatted = $derived(fmtPower(stats.totalGeneration));
   let resFormatted = $derived(fmtPower(stats.reserves));
+
+  let freqStatus = $derived(
+    stats.frequency < UIThresholds.FREQUENCY_WARNING_LOW || stats.frequency > UIThresholds.FREQUENCY_WARNING_HIGH
+      ? 'Warning' : ''
+  );
+  let reserveStatus = $derived(
+    stats.reserves < UIThresholds.RESERVES_CRITICAL_MW ? 'Critical'
+    : stats.reserves < UIThresholds.RESERVES_WARNING_MW ? 'Warning'
+    : ''
+  );
 </script>
 
-<div class={cn('grid grid-cols-3 gap-4', className)} role="group" aria-label="Key game statistics">
+<div class={cn('grid grid-cols-3 gap-2 sm:gap-4', className)} role="group" aria-label="Key game statistics">
   <div>
     <SectionLabel variant="sidebar" id="freq-label">Frequency</SectionLabel>
     <div
       id="dash-freq"
       class={cn(
-        'text-2xl sm:text-3xl',
+        'text-xl sm:text-2xl',
         STAT_VALUE,
         stats.frequency < UIThresholds.FREQUENCY_WARNING_LOW || stats.frequency > UIThresholds.FREQUENCY_WARNING_HIGH
           ? 'text-destructive'
           : 'text-sidebar-foreground'
       )}
-      aria-labelledby="freq-label"
+      aria-label={freqStatus ? `Frequency: ${stats.frequency.toFixed(2)} Hz — ${freqStatus}` : undefined}
+      aria-labelledby={freqStatus ? undefined : 'freq-label'}
     >
       <FormattedUnit value={stats.frequency.toFixed(2)} unit="Hz" hero />
     </div>
   </div>
   <div>
     <SectionLabel variant="sidebar" id="tgen-label">Total Gen.</SectionLabel>
-    <div id="dash-tgen" class={cn('text-2xl sm:text-3xl text-sidebar-foreground', STAT_VALUE)} aria-labelledby="tgen-label">
+    <div id="dash-tgen" class={cn('text-xl sm:text-2xl text-sidebar-foreground', STAT_VALUE)} aria-labelledby="tgen-label">
       <FormattedUnit value={genFormatted[0]} unit={genFormatted[1]} hero />
     </div>
   </div>
@@ -44,7 +55,7 @@
     <div
       id="dash-reserve"
       class={cn(
-        'text-2xl sm:text-3xl',
+        'text-xl sm:text-2xl',
         STAT_VALUE,
         stats.reserves < UIThresholds.RESERVES_CRITICAL_MW
           ? 'text-destructive'
@@ -52,7 +63,8 @@
             ? 'text-[var(--color-warning)]'
             : 'text-sidebar-foreground'
       )}
-      aria-labelledby="reserve-label"
+      aria-label={reserveStatus ? `Reserves: ${resFormatted[0]} ${resFormatted[1]} — ${reserveStatus}` : undefined}
+      aria-labelledby={reserveStatus ? undefined : 'reserve-label'}
     >
       <FormattedUnit value={resFormatted[0]} unit={resFormatted[1]} hero />
     </div>

@@ -89,15 +89,15 @@
   --color-alert-emphasis: oklch(0.577 0.245 27.325); /* red-600 - blackout text */
   --color-hint: oklch(0.769 0.188 70.08); /* amber-500 - hints */
   /* Generation type colors (used by SVG grid map & theme config) */
-  --color-gen-nuclear: #c084fc;
-  --color-gen-thermal: #A08060;
-  --color-gen-wind: #22d3ee;
-  --color-gen-solar: #facc15;
-  --color-gen-load: #6b7280;
+  --color-gen-nuclear: oklch(0.68 0.16 295);  /* purple-400 */
+  --color-gen-thermal: oklch(0.6 0.06 70);    /* warm brown */
+  --color-gen-wind: oklch(0.78 0.14 200);     /* cyan-400 */
+  --color-gen-solar: oklch(0.87 0.17 85);     /* yellow-400 */
+  --color-gen-load: oklch(0.55 0.02 260);     /* gray-500 */
   /* Map interaction colors */
-  --color-power-flow: #4ade80;
-  --color-line-hover: #60a5fa;
-  --color-tripped: #FF0000;
+  --color-power-flow: oklch(0.79 0.17 150);   /* green-400 */
+  --color-line-hover: oklch(0.7 0.14 250);    /* blue-400 */
+  --color-tripped: oklch(0.63 0.3 29);        /* red */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -125,8 +125,8 @@
   --accent: oklch(0.269 0 0);
   --accent-foreground: oklch(0.985 0 0);
   --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
+  --border: oklch(1 0 0 / 14%);
+  --input: oklch(1 0 0 / 22%);
   --ring: oklch(0.556 0 0);
   --color-load-1: oklch(0.73 0.14 258); /* blue-400 */
   --color-load-2: oklch(0.7 0.18 283); /* indigo-400 */
@@ -137,18 +137,19 @@
   --color-status-in: oklch(0.75 0.2 145); /* green-400 */
   --color-status-dis: oklch(0.7 0 0); /* gray-400 */
   --color-status-startup: oklch(0.85 0.2 85);   /* yellow-400 */
-  --color-status-trip: oklch(0.63 0.3 29); /* true red */
+  --color-status-trip: oklch(0.70 0.28 29); /* true red, brightened for dark bg */
   /* UI Semantic Colors */
   --color-alert: oklch(0.704 0.191 22.216); /* red-400 - notifications, errors */
   --color-alert-emphasis: oklch(0.637 0.237 25.331); /* red-500 - blackout text */
   --color-hint: oklch(0.828 0.189 84.429); /* amber-400 - hints */
+  --color-tripped: oklch(0.70 0.28 29);       /* red, brightened for dark bg */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
   --sidebar-primary: oklch(0.488 0.243 264.376);
   --sidebar-primary-foreground: oklch(0.985 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
+  --sidebar-border: oklch(1 0 0 / 14%);
   --sidebar-ring: oklch(0.556 0 0);
 }
 
@@ -162,7 +163,7 @@
   --popover-foreground: oklch(0 0 0);
   --primary: oklch(0 0 0);
   --primary-foreground: oklch(1 0 0);
-  --secondary: transparent;
+  --secondary: oklch(0.93 0 0);
   --secondary-foreground: oklch(0 0 0);
   --muted: oklch(1 0 0);
   --muted-foreground: oklch(0 0 0);
@@ -186,6 +187,15 @@
   --color-alert: oklch(0.6 0.3 15); /* Red - matches destructive */
   --color-alert-emphasis: oklch(0.5 0.3 15); /* Darker Red */
   --color-hint: oklch(0.5 0.15 80); /* Dark Yellow/Brown */
+  /* Generation & map colors: high-saturation for max distinguishability */
+  --color-gen-nuclear: oklch(0.55 0.25 295);  /* Bold purple */
+  --color-gen-thermal: oklch(0.45 0.12 50);   /* Dark brown */
+  --color-gen-wind: oklch(0.55 0.2 220);      /* Deep cyan */
+  --color-gen-solar: oklch(0.65 0.2 85);      /* Dark gold */
+  --color-gen-load: oklch(0.35 0 0);          /* Near-black */
+  --color-power-flow: oklch(0.55 0.25 150);   /* Bold green */
+  --color-line-hover: oklch(0.5 0.25 260);    /* Bold blue */
+  --color-tripped: oklch(0.5 0.3 29);         /* Bold red */
   --sidebar: oklch(1 0 0);
   --sidebar-foreground: oklch(0 0 0);
   --sidebar-primary: oklch(0 0 0);
@@ -206,7 +216,7 @@
   --popover-foreground: oklch(1 0 0);
   --primary: oklch(1 0 0);
   --primary-foreground: oklch(0 0 0);
-  --secondary: transparent;
+  --secondary: oklch(0.15 0 0);
   --secondary-foreground: oklch(1 0 0);
   --muted: oklch(0 0 0);
   --muted-foreground: oklch(1 0 0);
@@ -230,6 +240,15 @@
   --color-alert: oklch(0.9 0.2 30); /* Bright Yellow-Red - matches destructive */
   --color-alert-emphasis: oklch(0.95 0.25 30); /* Brighter Red */
   --color-hint: oklch(0.95 0.2 85); /* Bright Yellow */
+  /* Generation & map colors: bright on black for max contrast */
+  --color-gen-nuclear: oklch(0.8 0.2 295);    /* Bright purple */
+  --color-gen-thermal: oklch(0.75 0.12 50);   /* Bright brown/orange */
+  --color-gen-wind: oklch(0.85 0.15 200);     /* Bright cyan */
+  --color-gen-solar: oklch(0.92 0.18 85);     /* Bright yellow */
+  --color-gen-load: oklch(0.7 0 0);           /* Light gray */
+  --color-power-flow: oklch(0.85 0.2 150);    /* Bright green */
+  --color-line-hover: oklch(0.8 0.18 250);    /* Bright blue */
+  --color-tripped: oklch(0.9 0.25 29);        /* Bright red */
   --sidebar: oklch(0 0 0);
   --sidebar-foreground: oklch(1 0 0);
   --sidebar-primary: oklch(1 0 0);
@@ -380,7 +399,17 @@
   @apply outline outline-1 outline-offset-[-1px] outline-foreground;
 }
 
-/* --- 7. Canvas & Map Layout --- */
+/* --- 7. Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* --- 8. Canvas & Map Layout --- */
 
 /* Center modal over the canvas area (offset by half the sidebar width) */
 @media (min-width: 768px) {

@@ -33,11 +33,12 @@
   ]);
 
   // Unified scale: max category value across both gen capacities and load values
-  let globalMax = $derived(Math.max(
-    ...generationSources.map(g => g.capacity),
-    ...loadMix.map(l => l.value),
-    1,
-  ));
+  let globalMax = $derived.by(() => {
+    let max = 1;
+    for (const g of generationSources) if (g.capacity > max) max = g.capacity;
+    for (const l of loadMix) if (l.value > max) max = l.value;
+    return max;
+  });
 
   function moneyStr(val: number): string {
     const [v, u] = fmtMoney(val);
@@ -47,7 +48,7 @@
 
 {#snippet statRow(label: string, value: string | [string, string])}
   <div class="flex justify-between items-baseline gap-2">
-    <span class="text-sidebar-foreground/60 truncate">{label}</span>
+    <span class="text-sidebar-foreground/80 truncate">{label}</span>
     <span class={cn('text-sidebar-foreground', STAT_VALUE)}>
       {#if typeof value === 'string'}
         {value}
@@ -62,7 +63,7 @@
   {@const totalPct = segments.reduce((a,s) => a + s.pct, 0)}
   <div class="flex items-center gap-1.5 sm:gap-2">
     <Icon class={cn('h-3.5 w-3.5 sm:h-4 sm:w-4 flex-shrink-0', iconClass)} />
-    <span id={nameId} class="text-xs sm:text-sm text-sidebar-foreground/50 w-16 sm:w-[5rem] flex-shrink-0 truncate">{name}</span>
+    <span id={nameId} class="text-xs sm:text-sm text-sidebar-foreground/80 w-16 sm:w-[5rem] flex-shrink-0 truncate">{name}</span>
     <div
       class="h-2.5 sm:h-3 flex-1 min-w-0 rounded-full bg-foreground/10"
       role="meter"
@@ -84,7 +85,7 @@
         {/each}
       </div>
     </div>
-    <span id={valueId} class={cn('text-sm sm:text-base w-16 sm:w-20 text-right text-sidebar-foreground/70 flex-shrink-0', STAT_VALUE)}>
+    <span id={valueId} class={cn('text-sm sm:text-base w-16 sm:w-20 text-right text-sidebar-foreground/80 flex-shrink-0', STAT_VALUE)}>
       <FormattedUnit value={value.toFixed(0)} unit="MW" />
     </span>
   </div>
@@ -153,9 +154,10 @@
     {@render statRow('Total Load', [loadFormatted[0], loadFormatted[1]])}
     {@render statRow('Total Cost', moneyStr(stats.totalCost))}
     {@render statRow('Unserved Load', [unservedFormatted[0], unservedFormatted[1]])}
+    <div class="border-t border-border/30 sm:hidden col-span-full my-1"></div>
     {@render statRow('Operating Cost', moneyStr(stats.totalOpCost))}
-    {@render statRow('Unserved Cost', moneyStr(stats.totalUnservedCost))}
     {@render statRow('Fuel Cost', moneyStr(stats.totalFuelCost))}
+    {@render statRow('Unserved Cost', moneyStr(stats.totalUnservedCost))}
     {@render statRow('Avg. Cost', `$${stats.avgCost.toFixed(2)}`)}
   </div>
 </div>

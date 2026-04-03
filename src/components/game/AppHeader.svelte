@@ -23,6 +23,16 @@
   let hintsCount = $derived(engineState.hints.length);
 
   let isMenuOpen = $state(false);
+  let menuToggleEl: HTMLElement | undefined = $state();
+
+  function closeMenu() {
+    isMenuOpen = false;
+    // Return focus to the toggle button after the menu closes
+    requestAnimationFrame(() => {
+      const btn = menuToggleEl?.querySelector('button');
+      btn?.focus();
+    });
+  }
 
   // Track the latest critical alert to show inline
   let visibleAlert: { id: number; message: string } | null = $state(null);
@@ -42,7 +52,7 @@
   });
 </script>
 
-<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && isMenuOpen) isMenuOpen = false; }} />
+<svelte:window onkeydown={(e) => { if (e.key === 'Escape' && isMenuOpen) closeMenu(); }} />
 
 {#snippet notificationDot(ping: boolean, color: string)}
   <span class="absolute top-1 right-1 flex h-2 w-2" aria-hidden="true">
@@ -102,7 +112,7 @@
       <p class="text-sm font-medium text-destructive truncate">{visibleAlert.message}</p>
       <button
         onclick={() => { visibleAlert = null; }}
-        class="text-destructive/60 hover:text-destructive shrink-0"
+        class="flex items-center justify-center size-8 rounded-md text-destructive/60 hover:text-destructive hover:bg-destructive/10 shrink-0 transition-colors cursor-pointer"
         aria-label="Dismiss alert"
       >
         <X class="h-3.5 w-3.5" />
@@ -133,47 +143,49 @@
     </nav>
 
     <!-- Mobile Menu Toggle -->
-    <Button variant="ghost" size="icon" class="md:hidden" onclick={() => { isMenuOpen = !isMenuOpen; }} aria-label="Toggle menu" aria-expanded={isMenuOpen} aria-controls="mobile-menu-nav">
+    <span bind:this={menuToggleEl} class="contents">
+    <Button variant="ghost" size="icon" class="md:hidden" onclick={() => { isMenuOpen ? closeMenu() : (isMenuOpen = true); }} aria-label="Toggle menu" aria-expanded={isMenuOpen} aria-controls="mobile-menu-nav">
       {#if isMenuOpen}
         <X class="h-5 w-5" />
       {:else}
         <Menu class="h-5 w-5" />
       {/if}
     </Button>
+    </span>
   </div>
 
   <!-- Mobile Menu Overlay -->
   {#if isMenuOpen}
-    <button class="fixed inset-0 z-40 md:hidden bg-transparent" aria-hidden="true" tabindex="-1" onclick={() => { isMenuOpen = false; }}></button>
+    <button class="fixed inset-0 z-40 md:hidden bg-transparent" aria-hidden="true" tabindex="-1" onclick={closeMenu}></button>
     <nav aria-label="Mobile menu" id="mobile-menu-nav" class="absolute top-full left-0 right-0 bg-background border-b shadow-lg z-50 p-4 md:hidden flex flex-col gap-4 animate-in slide-in-from-top-2">
       <div class="grid grid-cols-1 gap-2">
-        <Button variant="ghost" onclick={() => { onOpenModal('alerts'); isMenuOpen = false; }} class="justify-start relative" disabled={controlsDisabled} aria-label="View alerts, {alertsCount} new notifications">
+        <Button variant="ghost" onclick={() => { onOpenModal('alerts'); closeMenu(); }} class="justify-start relative" disabled={controlsDisabled} aria-label="View alerts, {alertsCount} new notifications">
           <Bell class="mr-2 h-4 w-4" aria-hidden="true" />
           Alerts
           {#if alertsCount > 0}
             {@render notificationDot(true, 'bg-[var(--color-alert)]')}
           {/if}
         </Button>
-        <Button variant="ghost" onclick={() => { onOpenModal('hints'); isMenuOpen = false; }} class="justify-start relative" disabled={controlsDisabled} aria-label="View hints, {hintsCount} new items">
+        <Button variant="ghost" onclick={() => { onOpenModal('hints'); closeMenu(); }} class="justify-start relative" disabled={controlsDisabled} aria-label="View hints, {hintsCount} new items">
           <Lightbulb class="mr-2 h-4 w-4" aria-hidden="true" />
           Hints
           {#if hintsCount > 0}
             {@render notificationDot(false, 'bg-[var(--color-hint)]')}
           {/if}
         </Button>
-        <Button variant="ghost" onclick={() => { onBriefingClick(); isMenuOpen = false; }} class="justify-start" disabled={controlsDisabled}>
+        <Button variant="ghost" onclick={() => { onBriefingClick(); closeMenu(); }} class="justify-start" disabled={controlsDisabled}>
           <FileText class="mr-2 h-4 w-4" aria-hidden="true" />
           Briefing
         </Button>
-        <Button variant="ghost" onclick={() => { onOpenModal('accessibility'); isMenuOpen = false; }} class="justify-start">
+        <Button variant="ghost" onclick={() => { onOpenModal('accessibility'); closeMenu(); }} class="justify-start">
           <PersonStanding class="mr-2 h-4 w-4" aria-hidden="true" />
           Accessibility
         </Button>
-        <Button variant="ghost" onclick={() => { onOpenModal('help'); isMenuOpen = false; }} class="justify-start">
+        <Button variant="ghost" onclick={() => { onOpenModal('help'); closeMenu(); }} class="justify-start">
           <HelpCircle class="mr-2 h-4 w-4" aria-hidden="true" />
           How to Play
         </Button>
-        <Button variant="ghost" onclick={() => { onOpenModal('quit'); isMenuOpen = false; }} class="justify-start text-[var(--color-alert)] hover:text-[var(--color-alert-emphasis)] hover:bg-[var(--color-alert)]/10">
+        <Button variant="ghost" onclick={() => { onOpenModal('quit'); closeMenu(); }} class="justify-start text-[var(--color-alert)] hover:text-[var(--color-alert-emphasis)] hover:bg-[var(--color-alert)]/10">
           <LogOut class="mr-2 h-4 w-4" aria-hidden="true" />
           Quit Game
         </Button>

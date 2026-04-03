@@ -30,8 +30,7 @@ export class KeyboardController {
 
       function handleKeyDown(e: KeyboardEvent) {
         const target = e.target as HTMLElement;
-        const isTyping = target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
-          target.tagName === 'SELECT' || target.isContentEditable;
+        const isTyping = target.matches('input, textarea, select, [contenteditable="true"]');
 
         if (isTyping || params.isBlocked() || params.isBlackout()) return;
         if (e.ctrlKey || e.metaKey) return;

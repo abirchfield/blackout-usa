@@ -58,20 +58,16 @@
       if (next >= genUnit.StartTime) {
         if (genUnit.Status === UnitStatus.STARTUP) {
           genUnit = { ...genUnit, Status: UnitStatus.IN, StatusCount: 0, P: genUnit.Pmin, Pset: genUnit.Pmin };
+          genSetpointVal = genUnit.Pmin;
         } else {
           genUnit = { ...genUnit, Status: UnitStatus.DIS, StatusCount: 0, P: 0, Pset: 0 };
+          genSetpointVal = 0;
         }
       } else {
         genUnit = { ...genUnit, StatusCount: next };
       }
     }, DEMO_TICK_MS);
     return () => clearInterval(id);
-  });
-
-  // Sync slider when coming online / going offline
-  $effect(() => {
-    if (genUnit.Status === UnitStatus.IN) genSetpointVal = genUnit.Pmin;
-    if (genUnit.Status === UnitStatus.DIS) genSetpointVal = 0;
   });
 
   // Ramp output toward setpoint
