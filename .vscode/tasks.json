@@ -7,10 +7,8 @@
 			"script": "dev",
 			"isBackground": true,
 			"problemMatcher": [],
-			"group": {
-				"kind": "build",
-				"isDefault": true
-			},
+			"group": { "kind": "build", "isDefault": true },
+			"runOptions": { "instanceLimit": 1 },
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -23,6 +21,7 @@
 			"script": "build",
 			"problemMatcher": [],
 			"group": "build",
+			"runOptions": { "instanceLimit": 1 },
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -36,6 +35,7 @@
 			"isBackground": true,
 			"problemMatcher": [],
 			"group": "build",
+			"runOptions": { "instanceLimit": 1 },
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
@@ -48,10 +48,24 @@
 			"script": "check",
 			"problemMatcher": [],
 			"group": "test",
+			"runOptions": { "instanceLimit": 1 },
 			"presentation": {
 				"reveal": "always",
 				"panel": "dedicated",
 				"clear": true
+			}
+		},
+		{
+			"label": "Deploy to Cloudflare",
+			"type": "npm",
+			"script": "deploy",
+			"problemMatcher": [],
+			"runOptions": { "instanceLimit": 1 },
+			"presentation": {
+				"reveal": "always",
+				"panel": "dedicated",
+				"clear": true,
+				"focus": true
 			}
 		}
 	]

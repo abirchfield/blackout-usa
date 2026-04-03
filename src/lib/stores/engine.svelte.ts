@@ -24,6 +24,9 @@ export function getEngine(): GameEngine {
 /**
  * Shallow-copy each Branch so Svelte detects property changes.
  * All mutable Branch props are primitives, so spread suffices.
+ * Note: sub1/sub2 are shared references to engine state — this is intentional.
+ * Components only read .Name from them (immutable), and the canvas renderer
+ * reads from engine.state directly, not from these snapshots.
  */
 function snapBranches(src: Record<string, Branch>): Record<string, Branch> {
   const out: Record<string, Branch> = {};

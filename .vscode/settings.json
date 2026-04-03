@@ -7,21 +7,34 @@
 		"reloadButton": null,
 		"commands": [
 			{
-				"name": "$(play) Dev Server",
-				"color": "#ffffff",
+				"name": "$(play) Dev",
+				"color": "#22c55e",
 				"singleInstance": true,
 				"command": "npm run dev"
 			},
 			{
 				"name": "$(package) Build",
-				"color": "#ffffff",
+				"color": "#3b82f6",
+				"singleInstance": true,
 				"command": "npm run build"
 			},
 			{
 				"name": "$(eye) Preview",
-				"color": "#ffffff",
+				"color": "#a855f7",
 				"singleInstance": true,
 				"command": "npm run preview"
+			},
+			{
+				"name": "$(check) Check",
+				"color": "#eab308",
+				"singleInstance": true,
+				"command": "npm run check"
+			},
+			{
+				"name": "$(cloud-upload) Deploy",
+				"color": "#f97316",
+				"singleInstance": true,
+				"command": "npm run deploy"
 			}
 		]
 	}

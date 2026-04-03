@@ -22,6 +22,8 @@ export const ALPHA_MAX = 1;
 export const MAX_ITER = 10;
 export const ALPHA_TOLERANCE = 1e-6;
 export const REF_ADMITTANCE = 10000;
+/** Minimum Cholesky diagonal before treating the matrix as near-singular. */
+export const CHOLESKY_MIN_DIAG = 1e-10;
 
 // --- Contingency: Frequency Trip Thresholds ---
 

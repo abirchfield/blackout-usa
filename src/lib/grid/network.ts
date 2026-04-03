@@ -3,17 +3,18 @@ import {
 } from "../types";
 import { isInactive } from "../utils";
 import {
-  BASE_MVA, REF_ADMITTANCE,
+  BASE_MVA, REF_ADMITTANCE, CHOLESKY_MIN_DIAG,
   ALPHA_MIN, ALPHA_MAX, MAX_ITER, ALPHA_TOLERANCE,
   OVERLOAD_TRIP_CRITICAL_MULTIPLIER, PROB_TRIP_OVERLOAD_CRITICAL,
   OVERLOAD_TRIP_NORMAL_MULTIPLIER, PROB_TRIP_OVERLOAD_NORMAL,
 } from "./constants";
 import { SubstationModel } from "./substation";
-import { UnionFind, choleskyFactorize, choleskySolve } from "./utils";
+import { UnionFind, choleskyFactorize, choleskySolve, isFiniteArray } from "./utils";
 
 // --- Probability helpers ---
 
 function overloadTripProbability(absFlow: number, capacity: number): number {
+  if (capacity <= 0) return 0;
   if (absFlow > capacity * OVERLOAD_TRIP_CRITICAL_MULTIPLIER) return PROB_TRIP_OVERLOAD_CRITICAL;
   if (absFlow > capacity * OVERLOAD_TRIP_NORMAL_MULTIPLIER) return PROB_TRIP_OVERLOAD_NORMAL;
   return 0;
@@ -110,6 +111,11 @@ export class NetworkModel implements Model {
     const n = this.n;
     for (let i = 0; i < n; i++) this.bNeg[i] = -this.pvec[i];
     choleskySolve(this.Ybus, this.bNeg, this.theta, n);
+    if (!isFiniteArray(this.theta, n)) {
+      console.warn('Solver produced non-finite angles — zeroing all branch flows');
+      for (const br of this.state.branchList) br.P = 0;
+      return;
+    }
     this.calcFlows();
   }
 
@@ -179,7 +185,7 @@ export class NetworkModel implements Model {
     // Negate Ybus → positive definite for Cholesky factorization
     const len = n * n;
     for (let i = 0; i < len; i++) Y[i] = -Y[i];
-    if (!choleskyFactorize(Y, n)) {
+    if (!choleskyFactorize(Y, n, CHOLESKY_MIN_DIAG)) {
       return false;  // dirty stays true → rebuilt next tick
     }
     this.dirty = false;
@@ -225,7 +231,14 @@ export class NetworkModel implements Model {
     }
 
     const refIdx = this.state.refIdx;
-    if (refIdx < 0) return;
+    if (refIdx < 0) {
+      // No valid reference bus — everything is islanded, trip all units
+      for (const m of this.subModels) {
+        m.data.island = -1;
+        m.tripActiveUnits();
+      }
+      return;
+    }
     const rootSet = this.uf.find(refIdx);
 
     for (const m of this.subModels) {

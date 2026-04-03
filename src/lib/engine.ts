@@ -107,6 +107,7 @@ export class GameEngine {
   // --- Playback ---
   private _playback: Playback = 'paused';
   private _externalPaused = false;
+  private readonly _interactive: boolean;
   private rafId?: number;
 
   // --- Alerts & Hints ---
@@ -160,7 +161,8 @@ export class GameEngine {
     this.weather = new WeatherModel(this.state, this.timeConfig, this._latitude);
     this.weather.setup();
 
-    this.view = new GridView(element, options.interactive !== false, gridCase.name);
+    this._interactive = options.interactive !== false;
+    this.view = new GridView(element, this._interactive, gridCase.name);
     this.view.init(this.state, {
       onTripHottestLine: () => { this.grid.disconnectHottestLine(); this.commit(); },
       onShedMinLoad:     () => { this.grid.shedMinLoad();     this.commit(); },
@@ -321,16 +323,27 @@ export class GameEngine {
 
   // --- Operator Actions ---
 
+  /** Execute a grid mutation and commit, catching errors to keep the game running. */
+  private act(fn: () => void) {
+    try {
+      fn();
+      this.commit();
+    } catch (err) {
+      console.error('Action error:', err);
+      this.addAlert({ message: 'Action failed — grid state unchanged.', critical: false });
+    }
+  }
+
   /** Toggle a generator unit on/off and commit. */
-  toggleUnit(subId: string, unitIndex: number) { this.grid.toggleUnit(subId, unitIndex); this.commit(); }
+  toggleUnit(subId: string, unitIndex: number) { this.act(() => this.grid.toggleUnit(subId, unitIndex)); }
   /** Toggle a load unit on/off and commit. */
-  toggleLoadUnit(subId: string, unitIndex: number) { this.grid.toggleLoadUnit(subId, unitIndex); this.commit(); }
+  toggleLoadUnit(subId: string, unitIndex: number) { this.act(() => this.grid.toggleLoadUnit(subId, unitIndex)); }
   /** Cancel an in-progress startup/shutdown and commit. */
-  abortTransition(subId: string, unitIndex: number) { this.grid.abortTransition(subId, unitIndex); this.commit(); }
+  abortTransition(subId: string, unitIndex: number) { this.act(() => this.grid.abortTransition(subId, unitIndex)); }
   /** Open or close a transmission branch and commit. */
-  toggleBranch(branchId: string) { this.grid.toggleBranch(branchId); this.commit(); }
+  toggleBranch(branchId: string) { this.act(() => this.grid.toggleBranch(branchId)); }
   /** Set a generator's target power output and commit. */
-  setSetpoint(subId: string, unitIndex: number, value: number) { this.grid.setSetpoint(subId, unitIndex, value); this.commit(); }
+  setSetpoint(subId: string, unitIndex: number, value: number) { this.act(() => this.grid.setSetpoint(subId, unitIndex, value)); }
 
   // --- View Delegation ---
 
@@ -342,7 +355,7 @@ export class GameEngine {
   applySettings(s: EngineSettings) { this.view.applySettings(s); }
   set onInteract(handler: InteractionHandler | undefined) { this.view.onInteract = handler; }
   /** Render one frame of the grid map. */
-  draw() { this.view.draw(this.isPaused, this.isFastForward); }
+  draw() { this.view.draw(this._interactive && this.isPaused, this.isFastForward); }
 
   // --- Simulation Tick ---
 
@@ -355,7 +368,8 @@ export class GameEngine {
     this.weather.tick(1);
     this.grid.tick(1);
 
-    if (this.state.frequency < FREQUENCY_BLACKOUT_THRESHOLD) {
+    // NaN-safe: !(NaN >= 58) is true, so NaN frequency triggers blackout
+    if (!(this.state.frequency >= FREQUENCY_BLACKOUT_THRESHOLD)) {
       this._isBlackout = true;
       this.addAlert({ message: "Grid frequency collapsed, leading to a blackout. You've been fired.", critical: true });
       this.grid.invalidate();
@@ -382,7 +396,16 @@ export class GameEngine {
       if (lastGameStepTime < 0) lastGameStepTime = timestamp;
       if (!this.isPaused) {
         const speed = this.isFastForward ? TICK_SPEED_FAST_MS : TICK_SPEED_NORMAL_MS;
-        if (timestamp - lastGameStepTime > speed) { this.tick(); lastGameStepTime = timestamp; }
+        if (timestamp - lastGameStepTime > speed) {
+          try {
+            this.tick();
+          } catch (err) {
+            console.error('Simulation error:', err);
+            this._playback = 'paused';
+            this.addAlert({ message: 'A simulation error occurred. The game has been paused.', critical: true });
+          }
+          lastGameStepTime = timestamp;
+        }
       }
       this.draw();
       this.rafId = requestAnimationFrame(loop);
