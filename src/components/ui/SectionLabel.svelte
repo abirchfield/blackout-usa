@@ -8,8 +8,8 @@
     variants: {
       variant: {
         default: 'text-[0.65rem] text-muted-foreground mb-2',
-        sidebar: 'text-[0.65rem] text-sidebar-foreground/60',
-        compact: 'text-[0.6rem] text-muted-foreground/60',
+        sidebar: 'text-[0.65rem] text-sidebar-foreground/80',
+        compact: 'text-[0.6rem] text-muted-foreground/80',
         dashboard: 'text-xs sm:text-sm text-muted-foreground border-b border-border/50 pb-1',
       },
     },

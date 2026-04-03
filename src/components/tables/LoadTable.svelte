@@ -22,7 +22,8 @@
   let loadUnits = $derived(units ?? sub.U);
 </script>
 
-<table class="w-full text-sm table-fixed" aria-label="Load circuits">
+<table class="w-full text-sm table-fixed">
+  <caption class="sr-only">Load circuits for {sub.Name} substation</caption>
   <thead class={cn("text-xs text-muted-foreground", stickyHeader && "sticky top-0 bg-background z-10")}>
     <tr class="border-b border-border/50">
       <th scope="col" class="p-2 text-center font-semibold w-[8%]">#</th>

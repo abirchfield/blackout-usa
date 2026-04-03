@@ -2,6 +2,7 @@
   import { Table, TableHeader, TableBody, TableRow, TableHead, TableCell } from '$components/ui/table';
   import Button from '$components/ui/Button.svelte';
   import ProgressBar from '$components/ui/ProgressBar.svelte';
+  import StatusIndicator from '$components/tables/StatusIndicator.svelte';
   import type { Branch } from '$lib/types';
   import { BranchStatus } from '$lib/types';
   import { branchLoading, getLoadingBarColor, isBranchActive } from '$lib/utils';
@@ -13,24 +14,6 @@
 
   let { branches, onBranchSelect }: Props = $props();
 
-  function getBranchIndicator(branch: Branch) {
-    const loading = branchLoading(branch);
-
-    if (branch.Status === BranchStatus.TRIP) {
-      return { className: 'bg-destructive w-2.5 h-2.5 rounded-full', title: 'Tripped' };
-    }
-
-    if (!isBranchActive(branch)) {
-      return { className: 'border border-muted-foreground w-2.5 h-2.5 rounded-full', title: 'Out-of-Service' };
-    }
-
-    if (loading > 100) {
-      return { className: 'bg-[var(--color-warning)] w-2.5 h-2.5 rounded-full', title: `Overloaded: ${loading.toFixed(0)}%` };
-    }
-
-    return { className: 'bg-[var(--color-status-in)] w-2.5 h-2.5 rounded-full', title: `In-Service: ${loading.toFixed(0)}%` };
-  }
-
   let sortedBranches = $derived.by(() => {
     if (!branches) return [];
     return Object.values(branches)
@@ -38,7 +21,7 @@
   });
 </script>
 
-<div>
+<div class="overflow-x-auto">
   <Table>
     <caption class="sr-only">A sortable list of all transmission lines in the grid. Select a line to view its details.</caption>
     <TableHeader>
@@ -52,21 +35,23 @@
         {#each sortedBranches as branch (branch.Number)}
           {@const loading = branchLoading(branch)}
           {@const active = isBranchActive(branch)}
-          {@const indicator = getBranchIndicator(branch)}
           {@const barColor = getLoadingBarColor(loading)}
+          {@const statusTitle = branch.Status === BranchStatus.TRIP ? 'Tripped' : !active ? 'Out-of-Service' : loading > 100 ? `Overloaded: ${loading.toFixed(0)}%` : `In-Service: ${loading.toFixed(0)}%`}
           <TableRow>
             <TableHead scope="row" class="font-medium text-xs py-2 truncate pr-4 text-foreground">
               <Button
                 variant="link"
                 onclick={() => onBranchSelect(branch)}
-                class="p-0 h-auto text-foreground text-xs font-medium justify-start text-left"
+                class="px-0 py-1 min-h-11 text-foreground text-xs font-medium justify-start text-left"
               >
                 {branch.sub1?.Name} - {branch.sub2?.Name}
               </Button>
             </TableHead>
             <TableCell class="py-2 text-right">
               <div class="flex items-center justify-end gap-2">
-                <div role="img" aria-label={indicator.title} class={indicator.className} title={indicator.title}></div>
+                <span role="img" aria-label={statusTitle}>
+                  <StatusIndicator status={branch.Status} class="w-3 h-3" title={statusTitle} />
+                </span>
                 {#if active}
                   <ProgressBar value={loading} height="sm" colorClass={barColor} label={`Line loading: ${loading.toFixed(0)}%`} class="w-16" />
                   <span class="text-xs font-mono w-8 text-right text-foreground" aria-hidden="true">{loading.toFixed(0)}%</span>

@@ -3,8 +3,8 @@ import { MediaQuery } from 'svelte/reactivity';
 export type Theme = 'light' | 'dark' | 'system';
 
 function getInitialTheme(): Theme {
-  if (typeof localStorage === 'undefined') return 'dark';
-  return (localStorage.getItem('theme') as Theme) || 'dark';
+  if (typeof localStorage === 'undefined') return 'system';
+  return (localStorage.getItem('theme') as Theme) || 'system';
 }
 
 const prefDark = typeof window !== 'undefined'

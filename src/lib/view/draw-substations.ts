@@ -1,4 +1,4 @@
-import { GameState, Substation, UnitStatus } from "../types";
+import { Substation, SubstationCategory, UnitStatus } from "../types";
 import { ThemeColors, getCategoryColorKey } from "./colors";
 import { DrawingConfig } from "./constants";
 import { LabelOffset } from "./draw-overlays";
@@ -25,7 +25,7 @@ export function computeSubGeometry(subs: Record<string, Substation>): Map<string
     result.set(key, {
       lon: sub.Longitude,
       lat: sub.Latitude,
-      isLoad: sub.Category === "Load",
+      isLoad: sub.Category === SubstationCategory.Load,
       pmax: sub.Pmax,
       colorKey: getCategoryColorKey(sub.Category),
     });

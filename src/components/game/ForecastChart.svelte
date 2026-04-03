@@ -1,6 +1,7 @@
 <script lang="ts">
   import { theme } from '$lib/stores/theme.svelte';
   import { ChartConfig } from '$lib/view/constants';
+  import { resolveColors } from '$lib/view/colors';
   import type { ForecastData } from '$lib/weather/forecast';
 
   interface Props {
@@ -20,22 +21,21 @@
     font: string;
   }
 
-  /** Normalize any CSS color to #rrggbb hex so alpha suffixes work on canvas. */
-  function toHex(color: string): string {
-    const ctx = document.createElement('canvas').getContext('2d')!;
-    ctx.fillStyle = color;
-    return ctx.fillStyle;
-  }
-
   function resolveChartColors(): ChartColors {
+    // resolveColors() returns #rrggbb hex — safe for hex alpha suffix concatenation.
+    const resolved = resolveColors({
+      wind: "--color-gen-wind",
+      solar: "--color-gen-solar",
+      fg: "--foreground",
+      mutedFg: "--muted-foreground",
+    });
     const cs = getComputedStyle(document.documentElement);
-    const v = (name: string) => cs.getPropertyValue(name).trim();
     return {
-      wind: toHex(v("--color-gen-wind") || "#22d3ee"),
-      solar: toHex(v("--color-gen-solar") || "#facc15"),
-      fg: toHex(v("--foreground") || "#000"),
-      mutedFg: toHex(v("--muted-foreground") || "#888"),
-      font: v("--font-sans") || "'Jura', sans-serif",
+      wind: resolved.wind,
+      solar: resolved.solar,
+      fg: resolved.fg,
+      mutedFg: resolved.mutedFg,
+      font: cs.getPropertyValue("--font-sans").trim() || "'Jura', sans-serif",
     };
   }
 
@@ -251,9 +251,39 @@
 
   let canvasEl: HTMLCanvasElement;
   let containerEl: HTMLDivElement;
+  let cachedCtx: CanvasRenderingContext2D | null = null;
   let cachedColors: ChartColors | null = null;
-  let cachedW = 0;
-  let cachedH = 0;
+
+  // Derive current wind/solar availability at the progress point for screen readers
+  let chartAriaLabel = $derived.by(() => {
+    const pts = forecast?.points;
+    if (!pts?.length || progress < 0 || progress > 1) return 'Renewable availability forecast.';
+    const idx = Math.min(Math.round(progress * (pts.length - 1)), pts.length - 1);
+    const windPct = Math.round(pts[idx].windAvail * 100);
+    let label = `Renewable availability forecast. Wind: ${windPct}%.`;
+    if (forecast.hasSolar) label += ` Solar: ${Math.round(pts[idx].sunAvail * 100)}%.`;
+    return label;
+  });
+
+  // Container dimensions tracked via ResizeObserver (reactive)
+  let containerW = $state(0);
+  let containerH = $state(0);
+  let prevCanvasW = 0;
+  let prevCanvasH = 0;
+
+  // ResizeObserver — updates dimensions without layout thrashing
+  $effect(() => {
+    if (!containerEl) return;
+    const ro = new ResizeObserver((entries) => {
+      const entry = entries[0];
+      if (!entry) return;
+      const { width, height } = entry.contentRect;
+      containerW = width;
+      containerH = height;
+    });
+    ro.observe(containerEl);
+    return () => ro.disconnect();
+  });
 
   // Invalidate colors on theme change
   $effect(() => {
@@ -261,42 +291,49 @@
     cachedColors = null;
   });
 
-  // Draw the chart whenever forecast, progress, or theme changes
+  // Draw the chart whenever forecast, progress, size, or theme changes
   $effect(() => {
     // Track reactive dependencies
     const _forecast = forecast;
     const _progress = progress;
     const _theme = theme.resolved;
+    const w = containerW;
+    const h = containerH;
 
-    if (!canvasEl || !containerEl) return;
+    if (!canvasEl || w === 0 || h === 0) return;
 
-    const rect = containerEl.getBoundingClientRect();
+    // Cache the 2D context — it's reusable for the lifetime of the canvas element
+    if (!cachedCtx) {
+      cachedCtx = canvasEl.getContext("2d");
+      if (!cachedCtx) return;
+    }
+
     const dpr = window.devicePixelRatio || 1;
-    const w = rect.width;
-    const h = rect.height;
-    if (w === 0 || h === 0) return;
 
     // Only reset canvas dimensions (trashes GPU surface) when size actually changed
-    if (w !== cachedW || h !== cachedH) {
-      cachedW = w;
-      cachedH = h;
+    if (w !== prevCanvasW || h !== prevCanvasH) {
+      prevCanvasW = w;
+      prevCanvasH = h;
       canvasEl.width = w * dpr;
       canvasEl.height = h * dpr;
       canvasEl.style.width = `${w}px`;
       canvasEl.style.height = `${h}px`;
     }
 
-    const ctx = canvasEl.getContext("2d")!;
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    cachedCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
     if (!cachedColors) {
       cachedColors = resolveChartColors();
     }
 
-    drawForecastChart(ctx, w, h, _forecast, _progress, cachedColors);
+    try {
+      drawForecastChart(cachedCtx, w, h, _forecast, _progress, cachedColors);
+    } catch (e) {
+      console.warn('ForecastChart draw failed:', e);
+    }
   });
 </script>
 
-<div bind:this={containerEl} class="h-[44px] sm:h-[52px] w-full" role="img" aria-label="Wind and solar availability forecast chart">
+<div bind:this={containerEl} class="h-[44px] sm:h-[52px] w-full" role="img" aria-label={chartAriaLabel}>
   <canvas bind:this={canvasEl} aria-hidden="true" class="block w-full h-full"></canvas>
 </div>

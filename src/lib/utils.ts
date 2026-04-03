@@ -8,10 +8,10 @@ export function cn(...inputs: ClassValue[]) {
 
 // --- Formatting Helpers ---
 
-/** Format power as [value, unit] tuple for structured rendering. */
+/** Format power as [value, unit] tuple for structured rendering.
+ *  Always uses MW (no GW conversion) with comma grouping for large values. */
 export function fmtPower(val: number): [string, string] {
-  if (val >= 1000) return [(val / 1000).toFixed(2), "GW"];
-  return [val.toFixed(0), "MW"];
+  return [Math.round(val).toLocaleString('en-US'), "MW"];
 }
 
 /** Format money as [value, unit] tuple for structured rendering. */

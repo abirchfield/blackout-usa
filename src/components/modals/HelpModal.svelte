@@ -146,15 +146,21 @@
 {#snippet pageDot(active: boolean, onclick: () => void, label: string)}
   <button
     {onclick}
-    class={cn(
+    onkeydown={(e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') { goToPrevPage(); e.preventDefault(); }
+      else if (e.key === 'ArrowRight') { goToNextPage(); e.preventDefault(); }
+    }}
+    class="flex items-center justify-center w-11 h-11 -m-1 rounded-full outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 focus-visible:ring-offset-background"
+    aria-label={label}
+    aria-current={active ? 'page' : undefined}
+  >
+    <span class={cn(
       'w-2.5 h-2.5 rounded-full transition-all',
       active
         ? 'bg-primary scale-110'
         : 'bg-muted-foreground/30 hover:bg-muted-foreground/50'
-    )}
-    aria-label={label}
-    aria-current={active ? 'page' : undefined}
-  ></button>
+    )}></span>
+  </button>
 {/snippet}
 
 <Dialog.Root {open} {onOpenChange}>
@@ -166,6 +172,10 @@
         {helpPageMeta[currentPage].title}
       {/snippet}
     </DialogHeader>
+
+    <div aria-live="polite" aria-atomic="true" class="sr-only">
+      Page {currentPage + 1} of {totalPages}: {helpPageMeta[currentPage].title}
+    </div>
 
     <div class="flex-1 modal-scroll py-1">
       <!-- Page 0: Welcome -->
@@ -292,7 +302,7 @@
               </div>
               <div>
                 <SectionLabel variant="compact">Total Gen.</SectionLabel>
-                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">6.97<UnitSuffix hero>GW</UnitSuffix></div>
+                <div class="text-lg sm:text-xl font-numeric font-bold text-foreground">6,970<UnitSuffix hero>MW</UnitSuffix></div>
               </div>
               <div>
                 <SectionLabel variant="compact">Reserves</SectionLabel>
@@ -332,7 +342,7 @@
                     {@const config = GenerationTypeConfig[type]}
                     <div class="flex items-center gap-2">
                       <config.icon class={cn('h-3.5 w-3.5 shrink-0', config.tailwind.text)} aria-hidden="true" />
-                      <span class="text-[11px] text-muted-foreground/60 w-14 shrink-0">{config.name}</span>
+                      <span class="text-[11px] text-muted-foreground/80 w-14 shrink-0">{config.name}</span>
                       <div class="h-2.5 flex-1 rounded-full bg-foreground/10">
                         <div class="h-2.5 flex rounded-full overflow-hidden" style="width: {capacity}%">
                           <div class={cn('h-full', config.tailwind.bg)} style="width: {(output / capacity) * 100}%"></div>
@@ -403,11 +413,14 @@
           Previous
         </Button>
 
-        <div class="flex items-center gap-1.5" role="navigation" aria-label="Help pages">
+        <nav
+          class="flex items-center gap-1.5"
+          aria-label="Help pages"
+        >
           {#each helpPageMeta as page, idx}
             {@render pageDot(idx === currentPage, () => { currentPage = idx; }, `Go to ${page.title}`)}
           {/each}
-        </div>
+        </nav>
 
         {#if currentPage < totalPages - 1}
           <Button size="sm" onclick={goToNextPage} class="gap-1">

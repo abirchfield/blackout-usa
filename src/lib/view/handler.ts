@@ -41,6 +41,19 @@ export class InputHandler implements GridHandler {
   private boundHandleMouseUp: (e: MouseEvent) => void;
   private boundHandleWheel: (e: WheelEvent) => void;
 
+  // Touch event handlers
+  private boundHandleTouchStart: (e: TouchEvent) => void;
+  private boundHandleTouchMove: (e: TouchEvent) => void;
+  private boundHandleTouchEnd: (e: TouchEvent) => void;
+
+  // Touch state
+  private touchId: number | null = null;       // primary finger identifier
+  private pinchStartDist: number = 0;          // initial distance between two fingers
+  private pinchStartScale: number = 0;         // scale at pinch start
+  private pinchMidX: number = 0;               // midpoint screen X at pinch start
+  private pinchMidY: number = 0;               // midpoint screen Y at pinch start
+  private isPinching: boolean = false;
+
   // Cached bounding rect — invalidated on resize/scroll
   private cachedRect: DOMRect | null = null;
   private resizeObserver: ResizeObserver;
@@ -64,12 +77,19 @@ export class InputHandler implements GridHandler {
     this.boundHandleMouseLeave = this.handleMouseLeave.bind(this);
     this.boundHandleMouseUp = this.handleMouseUp.bind(this);
     this.boundHandleWheel = this.handleWheel.bind(this);
+    this.boundHandleTouchStart = this.handleTouchStart.bind(this);
+    this.boundHandleTouchMove = this.handleTouchMove.bind(this);
+    this.boundHandleTouchEnd = this.handleTouchEnd.bind(this);
 
     this.canvas.addEventListener("mousedown", this.boundHandleMouseDown);
     this.canvas.addEventListener("mousemove", this.boundHandleMouseMove);
     this.canvas.addEventListener("mouseleave", this.boundHandleMouseLeave);
     this.canvas.addEventListener("mouseup", this.boundHandleMouseUp);
     this.canvas.addEventListener("wheel", this.boundHandleWheel, { passive: false });
+    this.canvas.addEventListener("touchstart", this.boundHandleTouchStart, { passive: false });
+    this.canvas.addEventListener("touchmove", this.boundHandleTouchMove, { passive: false });
+    this.canvas.addEventListener("touchend", this.boundHandleTouchEnd);
+    this.canvas.addEventListener("touchcancel", this.boundHandleTouchEnd);
 
     // Invalidate cached rect on resize or scroll
     this.boundInvalidateRect = () => { this.cachedRect = null; };
@@ -85,6 +105,10 @@ export class InputHandler implements GridHandler {
     this.canvas.removeEventListener("mouseleave", this.boundHandleMouseLeave);
     this.canvas.removeEventListener("mouseup", this.boundHandleMouseUp);
     this.canvas.removeEventListener("wheel", this.boundHandleWheel);
+    this.canvas.removeEventListener("touchstart", this.boundHandleTouchStart);
+    this.canvas.removeEventListener("touchmove", this.boundHandleTouchMove);
+    this.canvas.removeEventListener("touchend", this.boundHandleTouchEnd);
+    this.canvas.removeEventListener("touchcancel", this.boundHandleTouchEnd);
     this.resizeObserver.disconnect();
     window.removeEventListener("scroll", this.boundInvalidateRect);
     if (this.moveRafId) {
@@ -157,62 +181,7 @@ export class InputHandler implements GridHandler {
 
   private processHover(e: MouseEvent) {
     const { offsetX, offsetY } = this.getMouseOffset(e);
-
-    this.state.hoverSub = null;
-    this.state.hoverBranch = null;
-
-    const worldX = this.state.x0 + offsetX / this.state.scaleX;
-    const worldY = this.state.y0 - offsetY / this.state.scaleY;
-    const scaleFactor = Math.sqrt(this.state.scaleX / this.state.referenceScale);
-    const hoverRadius = getDynamicSubstationRadius(scaleFactor, true);
-    const hoverRadiusSq = (hoverRadius / this.state.scaleX) * (hoverRadius / this.state.scaleX);
-
-    this.ensureCachedArrays();
-
-    for (const sub of this.subsArray) {
-      const dx = worldX - sub.Longitude;
-      const dy = worldY - sub.Latitude;
-      if (dx * dx + dy * dy < hoverRadiusSq) {
-        this.state.hoverSub = sub;
-        break;
-      }
-    }
-
-    if (this.state.hoverSub === null) {
-      let mindist = ViewConfig.BRANCH_HOVER_RADIUS;
-
-      const normalRadius = getDynamicBranchRadius(scaleFactor, false);
-      const halfOffPx = normalRadius * DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR / 2;
-
-      for (const branch of this.branchArray) {
-        const s1 = branch.sub1;
-        const s2 = branch.sub2;
-        if (!s1 || !s2 || !branch.dist || branch.dist === 0) continue;
-
-        const dx = s2.Longitude - s1.Longitude;
-        const dy = s2.Latitude - s1.Latitude;
-        const t = ((worldX - s1.Longitude) * dx + (worldY - s1.Latitude) * dy) / (branch.dist * branch.dist);
-
-        if (t >= 0 && t <= 1) {
-          const raw = dy * (worldX - s1.Longitude) - dx * (worldY - s1.Latitude);
-          const signedPerpPx = -raw / branch.dist * this.state.scaleX;
-
-          // Account for visual offset of parallel siblings
-          let effectiveDist: number;
-          if (branch.sibling) {
-            const offset = branch.Number < branch.sibling ? -1 : 1;
-            effectiveDist = Math.abs(signedPerpPx - offset * halfOffPx);
-          } else {
-            effectiveDist = Math.abs(signedPerpPx);
-          }
-
-          if (effectiveDist < mindist) {
-            this.state.hoverBranch = branch;
-            mindist = effectiveDist;
-          }
-        }
-      }
-    }
+    this.hitTestAt(offsetX, offsetY);
   }
 
   private handleMouseUp(e: MouseEvent) {
@@ -240,6 +209,179 @@ export class InputHandler implements GridHandler {
       this.moveRafId = 0;
     }
   }
+
+  // ── Touch handlers ──────────────────────────────────────────────
+
+  private touchOffset(t: Touch): { offsetX: number; offsetY: number } {
+    const rect = this.getRect();
+    return { offsetX: t.clientX - rect.left, offsetY: t.clientY - rect.top };
+  }
+
+  private static pinchDist(a: Touch, b: Touch): number {
+    const dx = a.clientX - b.clientX;
+    const dy = a.clientY - b.clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  private handleTouchStart(e: TouchEvent) {
+    // Two-finger pinch start
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      this.isPinching = true;
+      this.state.inDrag = false;
+      const [a, b] = [e.touches[0], e.touches[1]];
+      this.pinchStartDist = InputHandler.pinchDist(a, b);
+      this.pinchStartScale = this.state.scaleX;
+      const rect = this.getRect();
+      this.pinchMidX = (a.clientX + b.clientX) / 2 - rect.left;
+      this.pinchMidY = (a.clientY + b.clientY) / 2 - rect.top;
+      return;
+    }
+
+    // Single-finger drag/tap start
+    if (e.touches.length === 1) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      this.touchId = touch.identifier;
+      const { offsetX, offsetY } = this.touchOffset(touch);
+      this.state.inDrag = true;
+      this.state.dragStartX = offsetX;
+      this.state.dragStartY = offsetY;
+      this.state.dragOrigX = offsetX;
+      this.state.dragOrigY = offsetY;
+
+      // Run hover detection at tap point so hoverSub/hoverBranch is set for touchEnd
+      this.hitTestAt(offsetX, offsetY);
+    }
+  }
+
+  private handleTouchMove(e: TouchEvent) {
+    // Pinch zoom
+    if (this.isPinching && e.touches.length >= 2) {
+      e.preventDefault();
+      const [a, b] = [e.touches[0], e.touches[1]];
+      const dist = InputHandler.pinchDist(a, b);
+      if (this.pinchStartDist > 0) {
+        const factor = dist / this.pinchStartDist;
+        let newScale = this.pinchStartScale * factor;
+        newScale = Math.max(this.state.scaleMin, Math.min(newScale, this.state.scaleMax));
+        if (newScale !== this.state.scaleX) {
+          const actualFactor = newScale / this.state.scaleX;
+          this.state.scaleX = newScale;
+          this.state.scaleY = newScale;
+          this.state.x0 += this.pinchMidX / (this.state.scaleX / actualFactor) * (1 - 1 / actualFactor);
+          this.state.y0 -= this.pinchMidY / (this.state.scaleX / actualFactor) * (1 - 1 / actualFactor);
+        }
+      }
+      return;
+    }
+
+    // Single-finger pan
+    if (e.touches.length === 1 && this.state.inDrag) {
+      e.preventDefault();
+      const touch = e.touches[0];
+      if (touch.identifier !== this.touchId) return;
+      const { offsetX, offsetY } = this.touchOffset(touch);
+      const prevX0 = this.state.x0;
+      const prevY0 = this.state.y0;
+      const deltaX = offsetX - this.state.dragStartX;
+      const deltaY = offsetY - this.state.dragStartY;
+      this.state.x0 -= deltaX / this.state.scaleX;
+      this.state.y0 += deltaY / this.state.scaleY;
+      this.clampPanBounds(prevX0, prevY0);
+      this.state.dragStartX = offsetX;
+      this.state.dragStartY = offsetY;
+    }
+  }
+
+  private handleTouchEnd(e: TouchEvent) {
+    if (this.isPinching) {
+      // End pinch when fewer than 2 fingers remain
+      if (e.touches.length < 2) this.isPinching = false;
+      return;
+    }
+
+    // Check for tap (vs drag) — same threshold as mouse click
+    if (this.state.inDrag) {
+      // Find the ended touch
+      const ended = Array.from(e.changedTouches).find(t => t.identifier === this.touchId);
+      if (ended) {
+        const { offsetX, offsetY } = this.touchOffset(ended);
+        const dx = offsetX - this.state.dragOrigX;
+        const dy = offsetY - this.state.dragOrigY;
+        if (dx * dx + dy * dy < CLICK_DRAG_THRESHOLD_SQ) {
+          // Tap — trigger interaction
+          if (this.state.hoverSub && this.onInteract) {
+            this.onInteract("sub", this.state.hoverSub);
+          } else if (this.state.hoverBranch && this.onInteract) {
+            this.onInteract("branch", this.state.hoverBranch);
+          }
+        }
+      }
+    }
+
+    this.state.inDrag = false;
+    this.touchId = null;
+    this.state.hoverSub = null;
+    this.state.hoverBranch = null;
+  }
+
+  /** Core hit-test: find the substation or branch nearest to a screen point. */
+  private hitTestAt(offsetX: number, offsetY: number) {
+    this.state.hoverSub = null;
+    this.state.hoverBranch = null;
+
+    const worldX = this.state.x0 + offsetX / this.state.scaleX;
+    const worldY = this.state.y0 - offsetY / this.state.scaleY;
+    const scaleFactor = Math.sqrt(this.state.scaleX / this.state.referenceScale);
+    const hoverRadius = getDynamicSubstationRadius(scaleFactor, true);
+    const hoverRadiusSq = (hoverRadius / this.state.scaleX) * (hoverRadius / this.state.scaleX);
+
+    this.ensureCachedArrays();
+
+    for (const sub of this.subsArray) {
+      const dx = worldX - sub.Longitude;
+      const dy = worldY - sub.Latitude;
+      if (dx * dx + dy * dy < hoverRadiusSq) {
+        this.state.hoverSub = sub;
+        return;
+      }
+    }
+
+    let mindist = ViewConfig.BRANCH_HOVER_RADIUS;
+    const normalRadius = getDynamicBranchRadius(scaleFactor, false);
+    const halfOffPx = normalRadius * DrawingConfig.SECOND_CIRCUIT_OFFSET_FACTOR / 2;
+
+    for (const branch of this.branchArray) {
+      const s1 = branch.sub1;
+      const s2 = branch.sub2;
+      if (!s1 || !s2 || !branch.dist || branch.dist === 0) continue;
+
+      const dx = s2.Longitude - s1.Longitude;
+      const dy = s2.Latitude - s1.Latitude;
+      const t = ((worldX - s1.Longitude) * dx + (worldY - s1.Latitude) * dy) / (branch.dist * branch.dist);
+
+      if (t >= 0 && t <= 1) {
+        const raw = dy * (worldX - s1.Longitude) - dx * (worldY - s1.Latitude);
+        const signedPerpPx = -raw / branch.dist * this.state.scaleX;
+
+        let effectiveDist: number;
+        if (branch.sibling) {
+          const offset = branch.Number < branch.sibling ? -1 : 1;
+          effectiveDist = Math.abs(signedPerpPx - offset * halfOffPx);
+        } else {
+          effectiveDist = Math.abs(signedPerpPx);
+        }
+
+        if (effectiveDist < mindist) {
+          this.state.hoverBranch = branch;
+          mindist = effectiveDist;
+        }
+      }
+    }
+  }
+
+  // ── Mouse wheel ─────────────────────────────────────────────────
 
   private handleWheel(e: WheelEvent) {
     e.preventDefault();

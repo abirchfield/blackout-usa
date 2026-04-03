@@ -152,7 +152,7 @@ export class WeatherModel implements Model, WeatherModelApi {
     }
 
     /** Apply weather models for this tick, clamping all values to [0,1]. */
-    tick(dt: number): void {
+    tick(_dt: number): void {
         const hour = this.currentHour();
         const elapsed = this.elapsedHours();
 

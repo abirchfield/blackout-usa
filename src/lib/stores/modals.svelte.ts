@@ -1,4 +1,3 @@
-import { tick } from 'svelte';
 import type { ResultDetails, StatsSnapshot } from '$lib/types';
 
 export type ModalId =
@@ -20,7 +19,14 @@ export interface ModalPayload {
   gameStatistics?: StatsSnapshot;
 }
 
-function createModalState() {
+export type ModalState = ReturnType<typeof createModalState>;
+
+/**
+ * Factory for modal state. Each consumer creates its own instance,
+ * scoped to the component's lifecycle. No singleton — no stale state
+ * between SvelteKit page navigations.
+ */
+export function createModalState() {
   let activeModal = $state<ModalId | null>(null);
   let payload = $state<ModalPayload>({});
   let lastFocused: HTMLElement | null = null;
@@ -47,19 +53,6 @@ function createModalState() {
     });
   }
 
-  /** Close modal and wait for DOM + animation frame teardown before next action. */
-  async function closeModalAndWait() {
-    activeModal = null;
-    payload = {};
-    await tick();
-    await new Promise<void>((resolve) => requestAnimationFrame(() => resolve()));
-    requestAnimationFrame(() => {
-      if (lastFocused && document.contains(lastFocused)) {
-        lastFocused.focus();
-      }
-    });
-  }
-
   /** Toggle callback for bits-ui Dialog open state. */
   function onOpenChange(id: ModalId, open: boolean) {
     if (open) {
@@ -69,13 +62,6 @@ function createModalState() {
     }
   }
 
-  /** Swap the active modal without focus save/restore. */
-  async function replaceModal(id: ModalId, newPayload?: ModalPayload) {
-    await closeModalAndWait();
-    payload = newPayload || {};
-    activeModal = id;
-  }
-
   return {
     get activeModal() { return activeModal; },
     get payload() { return payload; },
@@ -83,11 +69,6 @@ function createModalState() {
     get isPausingModal() { return isPausingModal; },
     openModal,
     closeModal,
-    closeModalAndWait,
     onOpenChange,
-    replaceModal,
   };
 }
-
-/** Singleton modal state manager (open/close/replace modals with payload). */
-export const modals = createModalState();

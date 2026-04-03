@@ -5,12 +5,12 @@
   import { loadCase, DEFAULT_CASE, CASE_NAMES } from '$lib/cases/registry';
   import { theme } from '$lib/stores/theme.svelte';
   import { settings } from '$lib/stores/settings.svelte';
-  import { modals } from '$lib/stores/modals.svelte';
   import { PersonStanding, ExternalLink } from 'lucide-svelte';
 
   let mapContainer: HTMLDivElement;
   let engine: GameEngine | null = null;
   let selectedCase = $state(DEFAULT_CASE);
+  let showAccessibility = $state(false);
 
   let gameUrl = $derived(`${base}/${selectedCase}`);
   let tutorialUrl = $derived(`${base}/${selectedCase}?tutorial=true`);
@@ -70,7 +70,7 @@
       <Button
         variant="ghost"
         size="icon"
-        onclick={() => modals.openModal('accessibility')}
+        onclick={() => showAccessibility = true}
         aria-label="Accessibility Settings"
       >
         <PersonStanding class="h-6 w-6" />
@@ -133,11 +133,11 @@
       class="h-full w-full"
     ></div>
   </div>
-  {#if modals.activeModal === 'accessibility'}
+  {#if showAccessibility}
     {#await import('$components/modals/AccessibilityModal.svelte') then { default: AccessibilityModal }}
       <AccessibilityModal
         open={true}
-        onOpenChange={(open: boolean) => modals.onOpenChange('accessibility', open)}
+        onOpenChange={(open: boolean) => showAccessibility = open}
       />
     {/await}
   {/if}

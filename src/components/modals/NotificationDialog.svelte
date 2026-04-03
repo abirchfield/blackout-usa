@@ -35,7 +35,7 @@
             </div>
             <ul class="flex flex-col" aria-label={ariaLabel}>
               {#each items as item (item.id)}
-                <li class="flex items-start gap-3 border-b p-3">
+                <li class="flex items-start gap-3 border-b p-3" role={item.critical ? 'alert' : undefined}>
                   <Badge variant="secondary" class="mt-0.5 whitespace-nowrap">{item.time}</Badge>
                   <p class="flex-1 text-sm leading-snug {item.critical ? 'text-destructive font-semibold' : ''}">
                     {#if item.critical}<span class="sr-only">Critical: </span>{/if}
@@ -43,9 +43,9 @@
                   </p>
                   <Button
                     variant="ghost"
-                    size="icon"
+                    size="icon-sm"
                     onclick={() => onRemove(item.id)}
-                    class="h-6 w-6 shrink-0"
+                    class="shrink-0 -mr-1"
                     aria-label="Dismiss: {item.message}"
                   >
                     <X class="h-4 w-4" aria-hidden="true" />

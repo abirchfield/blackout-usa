@@ -89,6 +89,7 @@ export class GameEngine {
   public state: GameState;
   private _stats!: StatsSnapshot;
   get stats(): StatsSnapshot { return this._stats; }
+  get caseName(): string { return this.gridCase.name; }
 
   // --- Forecast ---
   private _forecast: ForecastData | null = null;
@@ -159,7 +160,7 @@ export class GameEngine {
     this.weather = new WeatherModel(this.state, this.timeConfig, this._latitude);
     this.weather.setup();
 
-    this.view = new GridView(element, options.interactive !== false);
+    this.view = new GridView(element, options.interactive !== false, gridCase.name);
     this.view.init(this.state, {
       onTripHottestLine: () => { this.grid.disconnectHottestLine(); this.commit(); },
       onShedMinLoad:     () => { this.grid.shedMinLoad();     this.commit(); },

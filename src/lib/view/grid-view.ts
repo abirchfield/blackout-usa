@@ -76,7 +76,7 @@ export class GridView implements GridViewApi {
     hoverFlowOffset: -1,
   };
 
-  constructor(element: HTMLDivElement, interactive = true) {
+  constructor(element: HTMLDivElement, interactive = true, caseName = "electrical grid") {
     this.container = element;
     this.interactive = interactive;
 
@@ -87,7 +87,7 @@ export class GridView implements GridViewApi {
     this.canvas.style.width = "100%";
     this.canvas.style.height = "100%";
     this.canvas.setAttribute("tabindex", "0");
-    this.canvas.setAttribute("aria-label", "Interactive Texas electrical grid map");
+    this.canvas.setAttribute("aria-label", `Interactive ${caseName} map`);
     this.canvas.setAttribute("role", "application");
     element.appendChild(this.canvas);
 

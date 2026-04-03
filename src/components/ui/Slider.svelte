@@ -15,6 +15,11 @@
   }
 
   let { value = $bindable(0), min = 0, max = 100, step = 1, disabled, onValueChange, onValueCommit, class: className, ...rest }: Props = $props();
+
+  // svelte-ignore state_referenced_locally
+  if (import.meta.env.DEV && !rest['aria-label'] && !rest['aria-labelledby']) {
+    console.warn('Slider: missing aria-label or aria-labelledby. Provide one for accessibility.');
+  }
 </script>
 
 <Slider.Root
