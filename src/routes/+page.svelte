@@ -37,7 +37,6 @@
         keyBindings: settings.current.keyBindings,
       });
       engine.navigateToDay(1);
-      engine.startDay();
       engine.startLoop();
     });
 

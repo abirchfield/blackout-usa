@@ -174,91 +174,78 @@
   {/if}
 </div>
 
-<!-- Modals -->
-{#if modals.activeModal === 'help'}
-  <HelpModal
-    open={true}
-    onOpenChange={(open: boolean) => {
-      if (!open && isInitialTutorial) {
-        isInitialTutorial = false;
-        modals.closeModal();
-        engine.navigateToDay(1);
-        return;
-      }
-      modals.onOpenChange('help', open);
-    }}
-  />
-{/if}
+<!-- Modals — always mounted, controlled via `open` prop so bits-ui can
+     properly manage its Portal/Overlay lifecycle (no orphaned overlays). -->
+<HelpModal
+  open={modals.activeModal === 'help'}
+  onOpenChange={(open: boolean) => {
+    if (!open && isInitialTutorial) {
+      isInitialTutorial = false;
+      modals.closeModal();
+      engine.navigateToDay(1);
+      return;
+    }
+    modals.onOpenChange('help', open);
+  }}
+/>
 
-{#if modals.activeModal === 'accessibility'}
-  <AccessibilityModal
-    open={true}
-    onOpenChange={(open: boolean) => modals.onOpenChange('accessibility', open)}
-  />
-{/if}
+<AccessibilityModal
+  open={modals.activeModal === 'accessibility'}
+  onOpenChange={(open: boolean) => modals.onOpenChange('accessibility', open)}
+/>
 
-{#if modals.activeModal === 'grid'}
-  <GridModal
-    open={true}
-    substationId={modals.payload.substationId}
-    branchId={modals.payload.branchId}
-    onClose={modals.closeModal}
-  />
-{/if}
+<GridModal
+  open={modals.activeModal === 'grid'}
+  substationId={modals.payload.substationId}
+  branchId={modals.payload.branchId}
+  onClose={modals.closeModal}
+/>
 
-{#if modals.activeModal === 'quit'}
-  <QuitModal
-    open={true}
-    onOpenChange={(open: boolean) => modals.onOpenChange('quit', open)}
-    day={engine.targetDay}
-    onQuitToStart={() => goto(`${base}/`)}
-    onReplayDay={(day: number) => engine.navigateToDay(day)}
-    onNextDay={() => engine.advanceToNextDay()}
-  />
-{/if}
+<QuitModal
+  open={modals.activeModal === 'quit'}
+  onOpenChange={(open: boolean) => modals.onOpenChange('quit', open)}
+  day={engine.targetDay}
+  onQuitToStart={() => goto(`${base}/`)}
+  onReplayDay={(day: number) => engine.navigateToDay(day)}
+  onNextDay={() => engine.advanceToNextDay()}
+/>
 
-{#if modals.activeModal === 'day-briefing' || modals.activeModal === 'day-results'}
-  <DayTransitionModal
-    open={true}
-    mode={modals.activeModal === 'day-results' ? 'results' : 'briefing'}
-    targetDay={modals.payload.targetDay ?? 1}
-    info={modals.payload.info}
-    resultDetails={modals.payload.resultDetails}
-    gameStatistics={modals.payload.gameStatistics ?? engine.stats}
-    onStartDay={() => { engine.startDay(); modals.closeModal(); }}
-    onClose={modals.closeModal}
-    onReplayDay={(day: number) => engine.navigateToDay(day)}
-    onNextDay={() => engine.advanceToNextDay()}
-  />
-{/if}
+<DayTransitionModal
+  open={modals.activeModal === 'day-briefing' || modals.activeModal === 'day-results'}
+  mode={modals.activeModal === 'day-results' ? 'results' : 'briefing'}
+  targetDay={modals.payload.targetDay ?? 1}
+  info={modals.payload.info}
+  resultDetails={modals.payload.resultDetails}
+  gameStatistics={modals.payload.gameStatistics ?? engine.stats}
+  onStartDay={() => { engine.startDay(); modals.closeModal(); }}
+  onClose={modals.closeModal}
+  onReplayDay={(day: number) => engine.navigateToDay(day)}
+  onNextDay={() => engine.advanceToNextDay()}
+/>
 
-{#if modals.activeModal === 'alerts'}
-  <NotificationDialog
-    open={true}
-    onOpenChange={(open: boolean) => modals.onOpenChange('alerts', open)}
-    title="Alerts"
-    description="Critical and informational messages about the grid status."
-    items={engineState.alerts}
-    onRemove={(id) => engine.dismissAlert(id)}
-    onDismissAll={() => engine.dismissAllAlerts()}
-    emptyMessage="No alerts to show"
-    ariaLabel="List of alerts"
-  />
-{/if}
+<NotificationDialog
+  open={modals.activeModal === 'alerts'}
+  onOpenChange={(open: boolean) => modals.onOpenChange('alerts', open)}
+  title="Alerts"
+  description="Critical and informational messages about the grid status."
+  items={engineState.alerts}
+  onRemove={(id) => engine.dismissAlert(id)}
+  onDismissAll={() => engine.dismissAllAlerts()}
+  emptyMessage="No alerts to show"
+  ariaLabel="List of alerts"
+/>
 
-{#if modals.activeModal === 'hints'}
-  <NotificationDialog
-    open={true}
-    onOpenChange={(open: boolean) => modals.onOpenChange('hints', open)}
-    title="Hints"
-    description="Suggestions and guidance for managing the grid."
-    items={engineState.hints}
-    onRemove={(id) => engine.dismissHint(id)}
-    onDismissAll={() => engine.dismissAllHints()}
-    emptyMessage="No hints to show"
-    ariaLabel="List of hints"
-  />
-{/if}
+<NotificationDialog
+  open={modals.activeModal === 'hints'}
+  onOpenChange={(open: boolean) => modals.onOpenChange('hints', open)}
+  title="Hints"
+  description="Suggestions and guidance for managing the grid."
+  items={engineState.hints}
+  onRemove={(id) => engine.dismissHint(id)}
+  onDismissAll={() => engine.dismissAllHints()}
+  emptyMessage="No hints to show"
+  ariaLabel="List of hints"
+/>
 
 <div aria-live="polite" aria-atomic="true" class="sr-only">
   {announcement}
@@ -270,7 +257,7 @@
       "bg-sidebar overflow-y-auto",
       mobile.value
         ? "border-t-2 border-border"
-        : "w-[clamp(280px,35%,400px)] flex-shrink-0 border-r border-border"
+        : "w-[clamp(280px,35%,400px)] shrink-0 border-r border-border"
     )}
     aria-label="Game Sidebar"
   >

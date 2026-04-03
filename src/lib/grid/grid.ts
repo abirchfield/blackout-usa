@@ -302,7 +302,9 @@ export class GridModel implements GridModelApi {
 
   private calc_frequency({ totalLoad, genMin, genMax, genSetpoint }: { totalLoad: number; genMin: number; genMax: number; genSetpoint: number }): void {
     if (genMax < MIN_GENERATION_FOR_FREQ_STABILITY_MW) {
-      this.state.frequency = 0.0;
+      // Gradual decay: less generation = faster collapse, giving the player a few ticks to react
+      const severity = 1 - (genMax / MIN_GENERATION_FOR_FREQ_STABILITY_MW);
+      this.state.frequency -= FREQ_STEP_LARGE * (1 + severity * 4);
       return;
     }
 
@@ -326,6 +328,11 @@ export class GridModel implements GridModelApi {
       // genMax === genMin, no droop range — nudge toward nominal
       if (this.state.frequency < BASE_FREQUENCY) this.state.frequency += FREQ_STEP_SMALL;
       else if (this.state.frequency > BASE_FREQUENCY) this.state.frequency -= FREQ_STEP_SMALL;
+    }
+
+    // Last defense: if anything upstream produced NaN/Infinity, collapse to zero
+    if (!Number.isFinite(this.state.frequency)) {
+      this.state.frequency = 0;
     }
   }
 

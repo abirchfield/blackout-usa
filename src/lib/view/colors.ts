@@ -28,7 +28,7 @@ const toHex: (color: string) => string = (() => {
     if (!ctx) {
       const c = document.createElement('canvas');
       c.width = 1; c.height = 1;
-      ctx = c.getContext('2d')!;
+      ctx = c.getContext('2d', { willReadFrequently: true })!;
     }
     ctx.clearRect(0, 0, 1, 1);
     ctx.fillStyle = '#000';

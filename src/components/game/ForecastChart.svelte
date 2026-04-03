@@ -334,6 +334,6 @@
   });
 </script>
 
-<div bind:this={containerEl} class="h-[44px] sm:h-[52px] w-full" role="img" aria-label={chartAriaLabel}>
+<div bind:this={containerEl} class="h-11 sm:h-[52px] w-full" role="img" aria-label={chartAriaLabel}>
   <canvas bind:this={canvasEl} aria-hidden="true" class="block w-full h-full"></canvas>
 </div>

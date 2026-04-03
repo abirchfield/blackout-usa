@@ -45,6 +45,14 @@ export class UnionFind {
   }
 }
 
+/** Return false if any of the first `len` elements is NaN or Infinity. */
+export function isFiniteArray(arr: Float64Array, len: number): boolean {
+  for (let i = 0; i < len; i++) {
+    if (!Number.isFinite(arr[i])) return false;
+  }
+  return true;
+}
+
 // =========================================================================
 // Dense Cholesky Solver (for symmetric positive-definite matrices)
 // =========================================================================
@@ -54,14 +62,14 @@ export class UnionFind {
  * A is n×n row-major Float64Array (only lower triangle is read/written).
  * Returns false if the matrix is not positive definite.
  */
-export function choleskyFactorize(A: Float64Array, n: number): boolean {
+export function choleskyFactorize(A: Float64Array, n: number, minDiag = 1e-10): boolean {
   for (let i = 0; i < n; i++) {
     for (let j = 0; j <= i; j++) {
       let sum = A[i * n + j];
       for (let k = 0; k < j; k++) sum -= A[i * n + k] * A[j * n + k];
 
       if (i === j) {
-        if (sum <= 0) return false;
+        if (sum < minDiag) return false;
         A[i * n + j] = Math.sqrt(sum);
       } else {
         A[i * n + j] = sum / A[j * n + j];

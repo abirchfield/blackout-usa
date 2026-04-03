@@ -39,7 +39,11 @@
   let lastShownId: number | null = $state(null);
 
   $effect(() => {
-    if (engineState.alerts.length === 0) return;
+    if (engineState.alerts.length === 0) {
+      visibleAlert = null;
+      lastShownId = null;
+      return;
+    }
     const latest = engineState.alerts[0];
     if (!latest.critical) return;
     if (latest.id === lastShownId) return;
@@ -81,12 +85,12 @@
   <div class="flex shrink-0">
     <div class="flex items-center gap-2 flex-nowrap">
       <h1 class="text-xl sm:text-2xl font-bold font-sans text-foreground">
-        <span class={isBlackout ? 'text-[var(--color-alert-emphasis)] animate-pulse' : undefined}>Blackout</span> USA
+        <span class={isBlackout ? 'text-(--color-alert-emphasis) animate-pulse' : undefined}>Blackout</span> USA
       </h1>
       <!-- Desktop Controls -->
       <div class="hidden md:flex items-center gap-1 border-l ml-2 pl-2">
         {@render timeControls()}
-        <Button variant="ghost" size="icon" onclick={() => onOpenModal('alerts')} class={cn('relative', alertsCount > 0 && 'text-[var(--color-alert)]')} aria-label="View alerts, {alertsCount} new notifications" disabled={controlsDisabled}>
+        <Button variant="ghost" size="icon" onclick={() => onOpenModal('alerts')} class={cn('relative', alertsCount > 0 && 'text-(--color-alert)')} aria-label="View alerts, {alertsCount} new notifications" disabled={controlsDisabled}>
           <Bell class="h-5 w-5" />
           {#if alertsCount > 0}
             {@render notificationDot(true, 'bg-[var(--color-alert)]')}
@@ -185,7 +189,7 @@
           <HelpCircle class="mr-2 h-4 w-4" aria-hidden="true" />
           How to Play
         </Button>
-        <Button variant="ghost" onclick={() => { onOpenModal('quit'); closeMenu(); }} class="justify-start text-[var(--color-alert)] hover:text-[var(--color-alert-emphasis)] hover:bg-[var(--color-alert)]/10">
+        <Button variant="ghost" onclick={() => { onOpenModal('quit'); closeMenu(); }} class="justify-start text-(--color-alert) hover:text-(--color-alert-emphasis) hover:bg-(--color-alert)/10">
           <LogOut class="mr-2 h-4 w-4" aria-hidden="true" />
           Quit Game
         </Button>

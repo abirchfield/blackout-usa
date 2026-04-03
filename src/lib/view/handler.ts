@@ -203,6 +203,7 @@ export class InputHandler implements GridHandler {
     this.state.inDrag = false;
     this.state.hoverBranch = null;
     this.state.hoverSub = null;
+    this.canvas.style.cursor = '';
     this.pendingMoveEvent = null;
     if (this.moveRafId) {
       cancelAnimationFrame(this.moveRafId);
@@ -344,6 +345,7 @@ export class InputHandler implements GridHandler {
       const dy = worldY - sub.Latitude;
       if (dx * dx + dy * dy < hoverRadiusSq) {
         this.state.hoverSub = sub;
+        this.canvas.style.cursor = 'pointer';
         return;
       }
     }
@@ -379,6 +381,8 @@ export class InputHandler implements GridHandler {
         }
       }
     }
+
+    this.canvas.style.cursor = this.state.hoverBranch ? 'pointer' : '';
   }
 
   // ── Mouse wheel ─────────────────────────────────────────────────

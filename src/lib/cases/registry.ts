@@ -47,7 +47,16 @@ export async function loadCase(caseName: string): Promise<GridCase> {
     throw new Error(`Case asset mismatch for: ${caseName}. Re-run data generation and verify scenario module exists.`);
   }
 
-  const [bundle, scenario] = await Promise.all([loadBundle(), loadScenario()]);
+  let bundle, scenario;
+  try {
+    [bundle, scenario] = await Promise.all([loadBundle(), loadScenario()]);
+  } catch (err) {
+    throw new Error(`Failed to load case "${caseName}": ${err instanceof Error ? err.message : err}`);
+  }
+
+  if (!scenario.scenarios || typeof scenario.scenarios !== 'object') {
+    throw new Error(`Case "${caseName}" scenario module is missing a "scenarios" export.`);
+  }
 
   return {
     ...bundle.default,
