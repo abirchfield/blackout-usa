@@ -33,3 +33,10 @@ npm run check        # run svelte-check for type errors
 ```
 
 `npm run generate` runs `data/runme.py` which reads the case JSON files and writes `data/_out/`. You only need to re-run it when case data changes.
+
+
+### Acknowledgments
+
+This digital educational experience was developed by Adam Birchfield and Luke Lowery at Texas A&M University.
+
+Support from the US National Science Foundation (NSF) under award 2442131 is gratefully acknowledged.
