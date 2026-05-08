@@ -2,7 +2,7 @@
   import { base } from '$app/paths';
   import Button from '$components/ui/Button.svelte';
   import { GameEngine } from '$lib/engine';
-  import { loadCase, DEFAULT_CASE, CASE_NAMES } from '$lib/cases/registry';
+  import { loadCase, DEFAULT_CASE } from '$lib/cases/registry';
   import { theme } from '$lib/stores/theme.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { PersonStanding, ExternalLink } from 'lucide-svelte';
@@ -79,7 +79,7 @@
       <h1 class="text-3xl font-bold">Welcome to the Blackout USA Game!</h1>
       <p>
         Can you efficiently operate an electrical grid and keep it safe
-        from a blackout? Choose a map to play.
+        from a blackout?
       </p>
       <p class="text-sm text-muted-foreground">
         This game was developed by the research group of Prof. Adam
@@ -97,24 +97,6 @@
         </a>.
       </p>
     </div>
-    {#if CASE_NAMES.length > 1}
-      <div class="mt-4">
-        <p class="text-sm font-medium text-muted-foreground uppercase tracking-wide">Select Grid</p>
-        <div class="mt-2 flex gap-2 flex-wrap" role="group" aria-label="Grid selection">
-          {#each CASE_NAMES as name}
-            <button
-              onclick={() => selectedCase = name}
-              aria-pressed={selectedCase === name}
-              class="px-4 py-2 rounded-md border text-sm font-medium transition-colors cursor-pointer {selectedCase === name
-                ? 'bg-primary text-primary-foreground border-primary'
-                : 'bg-muted text-muted-foreground border-border hover:bg-accent hover:text-accent-foreground'}"
-            >
-              {name}
-            </button>
-          {/each}
-        </div>
-      </div>
-    {/if}
     <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4">
       <Button variant="secondary" href={tutorialUrl} data-sveltekit-preload-data="tap" class="text-xl py-6 cursor-pointer">
         How to Play
