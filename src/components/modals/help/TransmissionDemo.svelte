@@ -54,7 +54,7 @@
   {@const styles = {
     normal: { stroke: 'var(--foreground)', dasharray: 'none' },
     overloaded: { stroke: 'var(--color-warning)', dasharray: 'none' },
-    critical: { stroke: 'var(--color-overload-critical)', dasharray: '8,4' },
+    critical: { stroke: 'var(--color-overload-critical)', dasharray: 'none' },
     tripped: { stroke: 'var(--color-tripped)', dasharray: '5,5' },
     out: { stroke: 'var(--foreground)', dasharray: '5,5' },
   }}
@@ -94,7 +94,7 @@
       {@render lineExample('out', 'Out-of-Service')}
     </div>
     <p class="text-xs text-muted-foreground text-center mt-2">
-      Above 100%: yellow. Above 120%: red with dashing. Tripped: disconnected.
+      Above 100%: yellow. Above 120%: orange. Tripped or out-of-service: dashed.
     </p>
   </div>
 

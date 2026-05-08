@@ -27,61 +27,59 @@
   let isTabular = $derived(settings.current.viewMode === 'tabular');
 </script>
 
-{#if open}
-  <Dialog.Root {open} {onOpenChange}>
-    <DialogContent id="accessibility-modal" class="sm:max-w-lg">
-      <DialogHeader title="Settings" description="Customize your experience with display and accessibility options." />
-      <div class="space-y-6 py-4 max-h-[65vh] modal-scroll">
-        <!-- Display Section -->
-        <section class="space-y-1">
-          <div class="mb-3">
-            <h3 class="text-sm font-semibold text-foreground">Display</h3>
-            <p class="text-xs text-muted-foreground">Customize colors, contrast, and text size</p>
-          </div>
-          <div class="space-y-0.5">
-            <SettingRow label="Color Theme" description="Light, dark, or match system" htmlFor="theme-select-modal" class="hover:bg-accent/50">{@render themeSelect()}</SettingRow>
-            <SettingRow label="Font Size" description="Adjust text size across the app" htmlFor="font-size-select-modal" class="hover:bg-accent/50">{@render fontSizeSelect()}</SettingRow>
-            <SettingRow label="High Contrast" description="Increase visual distinction" htmlFor="high-contrast-toggle-modal" class="hover:bg-accent/50">{@render highContrastToggle()}</SettingRow>
-          </div>
-        </section>
+<Dialog.Root {open} {onOpenChange}>
+  <DialogContent id="accessibility-modal" class="sm:max-w-lg">
+    <DialogHeader title="Settings" description="Customize your experience with display and accessibility options." />
+    <div class="space-y-6 py-4 max-h-[65vh] modal-scroll">
+      <!-- Display Section -->
+      <section class="space-y-1">
+        <div class="mb-3">
+          <h3 class="text-sm font-semibold text-foreground">Display</h3>
+          <p class="text-xs text-muted-foreground">Customize colors, contrast, and text size</p>
+        </div>
+        <div class="space-y-0.5">
+          <SettingRow label="Color Theme" description="Light, dark, or match system" htmlFor="theme-select-modal" class="hover:bg-accent/50">{@render themeSelect()}</SettingRow>
+          <SettingRow label="Font Size" description="Adjust text size across the app" htmlFor="font-size-select-modal" class="hover:bg-accent/50">{@render fontSizeSelect()}</SettingRow>
+          <SettingRow label="High Contrast" description="Increase visual distinction" htmlFor="high-contrast-toggle-modal" class="hover:bg-accent/50">{@render highContrastToggle()}</SettingRow>
+        </div>
+      </section>
 
-        <!-- Grid View Section -->
-        <section class="space-y-1">
-          <div class="mb-3">
-            <h3 class="text-sm font-semibold text-foreground">Grid View</h3>
-            <p class="text-xs text-muted-foreground">Configure how the power grid is displayed</p>
-          </div>
-          <div class="space-y-0.5">
-            <SettingRow label="Display Mode" description="Interactive map or data tables" htmlFor="view-mode-select" class="hover:bg-accent/50">{@render viewModeSelect()}</SettingRow>
-            <SettingRow label="Animations" description="Animated power flow on lines" htmlFor="animations-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render animationsToggle()}</SettingRow>
-            <SettingRow label="Map Labels" description="Show substation names on map" htmlFor="map-labels-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render mapLabelsToggle()}</SettingRow>
-            <SettingRow label="Zoom Speed" description="Mouse wheel sensitivity" htmlFor="zoom-sensitivity-slider" disabled={isTabular} class="hover:bg-accent/50">{@render zoomSlider()}</SettingRow>
-          </div>
-        </section>
+      <!-- Grid View Section -->
+      <section class="space-y-1">
+        <div class="mb-3">
+          <h3 class="text-sm font-semibold text-foreground">Grid View</h3>
+          <p class="text-xs text-muted-foreground">Configure how the power grid is displayed</p>
+        </div>
+        <div class="space-y-0.5">
+          <SettingRow label="Display Mode" description="Interactive map or data tables" htmlFor="view-mode-select" class="hover:bg-accent/50">{@render viewModeSelect()}</SettingRow>
+          <SettingRow label="Animations" description="Animated power flow on lines" htmlFor="animations-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render animationsToggle()}</SettingRow>
+          <SettingRow label="Map Labels" description="Show substation names on map" htmlFor="map-labels-toggle-modal" disabled={isTabular} class="hover:bg-accent/50">{@render mapLabelsToggle()}</SettingRow>
+          <SettingRow label="Zoom Speed" description="Mouse wheel sensitivity" htmlFor="zoom-sensitivity-slider" disabled={isTabular} class="hover:bg-accent/50">{@render zoomSlider()}</SettingRow>
+        </div>
+      </section>
 
-        <!-- Keyboard Shortcuts Section -->
-        <section class="space-y-4">
-          <div class="flex items-center justify-between">
-            <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Keyboard Shortcuts</h3>
-            <Button
-              variant="ghost"
-              size="sm"
-              onclick={() => settings.update({ keyBindings: defaultKeyBindings })}
-              class="h-7 px-2 text-xs"
-            >
-              <RotateCcw class="h-3 w-3 mr-1.5" />
-              Reset
-            </Button>
-          </div>
-          <KeybindSettings
-            bindings={settings.current.keyBindings}
-            onBindingsChange={(bindings) => settings.update({ keyBindings: bindings })}
-          />
-        </section>
-      </div>
-    </DialogContent>
-  </Dialog.Root>
-{/if}
+      <!-- Keyboard Shortcuts Section -->
+      <section class="space-y-4">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-muted-foreground uppercase tracking-wide">Keyboard Shortcuts</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            onclick={() => settings.update({ keyBindings: defaultKeyBindings })}
+            class="h-7 px-2 text-xs"
+          >
+            <RotateCcw class="h-3 w-3 mr-1.5" />
+            Reset
+          </Button>
+        </div>
+        <KeybindSettings
+          bindings={settings.current.keyBindings}
+          onBindingsChange={(bindings) => settings.update({ keyBindings: bindings })}
+        />
+      </section>
+    </div>
+  </DialogContent>
+</Dialog.Root>
 
 {#snippet themeSelect()}
   <Select.Root type="single" value={theme.current} onValueChange={(value) => { if (value) theme.current = value as any; }}>

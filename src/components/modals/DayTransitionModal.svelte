@@ -47,38 +47,25 @@
   // Briefing is only dismissible if day is already in progress
   // Always dismissible when content is missing (fallback escape hatch)
   let canDismiss = $derived((mode === 'briefing' && isDayInProgress) || !hasContent);
-  let instanceKey = $state(0);
 
   function handleOpenChange(isOpen: boolean) {
     if (isOpen) return;
-    if (canDismiss) {
-      onClose();
-      return;
-    }
-    // Force a remount to keep non-dismissible transitions visible.
-    instanceKey += 1;
+    if (canDismiss) onClose();
   }
 
   function handleOutsideInteraction(e: Event) {
-    if (!canDismiss) {
-      e.preventDefault();
-      return;
-    }
-    onClose();
+    if (!canDismiss) e.preventDefault();
   }
 </script>
 
-{#if open}
-  {#key instanceKey}
-    <Dialog.Root {open} onOpenChange={handleOpenChange}>
-      <DialogContent
-        id="day-transition-modal"
-        class="sm:max-w-lg font-sans"
-        showCloseButton={canDismiss}
-        onPointerDownOutside={handleOutsideInteraction}
-        onInteractOutside={handleOutsideInteraction}
-        onEscapeKeyDown={(e: Event) => { if (!canDismiss) e.preventDefault(); else onClose(); }}
-      >
+<Dialog.Root {open} onOpenChange={handleOpenChange}>
+  <DialogContent
+    id="day-transition-modal"
+    class="sm:max-w-lg font-sans"
+    showCloseButton={canDismiss}
+    onInteractOutside={handleOutsideInteraction}
+    onEscapeKeydown={(e: Event) => { if (!canDismiss) e.preventDefault(); }}
+  >
       {#if mode === 'results' && resultDetails}
         <DialogHeader class="sr-only" title="Day {gameStatistics.day} Results" description="Review your performance for this day." />
         <div class="space-y-6">
@@ -132,7 +119,5 @@
           <Button onclick={onClose} class="w-full text-lg py-6">Return to Game</Button>
         </div>
       {/if}
-      </DialogContent>
-    </Dialog.Root>
-  {/key}
-{/if}
+  </DialogContent>
+</Dialog.Root>

@@ -59,7 +59,6 @@ export function computeBranchGeometry(branches: Record<string, import("../types"
 
 // Pre-allocated reusable dash arrays (mutated once per frame, never reallocated)
 const dashTrip = [0, 0];
-const dashCritical = [0, 0];
 const dashNone: number[] = [];
 
 const NORMAL_THRESHOLD = DrawingConfig.BRANCH_OVERLOAD_NORMAL_THRESHOLD;
@@ -100,7 +99,6 @@ export function drawBranches(
   // Update reusable dash arrays for this frame's scale
   const d5 = 5 * invScale;
   dashTrip[0] = d5; dashTrip[1] = d5;
-  dashCritical[0] = 8 * invScale; dashCritical[1] = 4 * invScale;
 
   const { branches } = state;
   const hoverBranch = state.hoverBranch;
@@ -144,7 +142,7 @@ export function drawBranches(
       } else if (br.Status === BranchStatus.DIS) {
         hoverColor = colors.lineHover; hoverDash = dashTrip;
       } else if (isIn && ratio > CRIT_THRESHOLD) {
-        hoverColor = colors.overloadCritical; hoverDash = dashCritical;
+        hoverColor = colors.overloadCritical; hoverDash = dashNone;
       } else if (isIn && ratio > NORMAL_THRESHOLD) {
         hoverColor = colors.warning; hoverDash = dashNone;
       } else {
@@ -174,7 +172,6 @@ export function drawBranches(
   ctx.stroke(batchWarning);
 
   ctx.strokeStyle = colors.overloadCritical;
-  ctx.setLineDash(dashCritical);
   ctx.stroke(batchCritical);
 
   ctx.strokeStyle = colors.tripped;

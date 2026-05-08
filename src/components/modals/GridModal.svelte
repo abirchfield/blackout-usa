@@ -25,9 +25,24 @@
   const engineState = getEngineState();
   const engine = getEngine();
 
-  // Derived entity lookups
-  let sub = $derived(substationId ? engineState.subs[substationId] : undefined);
-  let branch = $derived(branchId ? engineState.branches[branchId] : undefined);
+  // Hold the IDs through bits-ui's close animation: the parent resets payload
+  // on close, but DialogContent stays mounted ~200ms to fade out. Without
+  // this, the content goes empty mid-animation.
+  let displaySubId = $state<string | undefined>(undefined);
+  let displayBranchId = $state<string | undefined>(undefined);
+
+  $effect(() => {
+    if (substationId) {
+      displaySubId = substationId;
+      displayBranchId = undefined;
+    } else if (branchId) {
+      displayBranchId = branchId;
+      displaySubId = undefined;
+    }
+  });
+
+  let sub = $derived(displaySubId ? engineState.subs[displaySubId] : undefined);
+  let branch = $derived(displayBranchId ? engineState.branches[displayBranchId] : undefined);
   let siblingBranch = $derived(branch?.sibling ? engineState.branches[branch.sibling] : undefined);
   let windAvail = $derived(engineState.stats.windAvail);
   let sunAvail = $derived(engineState.stats.sunAvail);
@@ -39,7 +54,7 @@
   // different modal), NOT every tick.  snapRecord() gives `sub` a new reference
   // each tick, so reading it inside the effect body would reset sliders mid-drag.
   $effect(() => {
-    const id = substationId;
+    const id = displaySubId;
     if (id) {
       untrack(() => {
         const s = engineState.subs[id];
@@ -190,9 +205,9 @@
   <CircuitTable branch={br} {sibling} {onBranchAction} isPaused={engineState.userPaused} />
 {/snippet}
 
-{#if open && sub}
-  <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-    <DialogContent id="grid-modal" class="sm:max-w-3xl canvas-center">
+<Dialog.Root open={open && (!!sub || !!branch)} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
+  <DialogContent id="grid-modal" class="sm:max-w-3xl canvas-center">
+    {#if sub}
       <DialogHeader titleClass="flex items-center gap-2" description="Controls and details for {sub.Name}." descriptionClass="sr-only">
         {#snippet titleContent()}
           {@render generationTypeIcon(sub.Category)}
@@ -205,13 +220,9 @@
         {/if}
         {@render substationContent(sub)}
       </div>
-    </DialogContent>
-  </Dialog.Root>
-{:else if open && branch}
-  {@const fromSub = branch.sub1?.Name || branch.FromSub}
-  {@const toSub = branch.sub2?.Name || branch.ToSub}
-  <Dialog.Root open={open} onOpenChange={(isOpen) => { if (!isOpen) onClose(); }}>
-    <DialogContent id="grid-modal" class="sm:max-w-3xl canvas-center">
+    {:else if branch}
+      {@const fromSub = branch.sub1?.Name || branch.FromSub}
+      {@const toSub = branch.sub2?.Name || branch.ToSub}
       <DialogHeader titleClass="flex items-center gap-2" description="Controls and details for this transmission line." descriptionClass="sr-only">
         {#snippet titleContent()}
           <Cable class="w-5 h-5 text-muted-foreground" aria-hidden="true" />
@@ -221,6 +232,6 @@
       <div role="region" aria-label="Line Controls" class="max-h-[70vh] overflow-y-auto -mx-4 sm:-mx-6 px-4 sm:px-6 relative">
         {@render branchContent(branch, siblingBranch)}
       </div>
-    </DialogContent>
-  </Dialog.Root>
-{/if}
+    {/if}
+  </DialogContent>
+</Dialog.Root>
