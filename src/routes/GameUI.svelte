@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from 'svelte';
+  import type { Action } from 'svelte/action';
   import { goto } from '$app/navigation';
   import { base } from '$app/paths';
   import { cn } from '$lib/utils';
@@ -9,7 +10,6 @@
   import { createModalState } from '$lib/stores/modals.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { theme } from '$lib/stores/theme.svelte';
-  import { mobile } from '$lib/stores/mobile.svelte';
   import { KeyboardController } from '$lib/keyboard.svelte';
 
   import AppHeader from '$components/game/AppHeader.svelte';
@@ -47,14 +47,14 @@
   let forecastProgress = $derived(engineState.stats.timeStep / GAME_DURATION_S);
 
   // --- State ---
-  let mapContainer: HTMLDivElement;
   let isInitialTutorial = $state(false);
   let announcement = $state('');
 
-  // --- Reparent canvas into the real layout container ---
-  $effect(() => {
-    if (mapContainer) engine.reparent(mapContainer);
-  });
+  // --- Canvas host action ---
+const hostCanvas: Action<HTMLDivElement, GameEngine> = (node, engineRef) => {
+    engineRef.attach(node);
+    return { destroy: () => engineRef.detach() };
+  };
 
   // --- Sync modal pause to engine ---
   $effect(() => {
@@ -159,19 +159,13 @@
   isBlackout={engineState.isBlackout}
 />
 
-<div class={cn(
-  "flex-1 w-full max-w-[1920px] mx-auto border-x border-border flex overflow-hidden",
-  mobile.value ? "flex-col" : "flex-row"
-)}>
-  {#if mobile.value}
-    <!-- Mobile: map on top, sidebar below -->
-    {@render mainPanel()}
-    {@render sidebarPanel()}
-  {:else}
-    <!-- Desktop: sidebar on left, map on right -->
-    {@render sidebarPanel()}
-    {@render mainPanel()}
-  {/if}
+<!-- Layout: column on mobile (map first, sidebar below), row on desktop (sidebar
+     left, map right). The visual swap is a CSS-`order` concern, not a DOM-shape
+     concern — keeping the host div stable across breakpoints is what lets the
+     canvas survive resizes without re-attaching. -->
+<div class="flex-1 w-full max-w-[1920px] mx-auto border-x border-border flex flex-col md:flex-row overflow-hidden">
+  {@render mainPanel()}
+  {@render sidebarPanel()}
 </div>
 
 <!-- Modals — always mounted, controlled via `open` prop so bits-ui can
@@ -253,12 +247,7 @@
 
 {#snippet sidebarPanel()}
   <aside
-    class={cn(
-      "bg-sidebar overflow-y-auto",
-      mobile.value
-        ? "border-t-2 border-border"
-        : "w-[clamp(280px,35%,400px)] shrink-0 border-r border-border"
-    )}
+    class="bg-sidebar overflow-y-auto border-t-2 border-border md:border-t-0 md:border-r md:w-[clamp(280px,35%,400px)] md:shrink-0 md:order-1"
     aria-label="Game Sidebar"
   >
     <div class="font-sans flex flex-col p-4 h-full">
@@ -273,7 +262,7 @@
 {/snippet}
 
 {#snippet mainPanel()}
-  <main id="main-game" class="flex-1 min-w-0 h-full flex flex-col" aria-label="Main game area">
+  <main id="main-game" class="flex-1 min-w-0 h-full flex flex-col md:order-2" aria-label="Main game area">
     <div class="font-sans relative flex-1 w-full h-full flex flex-col">
       {#if settings.current.viewMode === 'map'}
         <div class="absolute top-2 left-2 sm:top-4 sm:left-4 z-10 pointer-events-none select-none bg-background/90 px-3 py-1.5 sm:px-5 sm:py-2.5 rounded-md border border-border/50 shadow-sm">
@@ -294,7 +283,7 @@
            an interactive widget (canvas with click/drag), tabindex=-1 allows programmatic
            focus for keyboard shortcuts without adding it to the tab sequence -->
       <div
-        bind:this={mapContainer}
+        use:hostCanvas={engine}
         tabindex={settings.current.viewMode === 'map' ? -1 : undefined}
         aria-label={settings.current.viewMode === 'map' ? 'Interactive electrical grid map. Click substations or lines to inspect. For full keyboard access, switch to Tabular mode in Settings.' : 'Electrical grid map'}
         role={settings.current.viewMode === 'map' ? 'application' : 'img'}

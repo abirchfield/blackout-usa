@@ -21,7 +21,8 @@ export interface ViewCallbacks {
 export interface GridViewApi {
   init(state: GameState, callbacks: ViewCallbacks): void;
   draw(isPaused: boolean, isFastForward: boolean): void;
-  reparent(container: HTMLDivElement): void;
+  attach(container: HTMLDivElement): void;
+  detach(): void;
   applySettings(s: EngineSettings): void;
   performAction(action: GameAction): void;
   set onInteract(handler: InteractionHandler | undefined);
@@ -233,14 +234,22 @@ export class GridView implements GridViewApi {
     if (s.keyBindings !== undefined) this.state.keyBindings = s.keyBindings;
   }
 
-  /** Move the canvas element to a new container and force a redraw. */
-  reparent(container: HTMLDivElement): void {
+  /** Mount the canvas into a host container. Idempotent if already attached.
+   *  Preserves user view state (zoom/pan) across re-attach — only the first
+   *  attach (when isViewInitialized is still false) runs setInitialView. */
+  attach(container: HTMLDivElement): void {
+    if (this.canvas.parentElement === container) return;
     container.appendChild(this.canvas);
     this.container = container;
     this.lastWidth = 0;
     this.lastHeight = 0;
-    this.isViewInitialized = false;
     this._forceRedraw = true;
+  }
+
+  /** Remove the canvas from its current host. View state is retained so a
+   *  subsequent attach() resumes seamlessly. */
+  detach(): void {
+    this.canvas.remove();
   }
 
   /** Forward a game action to the input handler. */

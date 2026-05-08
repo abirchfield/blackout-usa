@@ -347,8 +347,10 @@ export class GameEngine {
 
   // --- View Delegation ---
 
-  /** Move the canvas to a new container element. */
-  reparent(container: HTMLDivElement) { this.view.reparent(container); }
+  /** Mount the canvas into a host container. Idempotent. */
+  attach(container: HTMLDivElement) { this.view.attach(container); }
+  /** Remove the canvas from its current host without losing view state. */
+  detach() { this.view.detach(); }
   /** Forward a game action (pan, zoom, emergency op) to the view layer. */
   performAction(action: GameAction) { this.view.performAction(action); }
   /** Push settings changes (theme, animations, keybindings) into the view. */

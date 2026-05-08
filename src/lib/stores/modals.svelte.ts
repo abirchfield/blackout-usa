@@ -42,10 +42,8 @@ export function createModalState() {
     activeModal = id;
   }
 
-  /** Close the active modal and restore focus to the previously focused element. */
   function closeModal() {
     activeModal = null;
-    payload = {};
     requestAnimationFrame(() => {
       if (lastFocused && document.contains(lastFocused)) {
         lastFocused.focus();
