@@ -206,8 +206,8 @@
   onOpenChange={(open: boolean) => modals.onOpenChange('quit', open)}
   day={engine.targetDay}
   onQuitToStart={() => goto(`${base}/`)}
-  onReplayDay={(day: number) => engine.navigateToDay(day)}
-  onNextDay={() => engine.advanceToNextDay()}
+  onReplayDay={(day: number) => { modals.closeModal(); engine.navigateToDay(day); }}
+  onNextDay={() => { modals.closeModal(); engine.advanceToNextDay(); }}
 />
 
 <DayTransitionModal
@@ -217,10 +217,10 @@
   info={modals.payload.info}
   resultDetails={modals.payload.resultDetails}
   gameStatistics={modals.payload.gameStatistics ?? engine.stats}
-  onStartDay={() => { engine.startDay(); modals.closeModal(); }}
+  onStartDay={() => { modals.closeModal(); engine.startDay(); }}
   onClose={modals.closeModal}
-  onReplayDay={(day: number) => engine.navigateToDay(day)}
-  onNextDay={() => engine.advanceToNextDay()}
+  onReplayDay={(day: number) => { modals.closeModal(); engine.navigateToDay(day); }}
+  onNextDay={() => { modals.closeModal(); engine.advanceToNextDay(); }}
 />
 
 <NotificationDialog

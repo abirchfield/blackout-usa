@@ -70,23 +70,34 @@
         <DialogHeader class="sr-only" title="Day {gameStatistics.day} Results" description="Review your performance for this day." />
         <div class="space-y-6">
           <DayResults stats={gameStatistics} day={gameStatistics.day} {resultDetails} />
-          <div class="grid grid-cols-2 gap-3 pt-2">
+          {#if resultDetails.performance === 'blackout'}
             <Button
               onclick={() => onReplayDay(targetDay)}
               variant={settings.hcVariant}
-              class="flex items-center justify-center gap-2"
+              class="w-full text-lg py-6 flex items-center justify-center gap-2"
             >
-              <RotateCw class="h-4 w-4" aria-hidden="true" />
+              <RotateCw class="h-5 w-5" aria-hidden="true" />
               <span>Replay Today</span>
             </Button>
-            <Button
-              onclick={() => onNextDay()}
-              class="flex items-center justify-center gap-2"
-            >
-              <span>Next Day</span>
-              <ArrowRight class="h-4 w-4" aria-hidden="true" />
-            </Button>
-          </div>
+          {:else}
+            <div class="grid grid-cols-2 gap-3 pt-2">
+              <Button
+                onclick={() => onReplayDay(targetDay)}
+                variant={settings.hcVariant}
+                class="flex items-center justify-center gap-2"
+              >
+                <RotateCw class="h-4 w-4" aria-hidden="true" />
+                <span>Replay Today</span>
+              </Button>
+              <Button
+                onclick={() => onNextDay()}
+                class="flex items-center justify-center gap-2"
+              >
+                <span>Next Day</span>
+                <ArrowRight class="h-4 w-4" aria-hidden="true" />
+              </Button>
+            </div>
+          {/if}
         </div>
       {:else if info}
         <DialogHeader title="Day {targetDay} Briefing" titleClass="text-2xl" description="Read the briefing and start the day when ready." descriptionClass="sr-only" />

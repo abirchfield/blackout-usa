@@ -23,6 +23,7 @@
   };
 
   let performance = $derived(performanceMap[resultDetails.performance]);
+  let isBlackout = $derived(resultDetails.performance === 'blackout');
 </script>
 
 <div class="space-y-4">
@@ -31,23 +32,27 @@
     <Badge variant={performance.variant}>{performance.title}</Badge>
   </div>
 
-  <div>
-    <p class="text-sm text-muted-foreground">Total cost for your shift was</p>
-    <div class={cn('text-3xl sm:text-4xl text-foreground', STAT_VALUE)}>
-      ${resultDetails.costM}<UnitSuffix hero>M</UnitSuffix>
+  {#if isBlackout}
+    <p class="text-sm text-muted-foreground whitespace-pre-line">{resultDetails.message}</p>
+  {:else}
+    <div>
+      <p class="text-sm text-muted-foreground">Total cost for your shift was</p>
+      <div class={cn('text-3xl sm:text-4xl text-foreground', STAT_VALUE)}>
+        ${resultDetails.costM}<UnitSuffix hero>M</UnitSuffix>
+      </div>
+      <p class="text-sm text-muted-foreground whitespace-pre-line mt-2">{resultDetails.message}</p>
     </div>
-    <p class="text-sm text-muted-foreground whitespace-pre-line mt-2">{resultDetails.message}</p>
-  </div>
 
-  <div class="border-t pt-3">
-    <SectionLabel>Additional Stats</SectionLabel>
-    <div class="grid grid-cols-2 gap-x-8 gap-y-0.5 text-sm" role="group" aria-label="Additional statistics">
-      {@render statRow('Operating Cost', fmtMoney(stats.totalOpCost))}
-      {@render statRow('Fuel Cost', fmtMoney(stats.totalFuelCost))}
-      {@render statRow('Unserved Cost', fmtMoney(stats.totalUnservedCost))}
-      {@render statRow('Avg. Cost', [`$${stats.avgCost.toFixed(2)}`, '/MWh'])}
+    <div class="border-t pt-3">
+      <SectionLabel>Additional Stats</SectionLabel>
+      <div class="grid grid-cols-2 gap-x-8 gap-y-0.5 text-sm" role="group" aria-label="Additional statistics">
+        {@render statRow('Operating Cost', fmtMoney(stats.totalOpCost))}
+        {@render statRow('Fuel Cost', fmtMoney(stats.totalFuelCost))}
+        {@render statRow('Unserved Cost', fmtMoney(stats.totalUnservedCost))}
+        {@render statRow('Avg. Cost', [`$${stats.avgCost.toFixed(2)}`, '/MWh'])}
+      </div>
     </div>
-  </div>
+  {/if}
 </div>
 
 {#snippet statRow(label: string, value: [string, string])}
