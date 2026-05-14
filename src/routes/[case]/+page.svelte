@@ -24,7 +24,7 @@
   {#if engine}
     <GameUI {engine} tutorial={data.tutorial} />
   {:else}
-    <!-- Temporary container — the engine attaches its canvas here during init -->
+    <!-- Initialization host: the engine attaches its canvas here before GameUI mounts. -->
     <div bind:this={initContainer} class="flex-1"></div>
   {/if}
 </div>

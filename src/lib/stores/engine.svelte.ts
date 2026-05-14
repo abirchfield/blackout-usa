@@ -3,7 +3,7 @@ import type { GameEngine } from '$lib/engine';
 import type { StatsSnapshot, Substation, Branch, Alert, Hint } from '$lib/types';
 import type { ForecastData } from '$lib/weather/forecast';
 
-// ── Engine context (unchanged) ──────────────────────────
+// Engine context
 
 const ENGINE_KEY = Symbol('engine');
 
@@ -19,7 +19,7 @@ export function getEngine(): GameEngine {
   return engine;
 }
 
-// ── Snapshot helpers ────────────────────────────────────
+// Snapshot helpers
 
 /**
  * Shallow-copy each Branch so Svelte detects property changes.
@@ -52,7 +52,7 @@ function snapSubs(src: Record<string, Substation>): Record<string, Substation> {
   return out;
 }
 
-// ── Reactive engine state ───────────────────────────────
+// Reactive engine state
 
 /**
  * Runes-based reactive bridge between the mutable GameEngine and Svelte's
@@ -122,7 +122,7 @@ export class EngineState {
   destroy() { this.#cleanup(); }
 }
 
-// ── Context helpers ─────────────────────────────────────
+// Context helpers
 
 const STATE_KEY = Symbol('engine-state');
 

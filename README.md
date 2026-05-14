@@ -19,7 +19,7 @@ are those of the author(s) and do not necessarily reflect the views of the Natio
 ### Development
 
 Prerequisites:
-- Node.js 20+ (required by `wrangler`)
+- Node.js 22+ (required by `wrangler`)
 - npm 10+
 - Python 3 (for `npm run generate` / `npm run build`)
 
@@ -34,6 +34,16 @@ npm run check        # run svelte-check for type errors
 
 `npm run generate` runs `data/runme.py` which reads the case JSON files and writes `data/_out/`. You only need to re-run it when case data changes.
 
+### Releases
+
+GitHub builds releases from version tags. After final changes are on `main`, tag the release commit:
+
+```bash
+git tag v0.2.0      # replace with the next version
+git push origin v0.2.0
+```
+
+Pushing a `v*.*.*` tag runs the `Release Build` workflow. It installs dependencies, checks the app, builds `build/`, and attaches `blackoutusa-<tag>.zip` to the GitHub Release.
 
 ### Acknowledgments
 

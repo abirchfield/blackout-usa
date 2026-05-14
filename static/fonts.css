@@ -1,5 +1,4 @@
-/* Self-hosted fonts — NOT processed by webpack/Next.js bundler.
-   Paths are relative to this file's location (public/). */
+/* Self-hosted fonts served from static/. Paths are relative to this file. */
 
 @font-face {
   font-family: 'Jura';

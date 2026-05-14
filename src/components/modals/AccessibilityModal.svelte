@@ -15,7 +15,7 @@
   import type { FontSize } from '$lib/stores/settings.svelte';
   import { settings } from '$lib/stores/settings.svelte';
   import { RotateCcw } from 'lucide-svelte';
-  import { theme } from '$lib/stores/theme.svelte';
+  import { theme, type Theme } from '$lib/stores/theme.svelte';
 
   interface Props {
     open: boolean;
@@ -25,6 +25,10 @@
   let { open, onOpenChange }: Props = $props();
 
   let isTabular = $derived(settings.current.viewMode === 'tabular');
+
+  function isTheme(value: string): value is Theme {
+    return value === 'light' || value === 'dark' || value === 'system';
+  }
 </script>
 
 <Dialog.Root {open} {onOpenChange}>
@@ -82,7 +86,7 @@
 </Dialog.Root>
 
 {#snippet themeSelect()}
-  <Select.Root type="single" value={theme.current} onValueChange={(value) => { if (value) theme.current = value as any; }}>
+  <Select.Root type="single" value={theme.current} onValueChange={(value) => { if (isTheme(value)) theme.current = value; }}>
     <SelectTrigger id="theme-select-modal" class="w-auto min-w-32">
       <span data-slot="select-value">{theme.current === 'light' ? 'Light' : theme.current === 'dark' ? 'Dark' : 'System'}</span>
     </SelectTrigger>
