@@ -10,9 +10,6 @@ This is a prototype digital experience that allows students and others to learn 
 
 For more information, see [https://birchfield.engr.tamu.edu/blackout-usa/](https://birchfield.engr.tamu.edu/blackout-usa/)
 
-This material is based upon work supported in part by the National Science Foundation under Award No. 2442131. Any opinions, findings and conclusions or recommendations expressed in this material
-are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
-
 ---
 
 
@@ -49,4 +46,5 @@ Pushing a `v*.*.*` tag runs the `Release Build` workflow. It installs dependenci
 
 This digital educational experience was developed by Adam Birchfield and Luke Lowery at Texas A&M University.
 
-Support from the US National Science Foundation (NSF) under award 2442131 is gratefully acknowledged.
+This material is based upon work supported in part by the National Science Foundation under Award No. 2442131. Any opinions, findings and conclusions or recommendations expressed in this material
+are those of the author(s) and do not necessarily reflect the views of the National Science Foundation.
